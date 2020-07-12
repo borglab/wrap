@@ -195,11 +195,12 @@ class PybindWrapper(object):
             return ""
         return (
             '\n    py::class_<{cpp_class}, {class_parent}'
-            'boost::shared_ptr<{cpp_class}>>({module_var}, "{class_name}")'
+            '{shared_ptr_type}::shared_ptr<{cpp_class}>>({module_var}, "{class_name}")'
             '{wrapped_ctors}'
             '{wrapped_methods}'
             '{wrapped_static_methods}'
             '{wrapped_properties};\n'.format(
+                shared_ptr_type=('boost' if self.use_boost else 'std'),
                 cpp_class=cpp_class,
                 class_name=instantiated_class.name,
                 class_parent=str(instantiated_class.parent_class)
@@ -226,11 +227,12 @@ class PybindWrapper(object):
 
         return (
             '\n    py::class_<{cpp_class}, {class_parent}'
-            'boost::shared_ptr<{cpp_class}>>({module_var}, "{class_name}")'
+            '{shared_ptr_type}::shared_ptr<{cpp_class}>>({module_var}, "{class_name}")'
             '{wrapped_ctors}'
             '{wrapped_methods}'
             '{wrapped_static_methods}'
             '{wrapped_properties};\n'.format(
+                shared_ptr_type=('boost' if self.use_boost else 'std'),
                 cpp_class=cpp_class,
                 class_name=stl_class.name,
                 class_parent=str(stl_class.parent_class)
@@ -364,7 +366,9 @@ class PybindWrapper(object):
             else "",
             module_name=self.module_name,
             includes=includes,
-            hoder_type="PYBIND11_DECLARE_HOLDER_TYPE(TYPE_PLACEHOLDER_DONOTUSE, boost::shared_ptr<TYPE_PLACEHOLDER_DONOTUSE>);"
+            hoder_type="PYBIND11_DECLARE_HOLDER_TYPE(TYPE_PLACEHOLDER_DONOTUSE, {shared_ptr_type}::shared_ptr<TYPE_PLACEHOLDER_DONOTUSE>);".format(
+                shared_ptr_type=('boost' if self.use_boost else 'std')
+            )
             if self.use_boost
             else "",
             wrapped_namespace=wrapped_namespace,

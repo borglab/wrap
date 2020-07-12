@@ -44,6 +44,14 @@ function(pybind_wrap
          module_template
          libs
          dependencies)
+  set(ExtraMacroArgs ${ARGN})
+  list(GET ExtraMacroArgs 0 USE_BOOST)
+  if(USE_BOOST)
+    set(_WRAP_BOOST_ARG "--use-boost")
+  else(USE_BOOST)
+    set(_WRAP_BOOST_ARG "")
+  endif(USE_BOOST)
+  
   add_custom_command(OUTPUT ${generated_cpp}
                      COMMAND ${PYTHON_EXECUTABLE}
                              ${CMAKE_SOURCE_DIR}/wrap/pybind_wrapper.py
@@ -59,7 +67,7 @@ function(pybind_wrap
                              ${ignore_classes}
                              --template
                              ${module_template}
-                             --use_boost
+                             ${_WRAP_BOOST_ARG}
                      VERBATIM)
   add_custom_target(pybind_wrap_${module_name} ALL DEPENDS ${generated_cpp})
 
