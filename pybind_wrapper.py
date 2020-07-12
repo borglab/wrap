@@ -397,7 +397,7 @@ def main():
         help="Name of the output pybind .cc file",
     )
     arg_parser.add_argument(
-        "--use_boost",
+        "--use-boost",
         action="store_true",
         help="using boost's shared_ptr instead of std's",
     )
