@@ -5,23 +5,23 @@ unset(PYTHON_INCLUDE_DIR CACHE)
 unset(PYTHON_MAJOR_VERSION CACHE)
 
 # Allow override from command line
-if(NOT DEFINED GTSAM_USE_CUSTOM_PYTHON_LIBRARY)
-  if(GTSAM_PYTHON_VERSION STREQUAL "Default")
+if(NOT DEFINED WRAP_USE_CUSTOM_PYTHON_LIBRARY)
+  if(WRAP_PYTHON_VERSION STREQUAL "Default")
     find_package(PythonInterp REQUIRED)
     find_package(PythonLibs REQUIRED)
   else()
     find_package(PythonInterp
-                ${GTSAM_PYTHON_VERSION}
+                ${WRAP_PYTHON_VERSION}
                 EXACT
                 REQUIRED)
     find_package(PythonLibs
-                ${GTSAM_PYTHON_VERSION}
+                ${WRAP_PYTHON_VERSION}
                 EXACT
                 REQUIRED)
   endif()
 endif()
 
-set(DIR_OF_GTSAM_PYBIND_CMAKE ${CMAKE_CURRENT_LIST_DIR})
+set(DIR_OF_WRAP_PYBIND_CMAKE ${CMAKE_CURRENT_LIST_DIR})
 
 # User-friendly Pybind11 wrapping and installing function. Builds a Pybind11
 # module from the provided interface_header. For example, for the interface
@@ -77,7 +77,7 @@ function(pybind_wrap
 
   if(APPLE)
     # `type_info` objects will become "weak private external" if the templated class is initialized implicitly even if we explicitly
-    # export them with `GTSAM_EXPORT`. If that happens, the `type_info` for the same templated class will diverge between shared
+    # export them with `WRAP_EXPORT`. If that happens, the `type_info` for the same templated class will diverge between shared
     # libraries, causing `dynamic_cast` to fail. This is mitigated by telling Clang to mimic the MSVC behavior.
     # See https://developer.apple.com/library/archive/technotes/tn2185/_index.html#//apple_ref/doc/uid/DTS10004200-CH1-SUBSECTION2
     # https://github.com/CppMicroServices/CppMicroServices/pull/82/files
@@ -116,7 +116,7 @@ function(install_python_scripts
   foreach(pattern ${patterns})
     list(APPEND patterns_args PATTERN "${pattern}")
   endforeach()
-  if(GTSAM_BUILD_TYPE_POSTFIXES)
+  if(WRAP_BUILD_TYPE_POSTFIXES)
     foreach(build_type ${CMAKE_CONFIGURATION_TYPES})
       string(TOUPPER "${build_type}" build_type_upper)
       if(${build_type_upper} STREQUAL "RELEASE")
@@ -125,7 +125,7 @@ function(install_python_scripts
       else()
         set(build_type_tag "")
       endif()
-      # Split up filename to strip trailing '/' in GTSAM_CYTHON_INSTALL_PATH if
+      # Split up filename to strip trailing '/' in WRAP_CYTHON_INSTALL_PATH if
       # there is one
       get_filename_component(location "${dest_directory}" PATH)
       get_filename_component(name "${dest_directory}" NAME)
@@ -153,11 +153,11 @@ endfunction()
 # dest_directory: The destination directory to install to.
 function(install_python_files source_files dest_directory)
 
-  if(GTSAM_BUILD_TYPE_POSTFIXES)
+  if(WRAP_BUILD_TYPE_POSTFIXES)
     foreach(build_type ${CMAKE_CONFIGURATION_TYPES})
       string(TOUPPER "${build_type}" build_type_upper)
       set(build_type_tag "")
-      # Split up filename to strip trailing '/' in GTSAM_PY_INSTALL_PATH if
+      # Split up filename to strip trailing '/' in WRAP_PY_INSTALL_PATH if
       # there is one
       get_filename_component(location "${dest_directory}" PATH)
       get_filename_component(name "${dest_directory}" NAME)
