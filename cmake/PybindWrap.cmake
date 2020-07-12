@@ -23,6 +23,8 @@ endif()
 
 set(DIR_OF_WRAP_PYBIND_CMAKE ${CMAKE_CURRENT_LIST_DIR})
 
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../pybind11 pybind11)
+
 # User-friendly Pybind11 wrapping and installing function. Builds a Pybind11
 # module from the provided interface_header. For example, for the interface
 # header gtsam.h, this will build the wrap module 'gtsam_py.cc'.
