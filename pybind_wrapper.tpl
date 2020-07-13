@@ -6,7 +6,6 @@
 #include "gtsam/nonlinear/utilities.h"  // for RedirectCout.
 
 {includes}
-#include "wrap/serialization.h"
 #include <boost/serialization/export.hpp>
 
 {boost_class_export}
@@ -21,6 +20,8 @@ PYBIND11_MODULE({module_name}, m_) {{
     m_.doc() = "pybind11 wrapper of {module_name}";
 
 {wrapped_namespace}
+
+#include "python/specializations.h"
 
 }}
 
