@@ -22,7 +22,5 @@ PYBIND11_MODULE({module_name}, m_) {{
 
 {wrapped_namespace}
 
-#include "python/specializations.h"
-
 }}
 
