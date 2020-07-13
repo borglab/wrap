@@ -22,7 +22,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 class TestWrap(unittest.TestCase):
-    TEST_DIR = path.dirname(__file__)
+    TEST_DIR = os.path.dirname(os.path.realpath(__file__)) + "/"
 
     def test_geometry_python(self):
         """
@@ -37,6 +37,9 @@ class TestWrap(unittest.TestCase):
 
         instantiator.instantiate_namespace_inplace(module)
 
+        with open(self.TEST_DIR + "pybind_wrapper.tpl") as template_file:
+            module_template = template_file.read()
+        
         # Create Pybind wrapper instance
         wrapper = PybindWrapper(
             module=module,
@@ -44,6 +47,7 @@ class TestWrap(unittest.TestCase):
             use_boost=False,
             top_module_namespaces=[''],
             ignore_classes=[''],
+            module_template=module_template
         )
 
         cc_content = wrapper.wrap()
