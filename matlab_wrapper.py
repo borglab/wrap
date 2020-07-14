@@ -254,11 +254,36 @@ class MatlabWrapper(object):
         method = ''
 
         if isinstance(static_method, parser.StaticMethod):
-            method += static_method.parent.namespaces()[-1] + \
-                separator + static_method.parent.name + separator
+            method += "".join([separator+x for x in static_method.parent.namespaces()]) + \
+                      separator + static_method.parent.name + separator
 
-        return method
+        return method[2*len(separator):]
+    def _format_instance_method(self, instance_method, separator=''):
+        """Example:
 
+                gtsamPoint3.staticFunction
+        """
+        method = ''
+
+        if isinstance(instance_method, instantiator.InstantiatedMethod):
+            method += "".join([separator+x for x in instance_method.parent.parent.full_namespaces()]) + \
+                      separator
+
+            method += instance_method.parent.name + separator + \
+                      instance_method.original.name + "<" + instance_method.instantiation.to_cpp() + ">"
+        return method[2*len(separator):]
+    def _format_global_method(self, static_method, separator=''):
+        """Example:
+
+                gtsamPoint3.staticFunction
+        """
+        method = ''
+
+        if isinstance(static_method, parser.GlobalFunction):
+            method += "".join([separator+x for x in static_method.parent.full_namespaces()]) + \
+                      separator
+
+        return method[2*len(separator):]
     def _wrap_args(self, args):
         """Wrap an interface_parser.ArgumentList into a list of arguments.
 
@@ -373,9 +398,9 @@ class MatlabWrapper(object):
             if params != '':
                 params += ','
 
-            params += arg.name
-
-            if self._is_ref(arg.ctype) and not constructor:
+            # import sys
+            # print("type: {}, is_ref: {}, cons: {}".format(arg.ctype, self._is_ref(arg.ctype), constructor), file=sys.stderr)
+            if self._is_ref(arg.ctype): # and not constructor:
                 ctype_camel = self._format_type_name(
                     arg.ctype.typename, separator='')
                 body_args += textwrap.indent(textwrap.dedent('''\
@@ -390,12 +415,13 @@ class MatlabWrapper(object):
                 body_args += textwrap.indent(textwrap.dedent('''\
                     {std_boost}::shared_ptr<{ctype_sep}> {name} = unwrap_shared_ptr< {ctype_sep} >(in[{id}], "ptr_{ctype}");
                 '''.format(
-                    std_boost='std' if constructor else 'boost',
+                    std_boost='boost' if constructor else 'boost',
                     ctype_sep=self._format_type_name(arg.ctype.typename),
                     ctype=self._format_type_name(
                         arg.ctype.typename, separator=''),
                     name=arg.name,
                     id=arg_id)), prefix='  ')
+                # params += "*"
             else:
                 body_args += textwrap.indent(textwrap.dedent('''\
                     {ctype} {name} = unwrap< {ctype} >(in[{id}]);
@@ -403,6 +429,8 @@ class MatlabWrapper(object):
                     ctype=arg.ctype.typename.name,
                     name=arg.name,
                     id=arg_id)), prefix='  ')
+
+            params += arg.name
 
             arg_id += 1
 
@@ -865,6 +893,9 @@ class MatlabWrapper(object):
         file_name = self._clean_class_name(instantiated_class)
         namespace_file_name = namespace_name + file_name
 
+        if instantiated_class.cpp_class() in self.ignore_classes:
+            return None
+
         # Class comment
         content_text = self.class_comment(instantiated_class)
         content_text += self.wrap_methods(instantiated_class.methods)
@@ -911,16 +942,16 @@ class MatlabWrapper(object):
         if len(instantiated_class.methods) != 0:
             methods = sorted(instantiated_class.methods,
                              key=lambda name: name.name)
-
-            content_text += '    ' + reduce(
-                lambda x, y: x + '\n' + ('' if y == '' else '    ') + y,
-                self.wrap_class_methods(
-                    namespace_name,
-                    instantiated_class,
-                    methods,
-                    serialize=serialize)
-                .splitlines()
-            ) + '\n'
+            class_methods_wrapped=self.wrap_class_methods(
+                namespace_name,
+                instantiated_class,
+                methods,
+                serialize=serialize).splitlines()
+            if len(class_methods_wrapped) > 0:
+                content_text += '    ' + reduce(
+                    lambda x, y: x + '\n' + ('' if y == '' else '    ') + y,
+                    class_methods_wrapped
+                ) + '\n'
 
         # Static class methods
         content_text += '  end\n\n  ' + reduce(
@@ -967,12 +998,13 @@ class MatlabWrapper(object):
                     class_text = self.wrap_instantiated_class(
                         element, namespace.name)
 
-                    namespace_scope.append(
-                        (
-                            '+' + namespace.name,
-                            [(class_text[0], class_text[1])]
+                    if not class_text is None:
+                        namespace_scope.append(
+                            (
+                                '+' + namespace.name,
+                                [(class_text[0], class_text[1])]
+                            )
                         )
-                    )
                 else:
                     class_text = self.wrap_instantiated_class(element)
                     current_scope.append((class_text[0], class_text[1]))
@@ -1055,15 +1087,25 @@ class MatlabWrapper(object):
         obj_start = ''
 
         if isinstance(method, instantiator.InstantiatedMethod):
-            method_name = method.original.name
+            # method_name = method.original.name
+            method_name = method.to_cpp()
             obj_start = 'obj->'
 
             if method.instantiation:
-                method_name += '<{}>'.format(
-                    self._format_type_name(method.instantiation))
+                # method_name += '<{}>'.format(
+                #     self._format_type_name(method.instantiation))
+                # method_name = self._format_instance_method(method, '::')
+                method = method.to_cpp()
+        elif isinstance(method, parser.GlobalFunction):
+            method_name = self._format_global_method(method, '::')
+            method_name += method.name
         else:
             method_name = self._format_static_method(method, '::')
             method_name += method.name
+
+        import sys
+        if isinstance(method, instantiator.InstantiatedMethod):
+            print("type: {}, method: {}, inst: {}".format(method_name, method.original, method.instantiation), file=sys.stderr)
 
         obj = '  ' if return_1_name == 'void' else ''
         obj += '{}{}({})'.format(obj_start, method_name, params)
@@ -1113,17 +1155,17 @@ class MatlabWrapper(object):
 
         return expanded
 
-    def wrap_collector_function_upcast_from_void(self, class_name, id):
+    def wrap_collector_function_upcast_from_void(self, class_name, id, cpp_name):
         return textwrap.dedent('''\
             void {class_name}_upcastFromVoid_{id}(int nargout, mxArray *out[], int nargin, const mxArray *in[]) {{
               mexAtExit(&_deleteAllObjects);
-              typedef std::shared_ptr<{class_name}> Shared;
-              std::shared_ptr<void> *asVoid = *reinterpret_cast<std::shared_ptr<void>**> (mxGetData(in[0]));
+              typedef boost::shared_ptr<{cpp_name}> Shared;
+              boost::shared_ptr<void> *asVoid = *reinterpret_cast<boost::shared_ptr<void>**> (mxGetData(in[0]));
               out[0] = mxCreateNumericMatrix(1, 1, mxUINT32OR64_CLASS, mxREAL);
-              Shared *self = new Shared(boost::static_pointer_cast<{class_name}>(*asVoid));
+              Shared *self = new Shared(boost::static_pointer_cast<{cpp_name}>(*asVoid));
               *reinterpret_cast<Shared**>(mxGetData(out[0])) = self;
             }}\n
-        ''').format(class_name=class_name, id=id)
+        ''').format(class_name=class_name, cpp_name=cpp_name, id=id)
 
     def generate_collector_function(self, id):
         collector_func = self.wrapper_map.get(id)
@@ -1140,18 +1182,14 @@ class MatlabWrapper(object):
             extra = collector_func[4]
 
             class_name = collector_func[0] + collector_func[1].name
-            class_name_separated = collector_func[0]
+            class_name_separated = collector_func[1].cpp_class()
             is_method = isinstance(extra, parser.Method)
             is_static_method = isinstance(extra, parser.StaticMethod)
-
-            if class_name_separated != '':
-                class_name_separated += '::'
-            class_name_separated += collector_func[1].name
 
             if collector_func[2] == 'collectorInsertAndMakeBase':
                 body += textwrap.indent(textwrap.dedent('''\
                     mexAtExit(&_deleteAllObjects);
-                    typedef std::shared_ptr<{class_name_sep}> Shared;\n
+                    typedef boost::shared_ptr<{class_name_sep}> Shared;\n
                     Shared *self = *reinterpret_cast<Shared**> (mxGetData(in[0]));
                     collector_{class_name}.insert(self);
                 ''').format(class_name_sep=class_name_separated,
@@ -1159,7 +1197,7 @@ class MatlabWrapper(object):
 
                 if collector_func[1].parent_class:
                     body += textwrap.indent(textwrap.dedent('''
-                        typedef std::shared_ptr<{}> SharedBase;
+                        typedef boost::shared_ptr<{}> SharedBase;
                         out[0] = mxCreateNumericMatrix(1, 1, mxUINT32OR64_CLASS, mxREAL);
                         *reinterpret_cast<SharedBase**>(mxGetData(out[0])) = new SharedBase(*self);
                     ''').format(collector_func[1].parent_class), prefix='  ')
@@ -1170,14 +1208,14 @@ class MatlabWrapper(object):
 
                 if collector_func[1].parent_class:
                     base += textwrap.indent(textwrap.dedent('''
-                        typedef std::shared_ptr<{}> SharedBase;
+                        typedef boost::shared_ptr<{}> SharedBase;
                         out[1] = mxCreateNumericMatrix(1, 1, mxUINT32OR64_CLASS, mxREAL);
                         *reinterpret_cast<SharedBase**>(mxGetData(out[1])) = new SharedBase(*self);
                     ''').format(collector_func[1].parent_class), prefix='  ')
 
                 body += textwrap.dedent('''\
                       mexAtExit(&_deleteAllObjects);
-                      typedef std::shared_ptr<{class_name_sep}> Shared;\n
+                      typedef boost::shared_ptr<{class_name_sep}> Shared;\n
                     {body_args}  Shared *self = new Shared(new {class_name_sep}({params}));
                       collector_{class_name}.insert(self);
                       out[0] = mxCreateNumericMatrix(1, 1, mxUINT32OR64_CLASS, mxREAL);
@@ -1189,7 +1227,7 @@ class MatlabWrapper(object):
                                       base=base)
             elif collector_func[2] == 'deconstructor':
                 body += textwrap.indent(textwrap.dedent('''\
-                    typedef std::shared_ptr<{class_name_sep}> Shared;
+                    typedef boost::shared_ptr<{class_name_sep}> Shared;
                     checkArguments("delete_{class_name}",nargout,nargin,1);
                     Shared *self = *reinterpret_cast<Shared**>(mxGetData(in[0]));
                     Collector_{class_name}::iterator item;
@@ -1202,10 +1240,10 @@ class MatlabWrapper(object):
                             class_name=class_name), prefix='  ')
             elif extra == 'serialize':
                 body += self.wrap_collector_function_serialize(
-                    collector_func[1].name, namespace=collector_func[0])
+                    collector_func[1].name, full_name=collector_func[1].cpp_class(), namespace=collector_func[0])
             elif extra == 'deserialize':
                 body += self.wrap_collector_function_deserialize(
-                    collector_func[1].name, namespace=collector_func[0])
+                    collector_func[1].name, full_name=collector_func[1].cpp_class(), namespace=collector_func[0])
             elif is_method or is_static_method:
                 method_name = ''
 
@@ -1387,6 +1425,14 @@ class MatlabWrapper(object):
         ptr_ctor_frag = ''
 
         for cls in self.classes:
+            if cls.cpp_class().strip() in self.ignore_classes:
+                continue
+
+            def _has_serialization(cls):
+                for m in cls.methods:
+                    if m.name in self.whitelist:
+                        return True
+                return False
             if len(cls.instantiations):
                 cls_insts = ''
 
@@ -1396,20 +1442,26 @@ class MatlabWrapper(object):
 
                     cls_insts += self._format_type_name(inst)
 
-                typedef_instances += 'typedef {original_class_name}<{class_inst}> {class_name_sep};\n'.format(
-                    original_class_name=cls.original.name,
-                    class_inst=cls_insts,
+                typedef_instances += 'typedef {original_class_name} {class_name_sep};\n'.format(
+                    original_class_name=cls.cpp_class(),
                     class_name_sep=cls.name)
 
-            class_name_sep = self._format_class_name(cls, '::')
-            class_name = self._format_class_name(cls)
+                class_name_sep = cls.name
+                class_name = self._format_class_name(cls)
 
-            if len(cls.original.namespaces()) > 1:
-                boost_class_export_guid += 'BOOST_CLASS_EXPORT_GUID({}, "{}");\n'.format(
-                    class_name_sep, class_name)
+                if len(cls.original.namespaces()) > 1 and _has_serialization(cls):
+                    boost_class_export_guid += 'BOOST_CLASS_EXPORT_GUID({}, "{}");\n'.format(
+                        class_name_sep, class_name)
+            else:
+                class_name_sep = cls.cpp_class()
+                class_name = self._format_class_name(cls)
+
+                if len(cls.original.namespaces()) > 1 and _has_serialization(cls):
+                    boost_class_export_guid += 'BOOST_CLASS_EXPORT_GUID({}, "{}");\n'.format(
+                        class_name_sep, class_name)
 
             typedef_collectors += textwrap.dedent('''\
-                typedef std::set<std::shared_ptr<{class_name_sep}>*> Collector_{class_name};
+                typedef std::set<boost::shared_ptr<{class_name_sep}>*> Collector_{class_name};
                 static Collector_{class_name} collector_{class_name};
             ''').format(class_name_sep=class_name_sep, class_name=class_name)
             delete_objs += textwrap.indent(textwrap.dedent('''\
@@ -1445,7 +1497,7 @@ class MatlabWrapper(object):
 
             if queue_set_next_case:
                 ptr_ctor_frag += self.wrap_collector_function_upcast_from_void(
-                    id_val[1].name, id)
+                    id_val[1].name, id, id_val[1].cpp_class())
 
         wrapper_file += textwrap.dedent('''\
             {typedef_instances}
@@ -1493,28 +1545,28 @@ class MatlabWrapper(object):
                     wrapper_id=wrapper_id,
                     class_name=namespace_name + '.' + class_name)
 
-    def wrap_collector_function_serialize(self, class_name, namespace=''):
+    def wrap_collector_function_serialize(self, class_name, full_name='', namespace=''):
         return textwrap.indent(textwrap.dedent('''\
-            typedef std::shared_ptr<{namespace}::{class_name}> Shared;
+            typedef boost::shared_ptr<{full_name}> Shared;
             checkArguments("string_serialize",nargout,nargin-1,0);
-            Shared obj = unwrap_shared_ptr<gtsam::Point3>(in[0], "ptr_{namespace}{class_name}");
+            Shared obj = unwrap_shared_ptr<{full_name}>(in[0], "ptr_{namespace}{class_name}");
             ostringstream out_archive_stream;
             boost::archive::text_oarchive out_archive(out_archive_stream);
             out_archive << *obj;
             out[0] = wrap< string >(out_archive_stream.str());
-        ''').format(class_name=class_name, namespace=namespace), prefix='  ')
+        ''').format(class_name=class_name, full_name=full_name, namespace=namespace), prefix='  ')
 
-    def wrap_collector_function_deserialize(self, class_name, namespace=''):
+    def wrap_collector_function_deserialize(self, class_name, full_name='', namespace=''):
         return textwrap.indent(textwrap.dedent('''\
-            typedef std::shared_ptr<{namespace}::{class_name}> Shared;
+            typedef boost::shared_ptr<{full_name}> Shared;
             checkArguments("{namespace}{class_name}.string_deserialize",nargout,nargin,1);
             string serialized = unwrap< string >(in[0]);
             istringstream in_archive_stream(serialized);
             boost::archive::text_iarchive in_archive(in_archive_stream);
-            Shared output(new {namespace}::{class_name}());
+            Shared output(new {full_name}());
             in_archive >> *output;
             out[0] = wrap_shared_ptr(output,"{namespace}.{class_name}", false);
-        ''').format(class_name=class_name, namespace=namespace), prefix='  ')
+        ''').format(class_name=class_name, full_name=full_name, namespace=namespace), prefix='  ')
 
     def wrap(self):
         self.wrap_namespace(self.module)
@@ -1534,6 +1586,8 @@ def _generate_content(cc_content, path):
     """
     for c in cc_content:
         if type(c) == list:
+            if len(c) == 0:
+                continue
             path_to_folder = path + '/' + c[0][0]
 
             if not os.path.isdir(path_to_folder):
@@ -1606,6 +1660,8 @@ if __name__ == "__main__":
 
     instantiator.instantiate_namespace_inplace(module)
 
+    import sys
+    print("Ignoring classes: {}".format(args.ignore), file=sys.stderr)
     wrapper = MatlabWrapper(
         module=module,
         module_name=args.module_name,
