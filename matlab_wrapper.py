@@ -399,7 +399,7 @@ class MatlabWrapper(object):
                 params += ','
 
             # import sys
-            # print("type: {}, is_ref: {}, cons: {}".format(arg.ctype, self._is_ref(arg.ctype), constructor), file=sys.stderr)
+            # print("type: {}, is_ref: {}, is_ref: {}".format(arg.ctype, self._is_ref(arg.ctype), arg.ctype.is_ref), file=sys.stderr)
             if self._is_ref(arg.ctype): # and not constructor:
                 ctype_camel = self._format_type_name(
                     arg.ctype.typename, separator='')
@@ -412,6 +412,7 @@ class MatlabWrapper(object):
                     id=arg_id)), prefix='  ')
             elif self._is_ptr(arg.ctype) and \
                     arg.ctype.typename.name not in self.ignore_namespace:
+                call_type = arg.ctype.is_ptr
                 body_args += textwrap.indent(textwrap.dedent('''\
                     {std_boost}::shared_ptr<{ctype_sep}> {name} = unwrap_shared_ptr< {ctype_sep} >(in[{id}], "ptr_{ctype}");
                 '''.format(
@@ -421,7 +422,8 @@ class MatlabWrapper(object):
                         arg.ctype.typename, separator=''),
                     name=arg.name,
                     id=arg_id)), prefix='  ')
-                # params += "*"
+                if call_type == "":
+                    params += "*"
             else:
                 body_args += textwrap.indent(textwrap.dedent('''\
                     {ctype} {name} = unwrap< {ctype} >(in[{id}]);
@@ -1100,12 +1102,15 @@ class MatlabWrapper(object):
             method_name = self._format_global_method(method, '::')
             method_name += method.name
         else:
-            method_name = self._format_static_method(method, '::')
+            if isinstance(method.parent, instantiator.InstantiatedClass):
+                method_name = method.parent.cpp_class() + "::"
+            else:
+                method_name = self._format_static_method(method, '::')
             method_name += method.name
 
         import sys
-        if isinstance(method, instantiator.InstantiatedMethod):
-            print("type: {}, method: {}, inst: {}".format(method_name, method.original, method.instantiation), file=sys.stderr)
+        if "MeasureRange" in method_name:
+            print("method: {}, method: {}, inst: {}".format(method_name, method.name, method.parent.cpp_class()), file=sys.stderr)
 
         obj = '  ' if return_1_name == 'void' else ''
         obj += '{}{}({})'.format(obj_start, method_name, params)
@@ -1393,7 +1398,7 @@ class MatlabWrapper(object):
               bool anyDeleted = false;
         ''')
         rtti_reg_start = textwrap.dedent('''\
-            void _geometry_RTTIRegister() {{
+            void _gtsam_RTTIRegister() {{
               const mxArray *alreadyCreated = mexGetVariablePtr("global", "gtsam_{module_name}_rttiRegistry_created");
               if(!alreadyCreated) {{
                 std::map<std::string, std::string> types;
@@ -1443,6 +1448,7 @@ class MatlabWrapper(object):
                     cls_insts += self._format_type_name(inst)
 
                 typedef_instances += 'typedef {original_class_name} {class_name_sep};\n'.format(
+                    namespace_name=namespace.name,
                     original_class_name=cls.cpp_class(),
                     class_name_sep=cls.name)
 
