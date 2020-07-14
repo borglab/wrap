@@ -23,6 +23,8 @@ endif()
 
 set(DIR_OF_WRAP_PYBIND_CMAKE ${CMAKE_CURRENT_LIST_DIR})
 
+set(PYBIND11_PYTHON_VERSION ${WRAP_PYTHON_VERSION})
+
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../pybind11 pybind11)
 
 # User-friendly Pybind11 wrapping and installing function. Builds a Pybind11
