@@ -163,6 +163,8 @@ class MatlabWrapper(object):
                 method_map[method.name] = len(method_out)
                 method_out.append([method])
             else:
+                import sys
+                print("[_group_methods] Merging {} with {}".format(method_index, method.name))
                 method_out[method_index].append(method)
 
         return method_out
@@ -352,16 +354,16 @@ class MatlabWrapper(object):
         check_statement = ''
         arg_id = 1
 
+        if check_statement == '':
+            check_statement = \
+                'if length(varargin) == {param_count}'.format(
+                    param_count=len(args.args_list))
+
         for i, arg in enumerate(args.args_list):
             name = arg.ctype.typename.name
 
             if name in self.not_check_type:
                 continue
-
-            if check_statement == '':
-                check_statement = \
-                    'if length(varargin) == {param_count}'.format(
-                        param_count=len(args.args_list))
 
             check_type = self.data_type_param.get(name)
 
@@ -756,6 +758,24 @@ class MatlabWrapper(object):
             %DISP Calls print on the object
         """), prefix='  ')
 
+    def _group_class_methods(self, methods):
+        """Group overloaded methods together"""
+        method_map = {}
+        method_out = []
+
+        for method in methods:
+            method_index = method_map.get(method.name)
+
+            if method_index is None:
+                method_map[method.name] = len(method_out)
+                method_out.append([method])
+            else:
+                import sys
+                print("[_group_methods] Merging {} with {}".format(method_index, method.name))
+                method_out[method_index].append(method)
+
+        return method_out
+
     def wrap_class_methods(self, namespace_name, inst_class, methods,
                            serialize=[False]):
         """Wrap the methods in the class.
@@ -768,11 +788,14 @@ class MatlabWrapper(object):
         """
         method_text = ''
 
+        methods = self._group_class_methods(methods)
+
         for method in methods:
-            if method.name in self.whitelist and method.name != 'serialize':
+            method_name = method[0].name
+            if method_name in self.whitelist and method_name != 'serialize':
                 continue
 
-            if method.name == 'serialize':
+            if method_name == 'serialize':
                 serialize[0] = True
                 method_text += self.wrap_class_serialize_method(
                     namespace_name, inst_class)
@@ -780,55 +803,64 @@ class MatlabWrapper(object):
                 # Generate method code
                 method_text += textwrap.indent(textwrap.dedent("""\
                     function varargout = {method_name}(this, varargin)
-                      % {caps_name} usage: {method_name}(""").format(
-                    caps_name=method.name.upper(),
-                    method_name=method.name), prefix='')
-
-                # Determine format of return and varargout statements
-                return_type = self._format_return_type(
-                    method.return_type, include_namespace=True)
-
-                if self._return_count(method.return_type) == 1:
-                    varargout = '' \
-                        if return_type == 'void' \
-                        else 'varargout{1} = '
-                else:
-                    varargout = '[ varargout{1} varargout{2} ] = '
-
-                check_statement = self._wrap_method_check_statement(
-                    method.args)
-                class_name = namespace_name + (
-                    '' if namespace_name == ''
-                    else '.') + inst_class.name
-
-                end_statement = '' \
-                    if check_statement == '' \
-                    else textwrap.indent(textwrap.dedent("""\
-                        else
-                          error('Arguments do not match any overload of function {class_name}.{method_name}');
-                        end
                     """).format(
-                        class_name=class_name,
-                        method_name=method.original.name), prefix='  ')
+                        caps_name=method_name.upper(),
+                        method_name=method_name), prefix='')
 
-                method_text += textwrap.dedent("""\
-                    {method_args}) : returns {return_type}
-                      % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
-                      {check_statement}{spacing}{varargout}{wrapper}({num}, this, varargin{{:}});
-                    {end_statement}""").format(
-                    method_args=self._wrap_args(method.args),
-                    return_type=return_type,
-                    num=self._update_wrapper_id(
-                        (namespace_name, inst_class,
-                         method.original.name, method)
-                    ),
-                    check_statement=check_statement,
-                    spacing='' if check_statement == '' else '    ',
-                    varargout=varargout,
-                    wrapper=self._wrapper_name(),
-                    end_statement=end_statement)
+                for overload in method:
+                    method_text += textwrap.indent(textwrap.dedent("""\
+                    % {caps_name} usage: {method_name}(""").format(
+                        caps_name=method_name.upper(),
+                        method_name=method_name), prefix='  ')
 
-                method_text += 'end\n\n'
+                    # Determine format of return and varargout statements
+                    return_type = self._format_return_type(
+                        overload.return_type, include_namespace=True)
+
+                    if self._return_count(overload.return_type) == 1:
+                        varargout = '' \
+                            if return_type == 'void' \
+                            else 'varargout{1} = '
+                    else:
+                        varargout = '[ varargout{1} varargout{2} ] = '
+
+                    check_statement = self._wrap_method_check_statement(
+                        overload.args)
+                    class_name = namespace_name + (
+                        '' if namespace_name == ''
+                        else '.') + inst_class.name
+
+                    end_statement = '' \
+                        if check_statement == '' \
+                        else textwrap.indent(textwrap.dedent("""\
+                              return
+                            end
+                        """).format(
+                            class_name=class_name,
+                            method_name=overload.original.name), prefix='  ')
+
+                    method_text += textwrap.dedent("""\
+                        {method_args}) : returns {return_type}
+                          % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
+                          {check_statement}{spacing}{varargout}{wrapper}({num}, this, varargin{{:}});
+                        {end_statement}""").format(
+                        method_args=self._wrap_args(overload.args),
+                        return_type=return_type,
+                        num=self._update_wrapper_id(
+                            (namespace_name, inst_class,
+                             overload.original.name, overload)
+                        ),
+                        check_statement=check_statement,
+                        spacing='' if check_statement == '' else '    ',
+                        varargout=varargout,
+                        wrapper=self._wrapper_name(),
+                        end_statement=end_statement
+                    )
+
+                final_statement = textwrap.indent(textwrap.dedent("""\
+                    error('Arguments do not match any overload of function {class_name}.{method_name}');
+                """), prefix='  ')
+                method_text += final_statement + 'end\n\n'
 
         return method_text
 
@@ -841,32 +873,63 @@ class MatlabWrapper(object):
             instantiated_class.static_methods,
             key=lambda name: name.name)
 
+        static_methods = self._group_class_methods(static_methods)
+
         for static_method in static_methods:
-            format_name = list(static_method.name)
+            format_name = list(static_method[0].name)
             format_name[0] = format_name[0].upper()
 
-            method_text += textwrap.indent(textwrap.dedent('''\
-                function varargout = {name}(varargin)
-                  % {name_caps} usage: {name_upper_case}({args}) : returns {return_type}
-                  % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
-                  varargout{{1}} = {wrapper}({id}, varargin{{:}});
-                end\n
-            ''').format(
-                name=''.join(format_name),
-                name_caps=static_method.name.upper(),
-                name_upper_case=static_method.name,
-                args=self._wrap_args(static_method.args),
-                return_type=self._format_return_type(
-                    static_method.return_type,
-                    include_namespace=True),
-                length=len(static_method.args.args_list),
-                var_args_list=self._wrap_variable_arguments(
-                    static_method.args),
-                wrapper=self._wrapper_name(),
-                id=self._update_wrapper_id((
-                    namespace_name, instantiated_class, static_method.name,
-                    static_method)),
-                class_name=instantiated_class.name), prefix='  ')
+            method_text += textwrap.indent(
+                textwrap.dedent('''\
+                    function varargout = {name}(varargin)
+                    '''.format(name=''.join(format_name))),
+                prefix="  "
+            )
+
+            for static_overload in static_method:
+                check_statement = self._wrap_method_check_statement(
+                    static_overload.args)
+
+                end_statement = '' \
+                    if check_statement == '' \
+                    else textwrap.indent(textwrap.dedent("""
+                              return
+                            end
+                            """), prefix='')
+                method_text += textwrap.indent(textwrap.dedent('''\
+                      % {name_caps} usage: {name_upper_case}({args}) : returns {return_type}
+                      % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
+                      {check_statement}{spacing}varargout{{1}} = {wrapper}({id}, varargin{{:}});{end_statement}
+                      ''').format(
+                    name=''.join(format_name),
+                    name_caps=static_overload.name.upper(),
+                    name_upper_case=static_overload.name,
+                    args=self._wrap_args(static_overload.args),
+                    return_type=self._format_return_type(
+                        static_overload.return_type,
+                        include_namespace=True),
+                    length=len(static_overload.args.args_list),
+                    var_args_list=self._wrap_variable_arguments(
+                        static_overload.args),
+                    check_statement=check_statement,
+                    spacing='' if check_statement == '' else '  ',
+                    wrapper=self._wrapper_name(),
+                    id=self._update_wrapper_id((
+                        namespace_name, instantiated_class, static_overload.name,
+                        static_overload)),
+                    class_name=instantiated_class.name,
+                    end_statement=end_statement
+                    ), prefix='    ')
+
+            method_text +=  textwrap.indent(textwrap.dedent("""\
+                    error('Arguments do not match any overload of function {class_name}.{method_name}');
+                """), prefix='    ')
+            method_text += textwrap.indent(
+                textwrap.dedent('''\
+                                    end\n
+                '''.format(name=''.join(format_name))),
+                prefix="  "
+            )
 
         if serialize:
             method_text += textwrap.indent(textwrap.dedent('''\
