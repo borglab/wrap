@@ -239,12 +239,17 @@ class MatlabWrapper(object):
 
     def _format_class_name(self, instantiated_class, separator=''):
         """Format a template_instantiator.InstantiatedClass name."""
-        class_name = instantiated_class.parent.name
+        # class_name = instantiated_class.parent.name
+        #
+        # if class_name != '':
+        #     class_name += separator
+        #
+        # class_name += instantiated_class.name
+        parentname = "".join([separator+x for x in instantiated_class.parent.full_namespaces()]) + separator
+        class_name = parentname[2*len(separator):]
 
         if class_name != '':
-            class_name += separator
-
-        class_name += instantiated_class.name
+            class_name += instantiated_class.name
 
         return class_name
 
@@ -363,6 +368,7 @@ class MatlabWrapper(object):
             name = arg.ctype.typename.name
 
             if name in self.not_check_type:
+                arg_id += 1
                 continue
 
             check_type = self.data_type_param.get(name)
@@ -559,7 +565,7 @@ class MatlabWrapper(object):
 
         return ''
 
-    def wrap_methods(self, methods, globals=False):
+    def wrap_methods(self, methods, globals=False, global_ns=None):
         """Wrap a sequence of methods. Groups methods with the same names
         together. If globals is True then output every method into its own
         file.
@@ -569,8 +575,14 @@ class MatlabWrapper(object):
 
         for method in methods:
             if globals:
+                import sys
+                print("[wrap_methods] wrapping: {}..{}={}".format(
+                    method[0].parent.name, method[0].name, type(method[0].parent.name)
+                ), file=sys.stderr)
+
                 method_text = self.wrap_global_function(method)
-                self.content.append((method[0].name + '.m', method_text))
+                self.content.append(("".join(['+' + x + '/' for x in global_ns.full_namespaces()[1:]])[:-1],
+                                     [(method[0].name + '.m', method_text)]))
             else:
                 method_text = self.wrap_method(method)
                 output += ''
@@ -639,12 +651,13 @@ class MatlabWrapper(object):
         if type(ctors) != list:
             ctors = [ctors]
 
-        import sys
-        if class_name:
-            print("[Constructor] class: {} ns: {}"
-                  .format(class_name,
-                          "".join(inst_class.parent.full_namespaces()))
-                  , file=sys.stderr)
+        # import sys
+        # if class_name:
+        #     print("[Constructor] class: {} ns: {}"
+        #           .format(class_name,
+        #                   inst_class.namespaces())
+        #           , file=sys.stderr)
+        # full_name = "".join(obj_type.full_namespaces()) + obj_type.name
 
         methods_wrap = textwrap.indent(textwrap.dedent("""\
             methods
@@ -777,8 +790,8 @@ class MatlabWrapper(object):
                 method_map[method.name] = len(method_out)
                 method_out.append([method])
             else:
-                import sys
-                print("[_group_methods] Merging {} with {}".format(method_index, method.name))
+                # import sys
+                # print("[_group_methods] Merging {} with {}".format(method_index, method.name))
                 method_out[method_index].append(method)
 
         return method_out
@@ -1086,7 +1099,7 @@ class MatlabWrapper(object):
 
                 if inner_namespace:
                     class_text = self.wrap_instantiated_class(
-                        element, namespace.name)
+                        element, "".join(namespace.full_namespaces()))
 
                     if not class_text is None:
                         namespace_scope.append(
@@ -1110,7 +1123,7 @@ class MatlabWrapper(object):
             if isinstance(func, parser.GlobalFunction)
         ]
 
-        test_output += self.wrap_methods(all_funcs, True)
+        test_output += self.wrap_methods(all_funcs, True, global_ns=namespace)
 
         return wrapped
 
@@ -1266,8 +1279,12 @@ class MatlabWrapper(object):
         if collector_func is None:
             return ''
 
+        method_name = collector_func[3]
+        # import sys
+        # print("[Collector Gen] id: {}, obj: {}".format(id, method_name), file=sys.stderr)
+
         collector_function = 'void {}(int nargout, mxArray *out[], int nargin, const mxArray *in[])\n' \
-            .format(collector_func[3])
+            .format(method_name)
 
         if isinstance(collector_func[1], instantiator.InstantiatedClass):
             body = '{\n'
@@ -1699,9 +1716,27 @@ def _generate_content(cc_content, path):
                 import sys
                 print("sub object: {}".format(sub_content[1][0][0]), file=sys.stderr)
                 _generate_content(sub_content[1], path_to_folder)
+        elif type(c[1]) == list:
+            path_to_folder = path + '/' + c[0]
+
+            import sys
+            print("[generate_content_global]: {}".format(path_to_folder), file=sys.stderr)
+            if not os.path.isdir(path_to_folder):
+                try:
+                    os.makedirs(path_to_folder, exist_ok=True)
+                except OSError:
+                    pass
+            for sub_content in c[1]:
+                import sys
+                path_to_file = path_to_folder + '/' + sub_content[0]
+                print("[generate_global_method]: {}".format(path_to_file), file=sys.stderr)
+                with open(path_to_file, 'w') as f:
+                    f.write(sub_content[1])
         else:
             path_to_file = path + '/' + c[0]
 
+            import sys
+            print("[generate_content]: {}".format(path_to_file), file=sys.stderr)
             if not os.path.isdir(path_to_file):
                 try:
                     os.mkdir(path)
