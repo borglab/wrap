@@ -174,7 +174,7 @@ class MatlabWrapper(object):
         if len(instantiated_class.ctors) != 0:
             return instantiated_class.ctors[0].name
 
-        return instantiated_class.cpp_class()
+        return instantiated_class.name
 
     def _format_type_name(self, type_name, separator='::',
                           include_namespace=True, constructor=False,
@@ -632,7 +632,8 @@ class MatlabWrapper(object):
         """
         has_parent = parent_name != ''
         class_name = inst_class.name
-
+        if has_parent:
+            parent_name = self._format_type_name(parent_name, separator=".")
         if type(ctors) != list:
             ctors = [ctors]
 
@@ -692,6 +693,14 @@ class MatlabWrapper(object):
             ), prefix='    ')
 
         base_obj = ''
+
+
+        import sys
+        if has_parent:
+            print("class: {} ns: {}"
+                  .format(parent_name,
+                            self._format_class_name(inst_class.parent, separator="."))
+                  , file=sys.stderr)
 
         if has_parent:
             base_obj = '  obj = obj@{parent_name}(uint64(5139824614673773682), base_ptr);'.format(
@@ -903,9 +912,15 @@ class MatlabWrapper(object):
         content_text += self.wrap_methods(instantiated_class.methods)
 
         # Class definition
+        # import sys
+        # if namespace_name:
+        #     print("nsname: {}, file_name_: {}, filename: {}"
+        #           .format(namespace_name,
+        #                   self._clean_class_name(instantiated_class), file_name)
+        #           , file=sys.stderr)
         content_text += 'classdef {class_name} < {parent}\n'.format(
             class_name=file_name,
-            parent=self._qualified_name(instantiated_class.parent_class))
+            parent=str(self._qualified_name(instantiated_class.parent_class)).replace("::", "."))
 
         # Class properties
         content_text += '  ' + reduce(
@@ -971,16 +986,19 @@ class MatlabWrapper(object):
 
         return file_name + '.m', content_text
 
-    def wrap_namespace(self, namespace):
+    def wrap_namespace(self, namespace, parent=[]):
         """Wrap a namespace by wrapping all of its components.
 
         Args:
             namespace: the interface_parser.namespace instance of the namespace
+            parent: parent namespace
         """
         test_output = ''
         namespaces = namespace.full_namespaces()
         inner_namespace = namespace.name != ''
         wrapped = []
+        import sys
+        print("wrapping ns: {}, parent: {}".format(namespace.full_namespaces(), parent), file=sys.stderr)
 
         matlab_wrapper = self.generate_matlab_wrapper()
         self.content.append((matlab_wrapper[0], matlab_wrapper[1]))
@@ -992,7 +1010,7 @@ class MatlabWrapper(object):
             if isinstance(element, parser.Include):
                 self._add_include(element)
             elif isinstance(element, parser.Namespace):
-                self.wrap_namespace(element)
+                self.wrap_namespace(element, namespaces)
             elif isinstance(element, instantiator.InstantiatedClass):
                 self._add_class(element)
 
@@ -1003,7 +1021,7 @@ class MatlabWrapper(object):
                     if not class_text is None:
                         namespace_scope.append(
                             (
-                                '+' + namespace.name,
+                                "".join(['+' + x + '/' for x in namespace.full_namespaces()[1:]])[:-1],
                                 [(class_text[0], class_text[1])]
                             )
                         )
@@ -1302,11 +1320,14 @@ class MatlabWrapper(object):
 
             collector_function += body
         else:
+            # import sys
+            # print("other func: {}".format(collector_func[1]), file=sys.stderr)
             body = textwrap.dedent('''\
                 {{
-                  checkArguments("{function_name}",nargout,nargin,{id});
+                  checkArguments("{function_name}",nargout,nargin,{len});
             ''').format(function_name=collector_func[1].name,
-                        id=self.global_function_id)
+                        id=self.global_function_id,
+                        len=len(collector_func[1].args.args_list))
 
             body += self._wrapper_unwrap_arguments(collector_func[1].args)[1]
             body += self.wrap_collector_function_return(
@@ -1594,15 +1615,19 @@ def _generate_content(cc_content, path):
         if type(c) == list:
             if len(c) == 0:
                 continue
+            import sys
+            print("c object: {}".format(c[0][0]), file=sys.stderr)
             path_to_folder = path + '/' + c[0][0]
 
             if not os.path.isdir(path_to_folder):
                 try:
-                    os.mkdir(path_to_folder)
+                    os.makedirs(path_to_folder, exist_ok=True)
                 except OSError:
                     pass
 
             for sub_content in c:
+                import sys
+                print("sub object: {}".format(sub_content[1][0][0]), file=sys.stderr)
                 _generate_content(sub_content[1], path_to_folder)
         else:
             path_to_file = path + '/' + c[0]
