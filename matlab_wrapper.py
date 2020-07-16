@@ -639,6 +639,13 @@ class MatlabWrapper(object):
         if type(ctors) != list:
             ctors = [ctors]
 
+        import sys
+        if class_name:
+            print("[Constructor] class: {} ns: {}"
+                  .format(class_name,
+                          "".join(inst_class.parent.full_namespaces()))
+                  , file=sys.stderr)
+
         methods_wrap = textwrap.indent(textwrap.dedent("""\
             methods
               function obj = {class_name}(varargin)
@@ -713,14 +720,14 @@ class MatlabWrapper(object):
 
         methods_wrap += textwrap.indent(textwrap.dedent('''\
               else
-                error('Arguments do not match any overload of {namespace}{d}{class_name} constructor');
+                error('Arguments do not match any overload of {class_name} constructor');
               end{base_obj}
-              obj.ptr_{namespace}{class_name} = my_ptr;
+              obj.ptr_{class_name} = my_ptr;
             end\n
         ''').format(
             namespace=namespace_name,
             d='' if namespace_name == '' else '.',
-            class_name=class_name,
+            class_name="".join(inst_class.parent.full_namespaces()) + class_name,
             base_obj=base_obj), prefix='  ')
 
         return methods_wrap
@@ -745,7 +752,7 @@ class MatlabWrapper(object):
             num=self._update_wrapper_id(
                 (namespace_name, inst_class, 'deconstructor', None)),
             wrapper=self._wrapper_name(),
-            class_name=namespace_name + class_name), prefix='  ')
+            class_name="".join(inst_class.parent.full_namespaces()) + class_name), prefix='  ')
 
         return methods_text
 
