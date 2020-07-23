@@ -12,6 +12,8 @@
 
 {hoder_type}
 
+#include "python/preamble.h"
+
 using namespace std;
 
 namespace py = pybind11;
