@@ -27,6 +27,7 @@ class PybindWrapper(object):
         self.ignore_classes = ignore_classes
         self._serializing_classes = list()
         self.module_template = module_template
+        self.python_keywords = ['print', 'lambda']
 
     def _py_args_names(self, args_list):
         names = args_list.args_names()
@@ -109,7 +110,7 @@ class PybindWrapper(object):
             '{py_args_names}){suffix}'.format(
                 prefix=prefix,
                 cdef="def_static" if is_static else "def",
-                py_method=py_method if py_method != "print" else "print_",
+                py_method=py_method if not py_method in self.python_keywords else py_method + "_",
                 opt_self="{cpp_class}* self".format(cpp_class=cpp_class)
                 if is_method
                 else "",
