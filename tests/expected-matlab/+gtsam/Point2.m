@@ -29,7 +29,7 @@ classdef Point2 < handle
       elseif nargin == 2 && isa(varargin{1},'double') && isa(varargin{2},'double')
         my_ptr = geometry_wrapper(2, varargin{1}, varargin{2});
       else
-        error('Arguments do not match any overload of gtsam.Point2 constructor');
+        error('Arguments do not match any overload of gtsamPoint2 constructor');
       end
       obj.ptr_gtsamPoint2 = my_ptr;
     end
@@ -45,19 +45,31 @@ classdef Point2 < handle
     function varargout = argChar(this, varargin)
       % ARGCHAR usage: argChar(char a) : returns void
       % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
-      geometry_wrapper(4, this, varargin{:});
+      if length(varargin) == 1
+        geometry_wrapper(4, this, varargin{:});
+        return
+      end
+      error('Arguments do not match any overload of function {class_name}.{method_name}');
     end
 
     function varargout = argUChar(this, varargin)
       % ARGUCHAR usage: argUChar(unsigned char a) : returns void
       % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
-      geometry_wrapper(5, this, varargin{:});
+      if length(varargin) == 1
+        geometry_wrapper(5, this, varargin{:});
+        return
+      end
+      error('Arguments do not match any overload of function {class_name}.{method_name}');
     end
 
     function varargout = dim(this, varargin)
       % DIM usage: dim() : returns int
       % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
-      varargout{1} = geometry_wrapper(6, this, varargin{:});
+      if length(varargin) == 0
+        varargout{1} = geometry_wrapper(6, this, varargin{:});
+        return
+      end
+      error('Arguments do not match any overload of function {class_name}.{method_name}');
     end
 
     function varargout = eigenArguments(this, varargin)
@@ -65,33 +77,49 @@ classdef Point2 < handle
       % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
       if length(varargin) == 2 && isa(varargin{1},'double') && size(varargin{1},2)==1 && isa(varargin{2},'double')
         geometry_wrapper(7, this, varargin{:});
-      else
-        error('Arguments do not match any overload of function gtsam.Point2.eigenArguments');
+        return
       end
+      error('Arguments do not match any overload of function {class_name}.{method_name}');
     end
 
     function varargout = returnChar(this, varargin)
       % RETURNCHAR usage: returnChar() : returns char
       % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
-      varargout{1} = geometry_wrapper(8, this, varargin{:});
+      if length(varargin) == 0
+        varargout{1} = geometry_wrapper(8, this, varargin{:});
+        return
+      end
+      error('Arguments do not match any overload of function {class_name}.{method_name}');
     end
 
     function varargout = vectorConfusion(this, varargin)
       % VECTORCONFUSION usage: vectorConfusion() : returns VectorNotEigen
       % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
-      varargout{1} = geometry_wrapper(9, this, varargin{:});
+      if length(varargin) == 0
+        varargout{1} = geometry_wrapper(9, this, varargin{:});
+        return
+      end
+      error('Arguments do not match any overload of function {class_name}.{method_name}');
     end
 
     function varargout = x(this, varargin)
       % X usage: x() : returns double
       % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
-      varargout{1} = geometry_wrapper(10, this, varargin{:});
+      if length(varargin) == 0
+        varargout{1} = geometry_wrapper(10, this, varargin{:});
+        return
+      end
+      error('Arguments do not match any overload of function {class_name}.{method_name}');
     end
 
     function varargout = y(this, varargin)
       % Y usage: y() : returns double
       % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
-      varargout{1} = geometry_wrapper(11, this, varargin{:});
+      if length(varargin) == 0
+        varargout{1} = geometry_wrapper(11, this, varargin{:});
+        return
+      end
+      error('Arguments do not match any overload of function {class_name}.{method_name}');
     end
 
   end

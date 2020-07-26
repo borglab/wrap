@@ -27,7 +27,7 @@ classdef Point3 < handle
       elseif nargin == 3 && isa(varargin{1},'double') && isa(varargin{2},'double') && isa(varargin{3},'double')
         my_ptr = geometry_wrapper(13, varargin{1}, varargin{2}, varargin{3});
       else
-        error('Arguments do not match any overload of gtsam.Point3 constructor');
+        error('Arguments do not match any overload of gtsamPoint3 constructor');
       end
       obj.ptr_gtsamPoint3 = my_ptr;
     end
@@ -43,7 +43,11 @@ classdef Point3 < handle
     function varargout = norm(this, varargin)
       % NORM usage: norm() : returns double
       % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
-      varargout{1} = geometry_wrapper(15, this, varargin{:});
+      if length(varargin) == 0
+        varargout{1} = geometry_wrapper(15, this, varargin{:});
+        return
+      end
+      error('Arguments do not match any overload of function {class_name}.{method_name}');
     end
 
     function varargout = string_serialize(this, varargin)
@@ -66,13 +70,23 @@ classdef Point3 < handle
     function varargout = StaticFunctionRet(varargin)
       % STATICFUNCTIONRET usage: StaticFunctionRet(double z) : returns gtsam::Point3
       % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
-      varargout{1} = geometry_wrapper(17, varargin{:});
+      if length(varargin) == 1
+        varargout{1} = geometry_wrapper(17, varargin{:});
+        return
+      end
+
+      error('Arguments do not match any overload of function {class_name}.{method_name}');
     end
 
     function varargout = StaticFunction(varargin)
       % STATICFUNCTION usage: staticFunction() : returns double
       % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
-      varargout{1} = geometry_wrapper(18, varargin{:});
+      if length(varargin) == 0
+        varargout{1} = geometry_wrapper(18, varargin{:});
+        return
+      end
+
+      error('Arguments do not match any overload of function {class_name}.{method_name}');
     end
 
     function varargout = string_deserialize(varargin)

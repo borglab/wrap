@@ -52,9 +52,9 @@ classdef MyTemplateMatrix < MyBase
       % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
       if length(varargin) == 1 && isa(varargin{1},'double')
         geometry_wrapper(65, this, varargin{:});
-      else
-        error('Arguments do not match any overload of function MyTemplateMatrix.accept_T');
+        return
       end
+      error('Arguments do not match any overload of function {class_name}.{method_name}');
     end
 
     function varargout = accept_Tptr(this, varargin)
@@ -62,21 +62,29 @@ classdef MyTemplateMatrix < MyBase
       % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
       if length(varargin) == 1 && isa(varargin{1},'double')
         geometry_wrapper(66, this, varargin{:});
-      else
-        error('Arguments do not match any overload of function MyTemplateMatrix.accept_Tptr');
+        return
       end
+      error('Arguments do not match any overload of function {class_name}.{method_name}');
     end
 
     function varargout = create_MixedPtrs(this, varargin)
       % CREATE_MIXEDPTRS usage: create_MixedPtrs() : returns pair< Matrix, Matrix >
       % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
-      [ varargout{1} varargout{2} ] = geometry_wrapper(67, this, varargin{:});
+      if length(varargin) == 0
+        [ varargout{1} varargout{2} ] = geometry_wrapper(67, this, varargin{:});
+        return
+      end
+      error('Arguments do not match any overload of function {class_name}.{method_name}');
     end
 
     function varargout = create_ptrs(this, varargin)
       % CREATE_PTRS usage: create_ptrs() : returns pair< Matrix, Matrix >
       % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
-      [ varargout{1} varargout{2} ] = geometry_wrapper(68, this, varargin{:});
+      if length(varargin) == 0
+        [ varargout{1} varargout{2} ] = geometry_wrapper(68, this, varargin{:});
+        return
+      end
+      error('Arguments do not match any overload of function {class_name}.{method_name}');
     end
 
     function varargout = return_T(this, varargin)
@@ -84,9 +92,9 @@ classdef MyTemplateMatrix < MyBase
       % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
       if length(varargin) == 1 && isa(varargin{1},'double')
         varargout{1} = geometry_wrapper(69, this, varargin{:});
-      else
-        error('Arguments do not match any overload of function MyTemplateMatrix.return_T');
+        return
       end
+      error('Arguments do not match any overload of function {class_name}.{method_name}');
     end
 
     function varargout = return_Tptr(this, varargin)
@@ -94,9 +102,9 @@ classdef MyTemplateMatrix < MyBase
       % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
       if length(varargin) == 1 && isa(varargin{1},'double')
         varargout{1} = geometry_wrapper(70, this, varargin{:});
-      else
-        error('Arguments do not match any overload of function MyTemplateMatrix.return_Tptr');
+        return
       end
+      error('Arguments do not match any overload of function {class_name}.{method_name}');
     end
 
     function varargout = return_ptrs(this, varargin)
@@ -104,9 +112,9 @@ classdef MyTemplateMatrix < MyBase
       % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
       if length(varargin) == 2 && isa(varargin{1},'double') && isa(varargin{2},'double')
         [ varargout{1} varargout{2} ] = geometry_wrapper(71, this, varargin{:});
-      else
-        error('Arguments do not match any overload of function MyTemplateMatrix.return_ptrs');
+        return
       end
+      error('Arguments do not match any overload of function {class_name}.{method_name}');
     end
 
     function varargout = templatedMethodMatrix(this, varargin)
@@ -114,9 +122,9 @@ classdef MyTemplateMatrix < MyBase
       % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
       if length(varargin) == 1 && isa(varargin{1},'double')
         varargout{1} = geometry_wrapper(72, this, varargin{:});
-      else
-        error('Arguments do not match any overload of function MyTemplateMatrix.templatedMethod');
+        return
       end
+      error('Arguments do not match any overload of function {class_name}.{method_name}');
     end
 
     function varargout = templatedMethodPoint2(this, varargin)
@@ -124,9 +132,9 @@ classdef MyTemplateMatrix < MyBase
       % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
       if length(varargin) == 1 && isa(varargin{1},'gtsam.Point2')
         varargout{1} = geometry_wrapper(73, this, varargin{:});
-      else
-        error('Arguments do not match any overload of function MyTemplateMatrix.templatedMethod');
+        return
       end
+      error('Arguments do not match any overload of function {class_name}.{method_name}');
     end
 
     function varargout = templatedMethodPoint3(this, varargin)
@@ -134,9 +142,9 @@ classdef MyTemplateMatrix < MyBase
       % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
       if length(varargin) == 1 && isa(varargin{1},'gtsam.Point3')
         varargout{1} = geometry_wrapper(74, this, varargin{:});
-      else
-        error('Arguments do not match any overload of function MyTemplateMatrix.templatedMethod');
+        return
       end
+      error('Arguments do not match any overload of function {class_name}.{method_name}');
     end
 
     function varargout = templatedMethodVector(this, varargin)
@@ -144,9 +152,9 @@ classdef MyTemplateMatrix < MyBase
       % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
       if length(varargin) == 1 && isa(varargin{1},'double') && size(varargin{1},2)==1
         varargout{1} = geometry_wrapper(75, this, varargin{:});
-      else
-        error('Arguments do not match any overload of function MyTemplateMatrix.templatedMethod');
+        return
       end
+      error('Arguments do not match any overload of function {class_name}.{method_name}');
     end
 
   end

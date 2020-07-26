@@ -29,23 +29,52 @@ class TestWrap(unittest.TestCase):
             (folder_name, [(file_name, file_content)])
         path -- the path to the files parent folder within the main folder
         """
+        if path == '':
+            path = self.MATLAB_ACTUAL_DIR
         for c in cc_content:
             if type(c) == list:
-                path_to_folder = self.MATLAB_ACTUAL_DIR if path == '' else path
-                path_to_folder += c[0][0]
+                if len(c) == 0:
+                    continue
+                import sys
+                print("c object: {}".format(c[0][0]), file=sys.stderr)
+                path_to_folder = path + '/' + c[0][0]
 
                 if not os.path.isdir(path_to_folder):
                     try:
-                        os.mkdir(path_to_folder)
+                        os.makedirs(path_to_folder, exist_ok=True)
                     except OSError:
-                        print("Failed to create directory {path}".format(
-                            path=path_to_file))
+                        pass
 
                 for sub_content in c:
+                    import sys
+                    print("sub object: {}".format(sub_content[1][0][0]), file=sys.stderr)
                     self._generate_content(sub_content[1], path_to_folder)
+            elif type(c[1]) == list:
+                path_to_folder = path + '/' + c[0]
+
+                import sys
+                print("[generate_content_global]: {}".format(path_to_folder), file=sys.stderr)
+                if not os.path.isdir(path_to_folder):
+                    try:
+                        os.makedirs(path_to_folder, exist_ok=True)
+                    except OSError:
+                        pass
+                for sub_content in c[1]:
+                    import sys
+                    path_to_file = path_to_folder + '/' + sub_content[0]
+                    print("[generate_global_method]: {}".format(path_to_file), file=sys.stderr)
+                    with open(path_to_file, 'w') as f:
+                        f.write(sub_content[1])
             else:
-                path_to_file = self.MATLAB_ACTUAL_DIR + c[0] if path == '' \
-                    else path + '/' + c[0]
+                path_to_file = path + '/' + c[0]
+
+                import sys
+                print("[generate_content]: {}".format(path_to_file), file=sys.stderr)
+                if not os.path.isdir(path_to_file):
+                    try:
+                        os.mkdir(path)
+                    except OSError:
+                        pass
 
                 with open(path_to_file, 'w') as f:
                     f.write(c[1])
@@ -69,7 +98,7 @@ class TestWrap(unittest.TestCase):
         wrapper = MatlabWrapper(
             module=module,
             module_name='geometry',
-            top_module_namespace=[''],
+            top_module_namespace=['gtsam'],
             ignore_classes=[''],
         )
 

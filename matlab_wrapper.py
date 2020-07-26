@@ -79,6 +79,13 @@ class MatlabWrapper(object):
         self.module_name = module_name
         self.top_module_namespace = top_module_namespace
         self.ignore_classes = ignore_classes
+        self.verbose = False
+
+    def _debug(self, message):
+        if not self.verbose:
+            return
+        import sys
+        print(message, file=sys.stderr)
 
     def _add_include(self, include):
         self.includes[include] = 0
@@ -163,8 +170,7 @@ class MatlabWrapper(object):
                 method_map[method.name] = len(method_out)
                 method_out.append([method])
             else:
-                import sys
-                print("[_group_methods] Merging {} with {}".format(method_index, method.name))
+                self._debug("[_group_methods] Merging {} with {}".format(method_index, method.name))
                 method_out[method_index].append(method)
 
         return method_out
@@ -239,13 +245,17 @@ class MatlabWrapper(object):
 
     def _format_class_name(self, instantiated_class, separator=''):
         """Format a template_instantiator.InstantiatedClass name."""
+        if instantiated_class.parent == '':
+            parent_full_ns = ['']
+        else:
+            parent_full_ns = instantiated_class.parent.full_namespaces()
         # class_name = instantiated_class.parent.name
         #
         # if class_name != '':
         #     class_name += separator
         #
         # class_name += instantiated_class.name
-        parentname = "".join([separator+x for x in instantiated_class.parent.full_namespaces()]) + separator
+        parentname = "".join([separator+x for x in parent_full_ns]) + separator
         class_name = parentname[2*len(separator):]
 
         if class_name != '':
@@ -575,10 +585,9 @@ class MatlabWrapper(object):
 
         for method in methods:
             if globals:
-                import sys
-                print("[wrap_methods] wrapping: {}..{}={}".format(
+                self._debug("[wrap_methods] wrapping: {}..{}={}".format(
                     method[0].parent.name, method[0].name, type(method[0].parent.name)
-                ), file=sys.stderr)
+                ))
 
                 method_text = self.wrap_global_function(method)
                 self.content.append(("".join(['+' + x + '/' for x in global_ns.full_namespaces()[1:]])[:-1],
@@ -716,13 +725,9 @@ class MatlabWrapper(object):
 
         base_obj = ''
 
-
-        import sys
         if has_parent:
-            print("class: {} ns: {}"
-                  .format(parent_name,
-                            self._format_class_name(inst_class.parent, separator="."))
-                  , file=sys.stderr)
+            self._debug("class: {} ns: {}"
+                  .format(parent_name, self._format_class_name(inst_class.parent, separator=".")))
 
         if has_parent:
             base_obj = '  obj = obj@{parent_name}(uint64(5139824614673773682), base_ptr);'.format(
@@ -1080,8 +1085,7 @@ class MatlabWrapper(object):
         namespaces = namespace.full_namespaces()
         inner_namespace = namespace.name != ''
         wrapped = []
-        import sys
-        print("wrapping ns: {}, parent: {}".format(namespace.full_namespaces(), parent), file=sys.stderr)
+        self._debug("wrapping ns: {}, parent: {}".format(namespace.full_namespaces(), parent))
 
         matlab_wrapper = self.generate_matlab_wrapper()
         self.content.append((matlab_wrapper[0], matlab_wrapper[1]))
@@ -1209,9 +1213,8 @@ class MatlabWrapper(object):
                 method_name = self._format_static_method(method, '::')
             method_name += method.name
 
-        import sys
         if "MeasureRange" in method_name:
-            print("method: {}, method: {}, inst: {}".format(method_name, method.name, method.parent.cpp_class()), file=sys.stderr)
+            self._debug("method: {}, method: {}, inst: {}".format(method_name, method.name, method.parent.cpp_class()))
 
         obj = '  ' if return_1_name == 'void' else ''
         obj += '{}{}({})'.format(obj_start, method_name, params)
@@ -1689,7 +1692,7 @@ class MatlabWrapper(object):
         return self.content
 
 
-def _generate_content(cc_content, path):
+def _generate_content(cc_content, path, verbose=False):
     """Generate files and folders from matlab wrapper content.
 
     Keyword arguments:
@@ -1698,12 +1701,17 @@ def _generate_content(cc_content, path):
         (folder_name, [(file_name, file_content)])
     path -- the path to the files parent folder within the main folder
     """
+    def _debug(message):
+        if not verbose:
+            return
+        import sys
+        print(message, file=sys.stderr)
+
     for c in cc_content:
         if type(c) == list:
             if len(c) == 0:
                 continue
-            import sys
-            print("c object: {}".format(c[0][0]), file=sys.stderr)
+            _debug("c object: {}".format(c[0][0]))
             path_to_folder = path + '/' + c[0][0]
 
             if not os.path.isdir(path_to_folder):
@@ -1714,13 +1722,12 @@ def _generate_content(cc_content, path):
 
             for sub_content in c:
                 import sys
-                print("sub object: {}".format(sub_content[1][0][0]), file=sys.stderr)
+                _debug("sub object: {}".format(sub_content[1][0][0]))
                 _generate_content(sub_content[1], path_to_folder)
         elif type(c[1]) == list:
             path_to_folder = path + '/' + c[0]
 
-            import sys
-            print("[generate_content_global]: {}".format(path_to_folder), file=sys.stderr)
+            _debug("[generate_content_global]: {}".format(path_to_folder))
             if not os.path.isdir(path_to_folder):
                 try:
                     os.makedirs(path_to_folder, exist_ok=True)
@@ -1729,14 +1736,13 @@ def _generate_content(cc_content, path):
             for sub_content in c[1]:
                 import sys
                 path_to_file = path_to_folder + '/' + sub_content[0]
-                print("[generate_global_method]: {}".format(path_to_file), file=sys.stderr)
+                _debug("[generate_global_method]: {}".format(path_to_file))
                 with open(path_to_file, 'w') as f:
                     f.write(sub_content[1])
         else:
             path_to_file = path + '/' + c[0]
 
-            import sys
-            print("[generate_content]: {}".format(path_to_file), file=sys.stderr)
+            _debug("[generate_content]: {}".format(path_to_file))
             if not os.path.isdir(path_to_file):
                 try:
                     os.mkdir(path)
