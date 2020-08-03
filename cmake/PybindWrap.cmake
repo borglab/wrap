@@ -197,7 +197,12 @@ function(create_symlinks source_folder dest_folder)
        "${source_folder}/*")
   foreach(path_file ${files})
     get_filename_component(folder ${path_file} PATH)
-
+    get_filename_component(ext ${path_file} EXT)
+    set(ignored_ext ".tpl" ".h")
+    list (FIND ignored_ext "${ext}" _index)
+    if (${_index} GREATER -1)
+      continue()
+    endif ()
     # Create REAL folder
     file(MAKE_DIRECTORY "${dest_folder}")
 
