@@ -8,7 +8,7 @@
 %norm() : returns double
 %
 %-------Static Methods-------
-%StaticFunctionRet(double z) : returns gtsam::Point3
+%StaticFunctionRet(double z) : returns Point3
 %staticFunction() : returns double
 %
 %-------Serialization Interface-------
@@ -27,7 +27,7 @@ classdef Point3 < handle
       elseif nargin == 3 && isa(varargin{1},'double') && isa(varargin{2},'double') && isa(varargin{3},'double')
         my_ptr = geometry_wrapper(13, varargin{1}, varargin{2}, varargin{3});
       else
-        error('Arguments do not match any overload of gtsamPoint3 constructor');
+        error('Arguments do not match any overload of gtsam.Point3 constructor');
       end
       obj.ptr_gtsamPoint3 = my_ptr;
     end
@@ -47,7 +47,7 @@ classdef Point3 < handle
         varargout{1} = geometry_wrapper(15, this, varargin{:});
         return
       end
-      error('Arguments do not match any overload of function {class_name}.{method_name}');
+      error('Arguments do not match any overload of function gtsam.Point3.norm');
     end
 
     function varargout = string_serialize(this, varargin)
@@ -68,14 +68,14 @@ classdef Point3 < handle
 
   methods(Static = true)
     function varargout = StaticFunctionRet(varargin)
-      % STATICFUNCTIONRET usage: StaticFunctionRet(double z) : returns gtsam::Point3
+      % STATICFUNCTIONRET usage: StaticFunctionRet(double z) : returns Point3
       % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
-      if length(varargin) == 1
+      if length(varargin) == 1 && isa(varargin{1},'double')
         varargout{1} = geometry_wrapper(17, varargin{:});
         return
       end
 
-      error('Arguments do not match any overload of function {class_name}.{method_name}');
+      error('Arguments do not match any overload of function Point3.StaticFunctionRet');
     end
 
     function varargout = StaticFunction(varargin)
@@ -86,7 +86,7 @@ classdef Point3 < handle
         return
       end
 
-      error('Arguments do not match any overload of function {class_name}.{method_name}');
+      error('Arguments do not match any overload of function Point3.staticFunction');
     end
 
     function varargout = string_deserialize(varargin)
