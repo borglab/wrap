@@ -118,6 +118,8 @@ virtual class MyTemplate : MyBase {
   pair<T*,T*> create_ptrs () const;
   pair<T ,T*> create_MixedPtrs () const;
   pair<T*,T*> return_ptrs (T* p1, T* p2) const;
+
+  static This Level(const T& K);
 };
 
 // A doubly templated class

@@ -29,7 +29,7 @@ classdef Point2 < handle
       elseif nargin == 2 && isa(varargin{1},'double') && isa(varargin{2},'double')
         my_ptr = geometry_wrapper(2, varargin{1}, varargin{2});
       else
-        error('Arguments do not match any overload of gtsamPoint2 constructor');
+        error('Arguments do not match any overload of gtsam.Point2 constructor');
       end
       obj.ptr_gtsamPoint2 = my_ptr;
     end
@@ -45,21 +45,21 @@ classdef Point2 < handle
     function varargout = argChar(this, varargin)
       % ARGCHAR usage: argChar(char a) : returns void
       % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
-      if length(varargin) == 1
+      if length(varargin) == 1 && isa(varargin{1},'char')
         geometry_wrapper(4, this, varargin{:});
         return
       end
-      error('Arguments do not match any overload of function {class_name}.{method_name}');
+      error('Arguments do not match any overload of function gtsam.Point2.argChar');
     end
 
     function varargout = argUChar(this, varargin)
       % ARGUCHAR usage: argUChar(unsigned char a) : returns void
       % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
-      if length(varargin) == 1
+      if length(varargin) == 1 && isa(varargin{1},'unsigned char')
         geometry_wrapper(5, this, varargin{:});
         return
       end
-      error('Arguments do not match any overload of function {class_name}.{method_name}');
+      error('Arguments do not match any overload of function gtsam.Point2.argUChar');
     end
 
     function varargout = dim(this, varargin)
@@ -69,7 +69,7 @@ classdef Point2 < handle
         varargout{1} = geometry_wrapper(6, this, varargin{:});
         return
       end
-      error('Arguments do not match any overload of function {class_name}.{method_name}');
+      error('Arguments do not match any overload of function gtsam.Point2.dim');
     end
 
     function varargout = eigenArguments(this, varargin)
@@ -79,7 +79,7 @@ classdef Point2 < handle
         geometry_wrapper(7, this, varargin{:});
         return
       end
-      error('Arguments do not match any overload of function {class_name}.{method_name}');
+      error('Arguments do not match any overload of function gtsam.Point2.eigenArguments');
     end
 
     function varargout = returnChar(this, varargin)
@@ -89,7 +89,7 @@ classdef Point2 < handle
         varargout{1} = geometry_wrapper(8, this, varargin{:});
         return
       end
-      error('Arguments do not match any overload of function {class_name}.{method_name}');
+      error('Arguments do not match any overload of function gtsam.Point2.returnChar');
     end
 
     function varargout = vectorConfusion(this, varargin)
@@ -99,7 +99,7 @@ classdef Point2 < handle
         varargout{1} = geometry_wrapper(9, this, varargin{:});
         return
       end
-      error('Arguments do not match any overload of function {class_name}.{method_name}');
+      error('Arguments do not match any overload of function gtsam.Point2.vectorConfusion');
     end
 
     function varargout = x(this, varargin)
@@ -109,7 +109,7 @@ classdef Point2 < handle
         varargout{1} = geometry_wrapper(10, this, varargin{:});
         return
       end
-      error('Arguments do not match any overload of function {class_name}.{method_name}');
+      error('Arguments do not match any overload of function gtsam.Point2.x');
     end
 
     function varargout = y(this, varargin)
@@ -119,7 +119,7 @@ classdef Point2 < handle
         varargout{1} = geometry_wrapper(11, this, varargin{:});
         return
       end
-      error('Arguments do not match any overload of function {class_name}.{method_name}');
+      error('Arguments do not match any overload of function gtsam.Point2.y');
     end
 
   end

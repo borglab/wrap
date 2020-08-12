@@ -1,7 +1,7 @@
 import interface_parser as parser
 
 
-def instantiate_type(ctype, template_typenames, instantiations, cpp_typename):
+def instantiate_type(ctype, template_typenames, instantiations, cpp_typename, instantiated_class=None):
     """
     Instantiate template typename for @p ctype.
     @return If ctype's name is in the @p template_typenames, return the
@@ -20,6 +20,17 @@ def instantiate_type(ctype, template_typenames, instantiations, cpp_typename):
             is_basis=ctype.is_basis,
         )
     elif str_arg_typename == 'This':
+        # import sys
+        if instantiated_class:
+            name = instantiated_class.original.name
+            namespaces_name = instantiated_class.namespaces()
+            namespaces_name.append(name)
+            # print("INST: {}, {}, CPP: {}, CLS: {}".format(
+            #     ctype, instantiations, cpp_typename, instantiated_class.instantiations
+            # ), file=sys.stderr)
+            cpp_typename = parser.Typename(
+                namespaces_name, instantiations=[inst for inst in instantiated_class.instantiations]
+            )
         return parser.Type(
             typename=cpp_typename,
             is_const=ctype.is_const,
@@ -58,13 +69,13 @@ def instantiate_args_list(args_list, template_typenames, instantiations,
 
 
 def instantiate_return_type(return_type, template_typenames, instantiations,
-                            cpp_typename):
+                            cpp_typename, instantiated_class=None):
     new_type1 = instantiate_type(
-        return_type.type1, template_typenames, instantiations, cpp_typename)
+        return_type.type1, template_typenames, instantiations, cpp_typename, instantiated_class=instantiated_class)
     if return_type.type2:
         new_type2 = instantiate_type(
             return_type.type2, template_typenames, instantiations,
-            cpp_typename)
+            cpp_typename, instantiated_class=instantiated_class)
     else:
         new_type2 = ''
     return parser.ReturnType(new_type1, new_type2)
@@ -215,7 +226,7 @@ class InstantiatedClass(parser.Class):
                 static_method.args.args_list,
                 self.original.template.typenames,
                 self.instantiations,
-                self.cpp_typename(),
+                self.cpp_typename()
             )
             instantiated_static_methods.append(
                 parser.StaticMethod(
@@ -225,6 +236,7 @@ class InstantiatedClass(parser.Class):
                         self.original.template.typenames,
                         self.instantiations,
                         self.cpp_typename(),
+                        instantiated_class=self
                     ),
                     args=parser.ArgumentList(instantiated_args),
                     parent=self,

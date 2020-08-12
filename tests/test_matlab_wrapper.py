@@ -106,44 +106,34 @@ class TestWrap(unittest.TestCase):
 
         self._generate_content(cc_content)
 
-        self.assertTrue(os.path.isdir(self.MATLAB_ACTUAL_DIR + '+gtsam'))
-        self.assertTrue(filecmp.cmp(
-            self.MATLAB_ACTUAL_DIR + '+gtsam/Point2.m',
-            self.MATLAB_TEST_DIR + '+gtsam/Point2.m'))
-        self.assertTrue(filecmp.cmp(
-            self.MATLAB_ACTUAL_DIR + '+gtsam/Point3.m',
-            self.MATLAB_TEST_DIR + '+gtsam/Point3.m'))
-        self.assertTrue(filecmp.cmp(
-            self.MATLAB_ACTUAL_DIR + 'Test.m',
-            self.MATLAB_TEST_DIR + 'Test.m'))
-        self.assertTrue(filecmp.cmp(
-            self.MATLAB_ACTUAL_DIR + 'MyBase.m',
-            self.MATLAB_TEST_DIR + 'MyBase.m'))
-        self.assertTrue(filecmp.cmp(
-            self.MATLAB_ACTUAL_DIR + 'MyTemplatePoint2.m',
-            self.MATLAB_TEST_DIR + 'MyTemplatePoint2.m'))
-        self.assertTrue(filecmp.cmp(
-            self.MATLAB_ACTUAL_DIR + 'MyTemplateMatrix.m',
-            self.MATLAB_TEST_DIR + 'MyTemplateMatrix.m'))
-        self.assertTrue(filecmp.cmp(
-            self.MATLAB_ACTUAL_DIR + 'MyVector3.m',
-            self.MATLAB_TEST_DIR + 'MyVector3.m'))
-        self.assertTrue(filecmp.cmp(
-            self.MATLAB_ACTUAL_DIR + 'MyVector12.m',
-            self.MATLAB_TEST_DIR + 'MyVector12.m'))
-        self.assertTrue(filecmp.cmp(
-            self.MATLAB_ACTUAL_DIR + 'MyFactorPosePoint2.m',
-            self.MATLAB_TEST_DIR + 'MyFactorPosePoint2.m'))
-        self.assertTrue(filecmp.cmp(
-            self.MATLAB_ACTUAL_DIR + 'aGlobalFunction.m',
-            self.MATLAB_TEST_DIR + 'aGlobalFunction.m'))
-        self.assertTrue(filecmp.cmp(
-            self.MATLAB_ACTUAL_DIR + 'overloadedGlobalFunction.m',
-            self.MATLAB_TEST_DIR + 'overloadedGlobalFunction.m'))
-        self.assertTrue(filecmp.cmp(
-            self.MATLAB_ACTUAL_DIR + 'geometry_wrapper.cpp',
-            self.MATLAB_TEST_DIR + 'geometry_wrapper.cpp'))
+        def compare_and_diff(file):
+            output = self.MATLAB_ACTUAL_DIR + file
+            expected = self.MATLAB_TEST_DIR + file
+            success = filecmp.cmp(output, expected)
+            if not success:
+                print("Differ in file: {}".format(file))
+                os.system("diff {} {}".format(output, expected))
+            self.assertTrue(success)
 
+        self.assertTrue(os.path.isdir(self.MATLAB_ACTUAL_DIR + '+gtsam'))
+
+        files = [
+            '+gtsam/Point2.m',
+            '+gtsam/Point3.m',
+            'Test.m',
+            'MyBase.m',
+            'MyTemplatePoint2.m',
+            'MyTemplateMatrix.m',
+            'MyVector3.m',
+            'MyVector12.m',
+            'MyFactorPosePoint2.m',
+            'aGlobalFunction.m',
+            'overloadedGlobalFunction.m',
+            'geometry_wrapper.cpp'
+        ]
+
+        for file in files:
+            compare_and_diff(file)
 
 if __name__ == '__main__':
     unittest.main()

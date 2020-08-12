@@ -10,7 +10,7 @@
 %create_MixedPtrs() : returns pair< Test, Test >
 %create_ptrs() : returns pair< Test, Test >
 %print() : returns void
-%return_Point2Ptr(bool value) : returns gtsam::Point2
+%return_Point2Ptr(bool value) : returns Point2
 %return_Test(Test value) : returns Test
 %return_TestPtr(Test value) : returns Test
 %return_bool(bool value) : returns bool
@@ -60,7 +60,7 @@ classdef Test < handle
         geometry_wrapper(24, this, varargin{:});
         return
       end
-      error('Arguments do not match any overload of function {class_name}.{method_name}');
+      error('Arguments do not match any overload of function Test.arg_EigenConstRef');
     end
 
     function varargout = create_MixedPtrs(this, varargin)
@@ -70,7 +70,7 @@ classdef Test < handle
         [ varargout{1} varargout{2} ] = geometry_wrapper(25, this, varargin{:});
         return
       end
-      error('Arguments do not match any overload of function {class_name}.{method_name}');
+      error('Arguments do not match any overload of function Test.create_MixedPtrs');
     end
 
     function varargout = create_ptrs(this, varargin)
@@ -80,7 +80,7 @@ classdef Test < handle
         [ varargout{1} varargout{2} ] = geometry_wrapper(26, this, varargin{:});
         return
       end
-      error('Arguments do not match any overload of function {class_name}.{method_name}');
+      error('Arguments do not match any overload of function Test.create_ptrs');
     end
 
     function varargout = print(this, varargin)
@@ -90,17 +90,17 @@ classdef Test < handle
         geometry_wrapper(27, this, varargin{:});
         return
       end
-      error('Arguments do not match any overload of function {class_name}.{method_name}');
+      error('Arguments do not match any overload of function Test.print');
     end
 
     function varargout = return_Point2Ptr(this, varargin)
-      % RETURN_POINT2PTR usage: return_Point2Ptr(bool value) : returns gtsam::Point2
+      % RETURN_POINT2PTR usage: return_Point2Ptr(bool value) : returns Point2
       % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
-      if length(varargin) == 1
+      if length(varargin) == 1 && isa(varargin{1},'logical')
         varargout{1} = geometry_wrapper(28, this, varargin{:});
         return
       end
-      error('Arguments do not match any overload of function {class_name}.{method_name}');
+      error('Arguments do not match any overload of function Test.return_Point2Ptr');
     end
 
     function varargout = return_Test(this, varargin)
@@ -110,7 +110,7 @@ classdef Test < handle
         varargout{1} = geometry_wrapper(29, this, varargin{:});
         return
       end
-      error('Arguments do not match any overload of function {class_name}.{method_name}');
+      error('Arguments do not match any overload of function Test.return_Test');
     end
 
     function varargout = return_TestPtr(this, varargin)
@@ -120,27 +120,27 @@ classdef Test < handle
         varargout{1} = geometry_wrapper(30, this, varargin{:});
         return
       end
-      error('Arguments do not match any overload of function {class_name}.{method_name}');
+      error('Arguments do not match any overload of function Test.return_TestPtr');
     end
 
     function varargout = return_bool(this, varargin)
       % RETURN_BOOL usage: return_bool(bool value) : returns bool
       % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
-      if length(varargin) == 1
+      if length(varargin) == 1 && isa(varargin{1},'logical')
         varargout{1} = geometry_wrapper(31, this, varargin{:});
         return
       end
-      error('Arguments do not match any overload of function {class_name}.{method_name}');
+      error('Arguments do not match any overload of function Test.return_bool');
     end
 
     function varargout = return_double(this, varargin)
       % RETURN_DOUBLE usage: return_double(double value) : returns double
       % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
-      if length(varargin) == 1
+      if length(varargin) == 1 && isa(varargin{1},'double')
         varargout{1} = geometry_wrapper(32, this, varargin{:});
         return
       end
-      error('Arguments do not match any overload of function {class_name}.{method_name}');
+      error('Arguments do not match any overload of function Test.return_double');
     end
 
     function varargout = return_field(this, varargin)
@@ -150,17 +150,17 @@ classdef Test < handle
         varargout{1} = geometry_wrapper(33, this, varargin{:});
         return
       end
-      error('Arguments do not match any overload of function {class_name}.{method_name}');
+      error('Arguments do not match any overload of function Test.return_field');
     end
 
     function varargout = return_int(this, varargin)
       % RETURN_INT usage: return_int(int value) : returns int
       % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
-      if length(varargin) == 1
+      if length(varargin) == 1 && isa(varargin{1},'numeric')
         varargout{1} = geometry_wrapper(34, this, varargin{:});
         return
       end
-      error('Arguments do not match any overload of function {class_name}.{method_name}');
+      error('Arguments do not match any overload of function Test.return_int');
     end
 
     function varargout = return_matrix1(this, varargin)
@@ -170,7 +170,7 @@ classdef Test < handle
         varargout{1} = geometry_wrapper(35, this, varargin{:});
         return
       end
-      error('Arguments do not match any overload of function {class_name}.{method_name}');
+      error('Arguments do not match any overload of function Test.return_matrix1');
     end
 
     function varargout = return_matrix2(this, varargin)
@@ -180,7 +180,7 @@ classdef Test < handle
         varargout{1} = geometry_wrapper(36, this, varargin{:});
         return
       end
-      error('Arguments do not match any overload of function {class_name}.{method_name}');
+      error('Arguments do not match any overload of function Test.return_matrix2');
     end
 
     function varargout = return_pair(this, varargin)
@@ -190,7 +190,7 @@ classdef Test < handle
         [ varargout{1} varargout{2} ] = geometry_wrapper(37, this, varargin{:});
         return
       end
-      error('Arguments do not match any overload of function {class_name}.{method_name}');
+      error('Arguments do not match any overload of function Test.return_pair');
     end
 
     function varargout = return_ptrs(this, varargin)
@@ -200,17 +200,17 @@ classdef Test < handle
         [ varargout{1} varargout{2} ] = geometry_wrapper(38, this, varargin{:});
         return
       end
-      error('Arguments do not match any overload of function {class_name}.{method_name}');
+      error('Arguments do not match any overload of function Test.return_ptrs');
     end
 
     function varargout = return_size_t(this, varargin)
       % RETURN_SIZE_T usage: return_size_t(size_t value) : returns size_t
       % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
-      if length(varargin) == 1
+      if length(varargin) == 1 && isa(varargin{1},'numeric')
         varargout{1} = geometry_wrapper(39, this, varargin{:});
         return
       end
-      error('Arguments do not match any overload of function {class_name}.{method_name}');
+      error('Arguments do not match any overload of function Test.return_size_t');
     end
 
     function varargout = return_string(this, varargin)
@@ -220,7 +220,7 @@ classdef Test < handle
         varargout{1} = geometry_wrapper(40, this, varargin{:});
         return
       end
-      error('Arguments do not match any overload of function {class_name}.{method_name}');
+      error('Arguments do not match any overload of function Test.return_string');
     end
 
     function varargout = return_vector1(this, varargin)
@@ -230,7 +230,7 @@ classdef Test < handle
         varargout{1} = geometry_wrapper(41, this, varargin{:});
         return
       end
-      error('Arguments do not match any overload of function {class_name}.{method_name}');
+      error('Arguments do not match any overload of function Test.return_vector1');
     end
 
     function varargout = return_vector2(this, varargin)
@@ -240,7 +240,7 @@ classdef Test < handle
         varargout{1} = geometry_wrapper(42, this, varargin{:});
         return
       end
-      error('Arguments do not match any overload of function {class_name}.{method_name}');
+      error('Arguments do not match any overload of function Test.return_vector2');
     end
 
   end
