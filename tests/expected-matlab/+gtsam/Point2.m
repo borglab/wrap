@@ -45,7 +45,7 @@ classdef Point2 < handle
     function varargout = argChar(this, varargin)
       % ARGCHAR usage: argChar(char a) : returns void
       % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
-      if length(varargin) == 1
+      if length(varargin) == 1 && isa(varargin{1},'char')
         geometry_wrapper(4, this, varargin{:});
         return
       end
@@ -55,7 +55,7 @@ classdef Point2 < handle
     function varargout = argUChar(this, varargin)
       % ARGUCHAR usage: argUChar(unsigned char a) : returns void
       % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
-      if length(varargin) == 1
+      if length(varargin) == 1 && isa(varargin{1},'unsigned char')
         geometry_wrapper(5, this, varargin{:});
         return
       end
