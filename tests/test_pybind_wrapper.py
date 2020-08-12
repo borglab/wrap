@@ -60,10 +60,12 @@ class TestWrap(unittest.TestCase):
         with open(output, 'w') as f:
             f.write(cc_content)
 
-        self.assertTrue(filecmp.cmp(
-            output,
-            path.join(self.TEST_DIR, 'expected-python/geometry_pybind.cpp'))
-        )
+        expected = path.join(self.TEST_DIR, 'expected-python/geometry_pybind.cpp')
+        success = filecmp.cmp(output, expected)
+
+        if not success:
+            os.system("diff {} {}".format(output, expected))
+        self.assertTrue(success)
 
 if __name__ == '__main__':
     unittest.main()

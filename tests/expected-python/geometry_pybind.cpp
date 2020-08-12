@@ -108,7 +108,8 @@ PYBIND11_MODULE(geometry_py, m_) {
         .def("return_T",[](MyTemplate<gtsam::Point2>* self,const std::shared_ptr<gtsam::Point2>& value){return self->return_T(value);}, py::arg("value"))
         .def("create_ptrs",[](MyTemplate<gtsam::Point2>* self){return self->create_ptrs();})
         .def("create_MixedPtrs",[](MyTemplate<gtsam::Point2>* self){return self->create_MixedPtrs();})
-        .def("return_ptrs",[](MyTemplate<gtsam::Point2>* self,const std::shared_ptr<gtsam::Point2>& p1,const std::shared_ptr<gtsam::Point2>& p2){return self->return_ptrs(p1, p2);}, py::arg("p1"), py::arg("p2"));
+        .def("return_ptrs",[](MyTemplate<gtsam::Point2>* self,const std::shared_ptr<gtsam::Point2>& p1,const std::shared_ptr<gtsam::Point2>& p2){return self->return_ptrs(p1, p2);}, py::arg("p1"), py::arg("p2"))
+        .def_static("Level",[](const gtsam::Point2& K){return MyTemplate<gtsam::Point2>::Level(K);}, py::arg("K"));
 
     py::class_<MyTemplate<gtsam::Matrix>, MyBase, std::shared_ptr<MyTemplate<gtsam::Matrix>>>(m_, "MyTemplateMatrix")
         .def(py::init<>())
@@ -122,7 +123,8 @@ PYBIND11_MODULE(geometry_py, m_) {
         .def("return_T",[](MyTemplate<gtsam::Matrix>* self,const std::shared_ptr<gtsam::Matrix>& value){return self->return_T(value);}, py::arg("value"))
         .def("create_ptrs",[](MyTemplate<gtsam::Matrix>* self){return self->create_ptrs();})
         .def("create_MixedPtrs",[](MyTemplate<gtsam::Matrix>* self){return self->create_MixedPtrs();})
-        .def("return_ptrs",[](MyTemplate<gtsam::Matrix>* self,const std::shared_ptr<gtsam::Matrix>& p1,const std::shared_ptr<gtsam::Matrix>& p2){return self->return_ptrs(p1, p2);}, py::arg("p1"), py::arg("p2"));
+        .def("return_ptrs",[](MyTemplate<gtsam::Matrix>* self,const std::shared_ptr<gtsam::Matrix>& p1,const std::shared_ptr<gtsam::Matrix>& p2){return self->return_ptrs(p1, p2);}, py::arg("p1"), py::arg("p2"))
+        .def_static("Level",[](const gtsam::Matrix& K){return MyTemplate<gtsam::Matrix>::Level(K);}, py::arg("K"));
 
     py::class_<MyVector<3>, std::shared_ptr<MyVector<3>>>(m_, "MyVector3")
         .def(py::init<>());
