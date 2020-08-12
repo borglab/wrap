@@ -11,6 +11,7 @@
 
 typedef MyTemplate<gtsam::Point2> MyTemplatePoint2;
 typedef MyTemplate<gtsam::Matrix> MyTemplateMatrix;
+typedef PrimitiveRef<double> PrimitiveRefdouble;
 typedef MyVector<3> MyVector3;
 typedef MyVector<12> MyVector12;
 typedef MyFactor<gtsam::Pose2, gtsam::Matrix> MyFactorPosePoint2;
@@ -30,6 +31,8 @@ typedef std::set<boost::shared_ptr<MyTemplatePoint2>*> Collector_MyTemplatePoint
 static Collector_MyTemplatePoint2 collector_MyTemplatePoint2;
 typedef std::set<boost::shared_ptr<MyTemplateMatrix>*> Collector_MyTemplateMatrix;
 static Collector_MyTemplateMatrix collector_MyTemplateMatrix;
+typedef std::set<boost::shared_ptr<PrimitiveRefdouble>*> Collector_PrimitiveRefdouble;
+static Collector_PrimitiveRefdouble collector_PrimitiveRefdouble;
 typedef std::set<boost::shared_ptr<MyVector3>*> Collector_MyVector3;
 static Collector_MyVector3 collector_MyVector3;
 typedef std::set<boost::shared_ptr<MyVector12>*> Collector_MyVector12;
@@ -77,6 +80,12 @@ void _deleteAllObjects()
       iter != collector_MyTemplateMatrix.end(); ) {
     delete *iter;
     collector_MyTemplateMatrix.erase(iter++);
+    anyDeleted = true;
+  } }
+  { for(Collector_PrimitiveRefdouble::iterator iter = collector_PrimitiveRefdouble.begin();
+      iter != collector_PrimitiveRefdouble.end(); ) {
+    delete *iter;
+    collector_PrimitiveRefdouble.erase(iter++);
     anyDeleted = true;
   } }
   { for(Collector_MyVector3::iterator iter = collector_MyVector3.begin();
@@ -893,7 +902,47 @@ void MyTemplateMatrix_Level_77(int nargout, mxArray *out[], int nargin, const mx
   out[0] = wrap_shared_ptr(boost::make_shared<MyTemplate<Matrix>>(MyTemplate<gtsam::Matrix>::Level(K)),"MyTemplateMatrix", false);
 }
 
-void MyVector3_collectorInsertAndMakeBase_78(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void PrimitiveRefdouble_collectorInsertAndMakeBase_78(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+{
+  mexAtExit(&_deleteAllObjects);
+  typedef boost::shared_ptr<PrimitiveRef<double>> Shared;
+
+  Shared *self = *reinterpret_cast<Shared**> (mxGetData(in[0]));
+  collector_PrimitiveRefdouble.insert(self);
+}
+
+void PrimitiveRefdouble_constructor_79(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+{
+  mexAtExit(&_deleteAllObjects);
+  typedef boost::shared_ptr<PrimitiveRef<double>> Shared;
+
+  Shared *self = new Shared(new PrimitiveRef<double>());
+  collector_PrimitiveRefdouble.insert(self);
+  out[0] = mxCreateNumericMatrix(1, 1, mxUINT32OR64_CLASS, mxREAL);
+  *reinterpret_cast<Shared**> (mxGetData(out[0])) = self;
+}
+
+void PrimitiveRefdouble_deconstructor_80(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+{
+  typedef boost::shared_ptr<PrimitiveRef<double>> Shared;
+  checkArguments("delete_PrimitiveRefdouble",nargout,nargin,1);
+  Shared *self = *reinterpret_cast<Shared**>(mxGetData(in[0]));
+  Collector_PrimitiveRefdouble::iterator item;
+  item = collector_PrimitiveRefdouble.find(self);
+  if(item != collector_PrimitiveRefdouble.end()) {
+    delete self;
+    collector_PrimitiveRefdouble.erase(item);
+  }
+}
+
+void PrimitiveRefdouble_Brutal_81(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+{
+  checkArguments("PrimitiveRefdouble.Brutal",nargout,nargin,1);
+  double t = unwrap< double >(in[0]);
+  out[0] = wrap_shared_ptr(boost::make_shared<PrimitiveRef<double>>(PrimitiveRef<double>::Brutal(t)),"PrimitiveRefdouble", false);
+}
+
+void MyVector3_collectorInsertAndMakeBase_82(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   mexAtExit(&_deleteAllObjects);
   typedef boost::shared_ptr<MyVector<3>> Shared;
@@ -902,7 +951,7 @@ void MyVector3_collectorInsertAndMakeBase_78(int nargout, mxArray *out[], int na
   collector_MyVector3.insert(self);
 }
 
-void MyVector3_constructor_79(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void MyVector3_constructor_83(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   mexAtExit(&_deleteAllObjects);
   typedef boost::shared_ptr<MyVector<3>> Shared;
@@ -913,7 +962,7 @@ void MyVector3_constructor_79(int nargout, mxArray *out[], int nargin, const mxA
   *reinterpret_cast<Shared**> (mxGetData(out[0])) = self;
 }
 
-void MyVector3_deconstructor_80(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void MyVector3_deconstructor_84(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   typedef boost::shared_ptr<MyVector<3>> Shared;
   checkArguments("delete_MyVector3",nargout,nargin,1);
@@ -926,7 +975,7 @@ void MyVector3_deconstructor_80(int nargout, mxArray *out[], int nargin, const m
   }
 }
 
-void MyVector12_collectorInsertAndMakeBase_81(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void MyVector12_collectorInsertAndMakeBase_85(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   mexAtExit(&_deleteAllObjects);
   typedef boost::shared_ptr<MyVector<12>> Shared;
@@ -935,7 +984,7 @@ void MyVector12_collectorInsertAndMakeBase_81(int nargout, mxArray *out[], int n
   collector_MyVector12.insert(self);
 }
 
-void MyVector12_constructor_82(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void MyVector12_constructor_86(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   mexAtExit(&_deleteAllObjects);
   typedef boost::shared_ptr<MyVector<12>> Shared;
@@ -946,7 +995,7 @@ void MyVector12_constructor_82(int nargout, mxArray *out[], int nargin, const mx
   *reinterpret_cast<Shared**> (mxGetData(out[0])) = self;
 }
 
-void MyVector12_deconstructor_83(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void MyVector12_deconstructor_87(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   typedef boost::shared_ptr<MyVector<12>> Shared;
   checkArguments("delete_MyVector12",nargout,nargin,1);
@@ -959,7 +1008,7 @@ void MyVector12_deconstructor_83(int nargout, mxArray *out[], int nargin, const 
   }
 }
 
-void MyFactorPosePoint2_collectorInsertAndMakeBase_84(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void MyFactorPosePoint2_collectorInsertAndMakeBase_88(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   mexAtExit(&_deleteAllObjects);
   typedef boost::shared_ptr<MyFactor<gtsam::Pose2, gtsam::Matrix>> Shared;
@@ -968,7 +1017,7 @@ void MyFactorPosePoint2_collectorInsertAndMakeBase_84(int nargout, mxArray *out[
   collector_MyFactorPosePoint2.insert(self);
 }
 
-void MyFactorPosePoint2_constructor_85(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void MyFactorPosePoint2_constructor_89(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   mexAtExit(&_deleteAllObjects);
   typedef boost::shared_ptr<MyFactor<gtsam::Pose2, gtsam::Matrix>> Shared;
@@ -983,7 +1032,7 @@ void MyFactorPosePoint2_constructor_85(int nargout, mxArray *out[], int nargin, 
   *reinterpret_cast<Shared**> (mxGetData(out[0])) = self;
 }
 
-void MyFactorPosePoint2_deconstructor_86(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void MyFactorPosePoint2_deconstructor_90(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   typedef boost::shared_ptr<MyFactor<gtsam::Pose2, gtsam::Matrix>> Shared;
   checkArguments("delete_MyFactorPosePoint2",nargout,nargin,1);
@@ -996,18 +1045,18 @@ void MyFactorPosePoint2_deconstructor_86(int nargout, mxArray *out[], int nargin
   }
 }
 
-void aGlobalFunction_87(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void aGlobalFunction_91(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   checkArguments("aGlobalFunction",nargout,nargin,0);
   out[0] = wrap< Vector >(aGlobalFunction());
 }
-void overloadedGlobalFunction_88(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void overloadedGlobalFunction_92(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   checkArguments("overloadedGlobalFunction",nargout,nargin,1);
   int a = unwrap< int >(in[0]);
   out[0] = wrap< Vector >(overloadedGlobalFunction(a));
 }
-void overloadedGlobalFunction_89(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void overloadedGlobalFunction_93(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   checkArguments("overloadedGlobalFunction",nargout,nargin,2);
   int a = unwrap< int >(in[0]);
@@ -1261,40 +1310,52 @@ void mexFunction(int nargout, mxArray *out[], int nargin, const mxArray *in[])
       MyTemplateMatrix_Level_77(nargout, out, nargin-1, in+1);
       break;
     case 78:
-      MyVector3_collectorInsertAndMakeBase_78(nargout, out, nargin-1, in+1);
+      PrimitiveRefdouble_collectorInsertAndMakeBase_78(nargout, out, nargin-1, in+1);
       break;
     case 79:
-      MyVector3_constructor_79(nargout, out, nargin-1, in+1);
+      PrimitiveRefdouble_constructor_79(nargout, out, nargin-1, in+1);
       break;
     case 80:
-      MyVector3_deconstructor_80(nargout, out, nargin-1, in+1);
+      PrimitiveRefdouble_deconstructor_80(nargout, out, nargin-1, in+1);
       break;
     case 81:
-      MyVector12_collectorInsertAndMakeBase_81(nargout, out, nargin-1, in+1);
+      PrimitiveRefdouble_Brutal_81(nargout, out, nargin-1, in+1);
       break;
     case 82:
-      MyVector12_constructor_82(nargout, out, nargin-1, in+1);
+      MyVector3_collectorInsertAndMakeBase_82(nargout, out, nargin-1, in+1);
       break;
     case 83:
-      MyVector12_deconstructor_83(nargout, out, nargin-1, in+1);
+      MyVector3_constructor_83(nargout, out, nargin-1, in+1);
       break;
     case 84:
-      MyFactorPosePoint2_collectorInsertAndMakeBase_84(nargout, out, nargin-1, in+1);
+      MyVector3_deconstructor_84(nargout, out, nargin-1, in+1);
       break;
     case 85:
-      MyFactorPosePoint2_constructor_85(nargout, out, nargin-1, in+1);
+      MyVector12_collectorInsertAndMakeBase_85(nargout, out, nargin-1, in+1);
       break;
     case 86:
-      MyFactorPosePoint2_deconstructor_86(nargout, out, nargin-1, in+1);
+      MyVector12_constructor_86(nargout, out, nargin-1, in+1);
       break;
     case 87:
-      aGlobalFunction_87(nargout, out, nargin-1, in+1);
+      MyVector12_deconstructor_87(nargout, out, nargin-1, in+1);
       break;
     case 88:
-      overloadedGlobalFunction_88(nargout, out, nargin-1, in+1);
+      MyFactorPosePoint2_collectorInsertAndMakeBase_88(nargout, out, nargin-1, in+1);
       break;
     case 89:
-      overloadedGlobalFunction_89(nargout, out, nargin-1, in+1);
+      MyFactorPosePoint2_constructor_89(nargout, out, nargin-1, in+1);
+      break;
+    case 90:
+      MyFactorPosePoint2_deconstructor_90(nargout, out, nargin-1, in+1);
+      break;
+    case 91:
+      aGlobalFunction_91(nargout, out, nargin-1, in+1);
+      break;
+    case 92:
+      overloadedGlobalFunction_92(nargout, out, nargin-1, in+1);
+      break;
+    case 93:
+      overloadedGlobalFunction_93(nargout, out, nargin-1, in+1);
       break;
     }
   } catch(const std::exception& e) {

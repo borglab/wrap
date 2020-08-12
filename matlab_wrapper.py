@@ -77,7 +77,7 @@ class MatlabWrapper(object):
         self.module_name = module_name
         self.top_module_namespace = top_module_namespace
         self.ignore_classes = ignore_classes
-        self.verbose = False
+        self.verbose = True
 
     def _debug(self, message):
         if not self.verbose:
@@ -149,6 +149,7 @@ class MatlabWrapper(object):
         reference in the wrapper.
         """
         return arg_type.typename.name not in self.ignore_namespace and \
+               arg_type.typename.name not in self.not_ptr_type and \
                arg_type.is_ref
 
     def _group_methods(self, methods):

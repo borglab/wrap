@@ -131,6 +131,13 @@ class MyFactor {
 // and a typedef specializing it
 typedef MyFactor<gtsam::Pose2, Matrix> MyFactorPosePoint2;
 
+template<T = {double}>
+class PrimitiveRef {
+  PrimitiveRef();
+
+  static This Brutal(const T& t);
+};
+
 // A class with integer template arguments
 template<N = {3,12}>
 class MyVector {
