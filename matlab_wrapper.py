@@ -50,7 +50,9 @@ class MatlabWrapper(object):
     """Methods that should not be wrapped directly"""
     whitelist = ['serializable', 'serialize']
     """Datatypes that do not need to be checked in methods"""
-    not_check_type = ['int', 'double', 'bool', 'char', 'unsigned char', 'size_t']
+    not_check_type = []
+    """Data types that are primitive types"""
+    not_ptr_type = ['int', 'double', 'bool', 'char', 'unsigned char', 'size_t']
     """Ignore the namespace for these datatypes"""
     ignore_namespace = ['Matrix', 'Vector', 'Point2', 'Point3']
     """The amount of times the wrapper has created a call to
@@ -75,7 +77,7 @@ class MatlabWrapper(object):
         self.module_name = module_name
         self.top_module_namespace = top_module_namespace
         self.ignore_classes = ignore_classes
-        self.verbose = True
+        self.verbose = False
 
     def _debug(self, message):
         if not self.verbose:
@@ -138,7 +140,7 @@ class MatlabWrapper(object):
         """Determine if the interface_parser.Type should be treated as a
         pointer in the wrapper.
         """
-        return arg_type.is_ptr or (arg_type.typename.name not in self.not_check_type
+        return arg_type.is_ptr or (arg_type.typename.name not in self.not_ptr_type
                                    and arg_type.typename.name not in self.ignore_namespace
                                    and arg_type.typename.name != 'string')
 
@@ -195,9 +197,10 @@ class MatlabWrapper(object):
 
         if include_namespace:
             for namespace in type_name.namespaces:
-                if name not in self.ignore_namespace:
+                if name not in self.ignore_namespace and namespace != '':
                     formatted_type_name += namespace + separator
 
+            #self._debug("formatted_ns: {}, ns: {}".format(formatted_type_name, type_name.namespaces))
         if constructor:
             formatted_type_name += self.data_type.get(name) or name
         elif method:
@@ -205,9 +208,21 @@ class MatlabWrapper(object):
         else:
             formatted_type_name += name
 
+        if len(type_name.instantiations) == 1:
+            if separator == "::":  # C++
+                formatted_type_name += '<{}>'.format(self._format_type_name(type_name.instantiations[0],
+                                                                            include_namespace=include_namespace,
+                                                                            constructor=constructor, method=method))
+            else:
+                formatted_type_name += '{}'.format(self._format_type_name(
+                    type_name.instantiations[0],
+                    separator=separator,
+                    include_namespace=False,
+                    constructor=constructor, method=method
+                ))
         return formatted_type_name
 
-    def _format_return_type(self, return_type, include_namespace=False):
+    def _format_return_type(self, return_type, include_namespace=False, separator="::"):
         """Format return_type.
 
         Args:
@@ -217,11 +232,19 @@ class MatlabWrapper(object):
         return_wrap = ''
 
         if self._return_count(return_type) == 1:
-            return_wrap = self._format_type_name(return_type.type1.typename, include_namespace=include_namespace)
+            return_wrap = self._format_type_name(
+                return_type.type1.typename,
+                separator=separator,
+                include_namespace=include_namespace
+            )
         else:
             return_wrap = 'pair< {type1}, {type2} >'.format(
-                type1=self._format_type_name(return_type.type1.typename, include_namespace=include_namespace),
-                type2=self._format_type_name(return_type.type2.typename, include_namespace=include_namespace))
+                type1=self._format_type_name(
+                    return_type.type1.typename, separator=separator, include_namespace=include_namespace
+                ),
+                type2=self._format_type_name(
+                    return_type.type2.typename, separator=separator, include_namespace=include_namespace
+                ))
 
         return return_wrap
 
@@ -238,10 +261,10 @@ class MatlabWrapper(object):
         #
         # class_name += instantiated_class.name
         parentname = "".join([separator + x for x in parent_full_ns]) + separator
+
         class_name = parentname[2 * len(separator):]
 
-        if class_name != '':
-            class_name += instantiated_class.name
+        class_name += instantiated_class.name
 
         return class_name
 
@@ -322,6 +345,9 @@ class MatlabWrapper(object):
 
             check_type = self.data_type_param.get(name)
 
+            if self.data_type.get(check_type):
+                check_type = self.data_type[check_type]
+
             if check_type is None:
                 check_type = self._format_type_name(arg.ctype.typename, separator='.', constructor=not wrap_datatypes)
 
@@ -378,6 +404,9 @@ class MatlabWrapper(object):
                 continue
 
             check_type = self.data_type_param.get(name)
+
+            if self.data_type.get(check_type):
+                check_type = self.data_type[check_type]
 
             if check_type is None:
                 check_type = self._format_type_name(arg.ctype.typename, separator='.')
@@ -717,15 +746,17 @@ class MatlabWrapper(object):
         if base_obj:
             base_obj = '\n' + base_obj
 
+        self._debug("class: {}, name: {}".format(inst_class.name, self._format_class_name(inst_class, separator=".")))
         methods_wrap += textwrap.indent(textwrap.dedent('''\
               else
-                error('Arguments do not match any overload of {class_name} constructor');
+                error('Arguments do not match any overload of {class_name_doc} constructor');
               end{base_obj}
               obj.ptr_{class_name} = my_ptr;
             end\n
         ''').format(namespace=namespace_name,
                     d='' if namespace_name == '' else '.',
-                    class_name="".join(inst_class.parent.full_namespaces()) + class_name,
+                    class_name_doc=self._format_class_name(inst_class, separator="."),
+                    class_name=self._format_class_name(inst_class, separator=""),
                     base_obj=base_obj),
                                         prefix='  ')
 
@@ -817,7 +848,7 @@ class MatlabWrapper(object):
                                                    prefix='  ')
 
                     # Determine format of return and varargout statements
-                    return_type = self._format_return_type(overload.return_type, include_namespace=True)
+                    return_type = self._format_return_type(overload.return_type, include_namespace=True, separator=".")
 
                     if self._return_count(overload.return_type) == 1:
                         varargout = '' \
@@ -854,7 +885,7 @@ class MatlabWrapper(object):
 
                 final_statement = textwrap.indent(textwrap.dedent("""\
                     error('Arguments do not match any overload of function {class_name}.{method_name}');
-                """),
+                """.format(class_name=class_name, method_name=method_name)),
                                                   prefix='  ')
                 method_text += final_statement + 'end\n\n'
 
@@ -895,7 +926,7 @@ class MatlabWrapper(object):
                                   name_upper_case=static_overload.name,
                                   args=self._wrap_args(static_overload.args),
                                   return_type=self._format_return_type(static_overload.return_type,
-                                                                       include_namespace=True),
+                                                                       include_namespace=True, separator="."),
                                   length=len(static_overload.args.args_list),
                                   var_args_list=self._wrap_variable_arguments(static_overload.args),
                                   check_statement=check_statement,
@@ -909,7 +940,7 @@ class MatlabWrapper(object):
 
             method_text += textwrap.indent(textwrap.dedent("""\
                     error('Arguments do not match any overload of function {class_name}.{method_name}');
-                """),
+                """.format(class_name=class_name, method_name=static_overload.name)),
                                            prefix='    ')
             method_text += textwrap.indent(textwrap.dedent('''\
                                     end\n
@@ -1161,11 +1192,9 @@ class MatlabWrapper(object):
                         shared_obj = '{obj},"{method_name_sep}"'.format(obj=obj, method_name_sep=sep_method_name('.'))
                     else:
                         self._debug("Non-PTR: {}, {}".format(return_1, type(return_1)))
-                        # FIXME: This is a very dirty hack!!!
-                        if isinstance(return_1, instantiator.InstantiatedClass):
-                            method_name_sep_dot = "".join(return_1.parent.full_namespaces()) + return_1.name
-                        else:
-                            method_name_sep_dot = sep_method_name('.')
+                        self._debug("Inner type is: {}, {}".format(return_1.typename.name, sep_method_name('.')))
+                        self._debug("Inner type instantiations: {}".format(return_1.typename.instantiations))
+                        method_name_sep_dot = sep_method_name('.')
                         shared_obj = 'boost::make_shared<{method_name_sep_col}>({obj}),"{method_name_sep_dot}"' \
                             .format(
                             method_name=return_1.typename.name,
@@ -1427,7 +1456,7 @@ class MatlabWrapper(object):
               bool anyDeleted = false;
         ''')
         rtti_reg_start = textwrap.dedent('''\
-            void _gtsam_RTTIRegister() {{
+            void _{module_name}_RTTIRegister() {{
               const mxArray *alreadyCreated = mexGetVariablePtr("global", "gtsam_{module_name}_rttiRegistry_created");
               if(!alreadyCreated) {{
                 std::map<std::string, std::string> types;

@@ -86,14 +86,17 @@ class Typename(object):
         )
     ).setParseAction(lambda t: Typename(t.namespaces_name, t.instantiations))
 
-    def __init__(self, namespaces_name, instantiations=''):
+    def __init__(self, namespaces_name, instantiations=[]):
         self.namespaces = namespaces_name[:-1]
         self.name = namespaces_name[-1]
 
         if instantiations:
-            self.instantiations = instantiations.asList()
+            if not isinstance(instantiations, list):
+                self.instantiations = instantiations.asList()
+            else:
+                self.instantiations = instantiations
         else:
-            self.instantiations = ''
+            self.instantiations = []
         if self.name in ["Matrix", "Vector"] and not self.namespaces:
             self.namespaces = ["gtsam"]
 
