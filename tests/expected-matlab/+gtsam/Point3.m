@@ -1,5 +1,5 @@
 %class Point3, see Doxygen page for details
-%at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
+%at https://gtsam.org/doxygen/
 %
 %-------Constructors-------
 %Point3(double x, double y, double z)
@@ -42,7 +42,7 @@ classdef Point3 < handle
     %DISP Calls print on the object
     function varargout = norm(this, varargin)
       % NORM usage: norm() : returns double
-      % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
+      % Doxygen can be found at https://gtsam.org/doxygen/
       if length(varargin) == 0
         varargout{1} = geometry_wrapper(15, this, varargin{:});
         return
@@ -52,7 +52,7 @@ classdef Point3 < handle
 
     function varargout = string_serialize(this, varargin)
       % STRING_SERIALIZE usage: string_serialize() : returns string
-      % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
+      % Doxygen can be found at https://gtsam.org/doxygen/
       if length(varargin) == 0
         varargout{1} = geometry_wrapper(16, this, varargin{:});
       else
@@ -69,7 +69,7 @@ classdef Point3 < handle
   methods(Static = true)
     function varargout = StaticFunctionRet(varargin)
       % STATICFUNCTIONRET usage: StaticFunctionRet(double z) : returns Point3
-      % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
+      % Doxygen can be found at https://gtsam.org/doxygen/
       if length(varargin) == 1 && isa(varargin{1},'double')
         varargout{1} = geometry_wrapper(17, varargin{:});
         return
@@ -80,7 +80,7 @@ classdef Point3 < handle
 
     function varargout = StaticFunction(varargin)
       % STATICFUNCTION usage: staticFunction() : returns double
-      % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
+      % Doxygen can be found at https://gtsam.org/doxygen/
       if length(varargin) == 0
         varargout{1} = geometry_wrapper(18, varargin{:});
         return
@@ -91,7 +91,7 @@ classdef Point3 < handle
 
     function varargout = string_deserialize(varargin)
       % STRING_DESERIALIZE usage: string_deserialize() : returns gtsam.Point3
-      % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
+      % Doxygen can be found at https://gtsam.org/doxygen/
       if length(varargin) == 1
         varargout{1} = geometry_wrapper(19, varargin{:});
       else

@@ -178,7 +178,8 @@ class MatlabWrapper(object):
 
         return instantiated_class.name
 
-    def _format_type_name(self, type_name, separator='::', include_namespace=True, constructor=False, method=False):
+    @classmethod
+    def _format_type_name(cls, type_name, separator='::', include_namespace=True, constructor=False, method=False):
         """
         Args:
             type_name: an interface_parser.Typename to reformat
@@ -198,24 +199,24 @@ class MatlabWrapper(object):
 
         if include_namespace:
             for namespace in type_name.namespaces:
-                if name not in self.ignore_namespace and namespace != '':
+                if name not in cls.ignore_namespace and namespace != '':
                     formatted_type_name += namespace + separator
 
             #self._debug("formatted_ns: {}, ns: {}".format(formatted_type_name, type_name.namespaces))
         if constructor:
-            formatted_type_name += self.data_type.get(name) or name
+            formatted_type_name += cls.data_type.get(name) or name
         elif method:
-            formatted_type_name += self.data_type_param.get(name) or name
+            formatted_type_name += cls.data_type_param.get(name) or name
         else:
             formatted_type_name += name
 
         if len(type_name.instantiations) == 1:
             if separator == "::":  # C++
-                formatted_type_name += '<{}>'.format(self._format_type_name(type_name.instantiations[0],
+                formatted_type_name += '<{}>'.format(cls._format_type_name(type_name.instantiations[0],
                                                                             include_namespace=include_namespace,
                                                                             constructor=constructor, method=method))
             else:
-                formatted_type_name += '{}'.format(self._format_type_name(
+                formatted_type_name += '{}'.format(cls._format_type_name(
                     type_name.instantiations[0],
                     separator=separator,
                     include_namespace=False,
@@ -223,7 +224,8 @@ class MatlabWrapper(object):
                 ))
         return formatted_type_name
 
-    def _format_return_type(self, return_type, include_namespace=False, separator="::"):
+    @classmethod
+    def _format_return_type(cls, return_type, include_namespace=False, separator="::"):
         """Format return_type.
 
         Args:
@@ -232,18 +234,18 @@ class MatlabWrapper(object):
         """
         return_wrap = ''
 
-        if self._return_count(return_type) == 1:
-            return_wrap = self._format_type_name(
+        if cls._return_count(return_type) == 1:
+            return_wrap = cls._format_type_name(
                 return_type.type1.typename,
                 separator=separator,
                 include_namespace=include_namespace
             )
         else:
             return_wrap = 'pair< {type1}, {type2} >'.format(
-                type1=self._format_type_name(
+                type1=cls._format_type_name(
                     return_type.type1.typename, separator=separator, include_namespace=include_namespace
                 ),
-                type2=self._format_type_name(
+                type2=cls._format_type_name(
                     return_type.type2.typename, separator=separator, include_namespace=include_namespace
                 ))
 
@@ -482,7 +484,8 @@ class MatlabWrapper(object):
 
         return params, body_args
 
-    def _return_count(self, return_type):
+    @staticmethod
+    def _return_count(return_type):
         """The amount of objects returned by the given
         interface_parser.ReturnType.
         """
@@ -532,7 +535,7 @@ class MatlabWrapper(object):
 
         comment = textwrap.dedent('''\
             %class {class_name}, see Doxygen page for details
-            %at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
+            %at https://gtsam.org/doxygen/
         ''').format(class_name=class_name)
 
         if len(ctors) != 0:
@@ -620,25 +623,32 @@ class MatlabWrapper(object):
         if not isinstance(function, list):
             function = [function]
 
-        m_method = function[0].name
+        function_name = function[0].name
 
         # Get all combinations of parameters
-        param_list = [m.args for m in function]
         param_wrap = ''
 
-        for i, p in enumerate(param_list):
+        for i, overload in enumerate(function):
             param_wrap += '      if' if i == 0 else '      elseif'
             param_wrap += ' length(varargin) == '
 
-            if len(p.args_list) == 0:
+            if len(overload.args.args_list) == 0:
                 param_wrap += '0\n'
             else:
-                param_wrap += str(len(p.args_list)) \
-                              + self._wrap_variable_arguments(p, False) + '\n'
+                param_wrap += str(len(overload.args.args_list)) \
+                              + self._wrap_variable_arguments(overload.args, False) + '\n'
+
+            # Determine format of return and varargout statements
+            return_type_formatted = self._format_return_type(
+                overload.return_type,
+                include_namespace=True,
+                separator="."
+            )
+            varargout = self._format_varargout(overload.return_type, return_type_formatted)
 
             param_wrap += textwrap.indent(textwrap.dedent('''\
-                varargout{{1}} = {module_name}_wrapper({num}, varargin{{:}});
-            ''').format(module_name=self.module_name,
+                {varargout}{module_name}_wrapper({num}, varargin{{:}});
+            ''').format(varargout=varargout, module_name=self.module_name,
                         num=self._update_wrapper_id(collector_function=(function[0].parent.name, function[i],
                                                                         'global_function', None))),
                                           prefix='        ')
@@ -646,13 +656,13 @@ class MatlabWrapper(object):
         param_wrap += textwrap.indent(textwrap.dedent('''\
             else
               error('Arguments do not match any overload of function {func_name}');
-        ''').format(func_name=m_method),
+        ''').format(func_name=function_name),
                                       prefix='      ')
 
         global_function = textwrap.indent(textwrap.dedent('''\
             function varargout = {m_method}(varargin)
             {statements}      end
-        ''').format(m_method=m_method, statements=param_wrap),
+        ''').format(m_method=function_name, statements=param_wrap),
                                           prefix='')
 
         return global_function
@@ -814,6 +824,18 @@ class MatlabWrapper(object):
 
         return method_out
 
+    @classmethod
+    def _format_varargout(cls, return_type, return_type_formatted):
+        """Determine format of return and varargout statements"""
+        if cls._return_count(return_type) == 1:
+            varargout = '' \
+                if return_type_formatted == 'void' \
+                else 'varargout{1} = '
+        else:
+            varargout = '[ varargout{1} varargout{2} ] = '
+
+        return varargout
+
     def wrap_class_methods(self, namespace_name, inst_class, methods, serialize=[False]):
         """Wrap the methods in the class.
 
@@ -849,14 +871,12 @@ class MatlabWrapper(object):
                                                    prefix='  ')
 
                     # Determine format of return and varargout statements
-                    return_type = self._format_return_type(overload.return_type, include_namespace=True, separator=".")
-
-                    if self._return_count(overload.return_type) == 1:
-                        varargout = '' \
-                            if return_type == 'void' \
-                            else 'varargout{1} = '
-                    else:
-                        varargout = '[ varargout{1} varargout{2} ] = '
+                    return_type_formatted = self._format_return_type(
+                        overload.return_type,
+                        include_namespace=True,
+                        separator="."
+                    )
+                    varargout = self._format_varargout(overload.return_type, return_type_formatted)
 
                     check_statement = self._wrap_method_check_statement(overload.args)
                     class_name = namespace_name + ('' if namespace_name == '' else '.') + inst_class.name
@@ -872,10 +892,10 @@ class MatlabWrapper(object):
 
                     method_text += textwrap.dedent("""\
                         {method_args}) : returns {return_type}
-                          % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
+                          % Doxygen can be found at https://gtsam.org/doxygen/
                           {check_statement}{spacing}{varargout}{wrapper}({num}, this, varargin{{:}});
                         {end_statement}""").format(method_args=self._wrap_args(overload.args),
-                                                   return_type=return_type,
+                                                   return_type=return_type_formatted,
                                                    num=self._update_wrapper_id(
                                                        (namespace_name, inst_class, overload.original.name, overload)),
                                                    check_statement=check_statement,
@@ -920,7 +940,7 @@ class MatlabWrapper(object):
                             """), prefix='')
                 method_text += textwrap.indent(textwrap.dedent('''\
                       % {name_caps} usage: {name_upper_case}({args}) : returns {return_type}
-                      % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
+                      % Doxygen can be found at https://gtsam.org/doxygen/
                       {check_statement}{spacing}varargout{{1}} = {wrapper}({id}, varargin{{:}});{end_statement}
                       ''').format(name=''.join(format_name),
                                   name_caps=static_overload.name.upper(),
@@ -952,7 +972,7 @@ class MatlabWrapper(object):
             method_text += textwrap.indent(textwrap.dedent('''\
                 function varargout = string_deserialize(varargin)
                   % STRING_DESERIALIZE usage: string_deserialize() : returns {class_name}
-                  % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
+                  % Doxygen can be found at https://gtsam.org/doxygen/
                   if length(varargin) == 1
                     varargout{{1}} = {wrapper}({id}, varargin{{:}});
                   else
@@ -1593,7 +1613,7 @@ class MatlabWrapper(object):
         return textwrap.dedent('''\
             function varargout = string_serialize(this, varargin)
               % STRING_SERIALIZE usage: string_serialize() : returns string
-              % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
+              % Doxygen can be found at https://gtsam.org/doxygen/
               if length(varargin) == 0
                 varargout{{1}} = {wrapper}({wrapper_id}, this, varargin{{:}});
               else

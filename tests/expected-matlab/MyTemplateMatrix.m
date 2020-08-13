@@ -1,5 +1,5 @@
 %class MyTemplateMatrix, see Doxygen page for details
-%at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
+%at https://gtsam.org/doxygen/
 %
 %-------Constructors-------
 %MyTemplateMatrix()
@@ -34,11 +34,11 @@ classdef MyTemplateMatrix < MyBase
         if nargin == 2
           my_ptr = varargin{2};
         else
-          my_ptr = geometry_wrapper(63, varargin{2});
+          my_ptr = geometry_wrapper(64, varargin{2});
         end
-        base_ptr = geometry_wrapper(62, my_ptr);
+        base_ptr = geometry_wrapper(63, my_ptr);
       elseif nargin == 0
-        [ my_ptr, base_ptr ] = geometry_wrapper(64);
+        [ my_ptr, base_ptr ] = geometry_wrapper(65);
       else
         error('Arguments do not match any overload of MyTemplateMatrix constructor');
       end
@@ -47,7 +47,7 @@ classdef MyTemplateMatrix < MyBase
     end
 
     function delete(obj)
-      geometry_wrapper(65, obj.ptr_MyTemplateMatrix);
+      geometry_wrapper(66, obj.ptr_MyTemplateMatrix);
     end
 
     function display(obj), obj.print(''); end
@@ -56,9 +56,9 @@ classdef MyTemplateMatrix < MyBase
     %DISP Calls print on the object
     function varargout = accept_T(this, varargin)
       % ACCEPT_T usage: accept_T(Matrix value) : returns void
-      % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
+      % Doxygen can be found at https://gtsam.org/doxygen/
       if length(varargin) == 1 && isa(varargin{1},'double')
-        geometry_wrapper(66, this, varargin{:});
+        geometry_wrapper(67, this, varargin{:});
         return
       end
       error('Arguments do not match any overload of function MyTemplateMatrix.accept_T');
@@ -66,9 +66,9 @@ classdef MyTemplateMatrix < MyBase
 
     function varargout = accept_Tptr(this, varargin)
       % ACCEPT_TPTR usage: accept_Tptr(Matrix value) : returns void
-      % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
+      % Doxygen can be found at https://gtsam.org/doxygen/
       if length(varargin) == 1 && isa(varargin{1},'double')
-        geometry_wrapper(67, this, varargin{:});
+        geometry_wrapper(68, this, varargin{:});
         return
       end
       error('Arguments do not match any overload of function MyTemplateMatrix.accept_Tptr');
@@ -76,9 +76,9 @@ classdef MyTemplateMatrix < MyBase
 
     function varargout = create_MixedPtrs(this, varargin)
       % CREATE_MIXEDPTRS usage: create_MixedPtrs() : returns pair< Matrix, Matrix >
-      % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
+      % Doxygen can be found at https://gtsam.org/doxygen/
       if length(varargin) == 0
-        [ varargout{1} varargout{2} ] = geometry_wrapper(68, this, varargin{:});
+        [ varargout{1} varargout{2} ] = geometry_wrapper(69, this, varargin{:});
         return
       end
       error('Arguments do not match any overload of function MyTemplateMatrix.create_MixedPtrs');
@@ -86,9 +86,9 @@ classdef MyTemplateMatrix < MyBase
 
     function varargout = create_ptrs(this, varargin)
       % CREATE_PTRS usage: create_ptrs() : returns pair< Matrix, Matrix >
-      % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
+      % Doxygen can be found at https://gtsam.org/doxygen/
       if length(varargin) == 0
-        [ varargout{1} varargout{2} ] = geometry_wrapper(69, this, varargin{:});
+        [ varargout{1} varargout{2} ] = geometry_wrapper(70, this, varargin{:});
         return
       end
       error('Arguments do not match any overload of function MyTemplateMatrix.create_ptrs');
@@ -96,9 +96,9 @@ classdef MyTemplateMatrix < MyBase
 
     function varargout = return_T(this, varargin)
       % RETURN_T usage: return_T(Matrix value) : returns Matrix
-      % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
+      % Doxygen can be found at https://gtsam.org/doxygen/
       if length(varargin) == 1 && isa(varargin{1},'double')
-        varargout{1} = geometry_wrapper(70, this, varargin{:});
+        varargout{1} = geometry_wrapper(71, this, varargin{:});
         return
       end
       error('Arguments do not match any overload of function MyTemplateMatrix.return_T');
@@ -106,9 +106,9 @@ classdef MyTemplateMatrix < MyBase
 
     function varargout = return_Tptr(this, varargin)
       % RETURN_TPTR usage: return_Tptr(Matrix value) : returns Matrix
-      % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
+      % Doxygen can be found at https://gtsam.org/doxygen/
       if length(varargin) == 1 && isa(varargin{1},'double')
-        varargout{1} = geometry_wrapper(71, this, varargin{:});
+        varargout{1} = geometry_wrapper(72, this, varargin{:});
         return
       end
       error('Arguments do not match any overload of function MyTemplateMatrix.return_Tptr');
@@ -116,9 +116,9 @@ classdef MyTemplateMatrix < MyBase
 
     function varargout = return_ptrs(this, varargin)
       % RETURN_PTRS usage: return_ptrs(Matrix p1, Matrix p2) : returns pair< Matrix, Matrix >
-      % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
+      % Doxygen can be found at https://gtsam.org/doxygen/
       if length(varargin) == 2 && isa(varargin{1},'double') && isa(varargin{2},'double')
-        [ varargout{1} varargout{2} ] = geometry_wrapper(72, this, varargin{:});
+        [ varargout{1} varargout{2} ] = geometry_wrapper(73, this, varargin{:});
         return
       end
       error('Arguments do not match any overload of function MyTemplateMatrix.return_ptrs');
@@ -126,9 +126,9 @@ classdef MyTemplateMatrix < MyBase
 
     function varargout = templatedMethodMatrix(this, varargin)
       % TEMPLATEDMETHODMATRIX usage: templatedMethodMatrix(Matrix t) : returns Matrix
-      % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
+      % Doxygen can be found at https://gtsam.org/doxygen/
       if length(varargin) == 1 && isa(varargin{1},'double')
-        varargout{1} = geometry_wrapper(73, this, varargin{:});
+        varargout{1} = geometry_wrapper(74, this, varargin{:});
         return
       end
       error('Arguments do not match any overload of function MyTemplateMatrix.templatedMethodMatrix');
@@ -136,9 +136,9 @@ classdef MyTemplateMatrix < MyBase
 
     function varargout = templatedMethodPoint2(this, varargin)
       % TEMPLATEDMETHODPOINT2 usage: templatedMethodPoint2(Point2 t) : returns Point2
-      % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
+      % Doxygen can be found at https://gtsam.org/doxygen/
       if length(varargin) == 1 && isa(varargin{1},'double') && size(varargin{1},1)==2 && size(varargin{1},2)==1
-        varargout{1} = geometry_wrapper(74, this, varargin{:});
+        varargout{1} = geometry_wrapper(75, this, varargin{:});
         return
       end
       error('Arguments do not match any overload of function MyTemplateMatrix.templatedMethodPoint2');
@@ -146,9 +146,9 @@ classdef MyTemplateMatrix < MyBase
 
     function varargout = templatedMethodPoint3(this, varargin)
       % TEMPLATEDMETHODPOINT3 usage: templatedMethodPoint3(Point3 t) : returns Point3
-      % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
+      % Doxygen can be found at https://gtsam.org/doxygen/
       if length(varargin) == 1 && isa(varargin{1},'double') && size(varargin{1},1)==3 && size(varargin{1},2)==1
-        varargout{1} = geometry_wrapper(75, this, varargin{:});
+        varargout{1} = geometry_wrapper(76, this, varargin{:});
         return
       end
       error('Arguments do not match any overload of function MyTemplateMatrix.templatedMethodPoint3');
@@ -156,9 +156,9 @@ classdef MyTemplateMatrix < MyBase
 
     function varargout = templatedMethodVector(this, varargin)
       % TEMPLATEDMETHODVECTOR usage: templatedMethodVector(Vector t) : returns Vector
-      % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
+      % Doxygen can be found at https://gtsam.org/doxygen/
       if length(varargin) == 1 && isa(varargin{1},'double') && size(varargin{1},2)==1
-        varargout{1} = geometry_wrapper(76, this, varargin{:});
+        varargout{1} = geometry_wrapper(77, this, varargin{:});
         return
       end
       error('Arguments do not match any overload of function MyTemplateMatrix.templatedMethodVector');
@@ -169,9 +169,9 @@ classdef MyTemplateMatrix < MyBase
   methods(Static = true)
     function varargout = Level(varargin)
       % LEVEL usage: Level(Matrix K) : returns MyTemplateMatrix
-      % Doxygen can be found at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
+      % Doxygen can be found at https://gtsam.org/doxygen/
       if length(varargin) == 1 && isa(varargin{1},'double')
-        varargout{1} = geometry_wrapper(77, varargin{:});
+        varargout{1} = geometry_wrapper(78, varargin{:});
         return
       end
 

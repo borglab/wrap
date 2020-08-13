@@ -1,5 +1,5 @@
 %class MyVector12, see Doxygen page for details
-%at http://research.cc.gatech.edu/borg/sites/edu.borg/html/index.html
+%at https://gtsam.org/doxygen/
 %
 %-------Constructors-------
 %MyVector12()
@@ -12,9 +12,9 @@ classdef MyVector12 < handle
     function obj = MyVector12(varargin)
       if nargin == 2 && isa(varargin{1}, 'uint64') && varargin{1} == uint64(5139824614673773682)
         my_ptr = varargin{2};
-        geometry_wrapper(85, my_ptr);
+        geometry_wrapper(86, my_ptr);
       elseif nargin == 0
-        my_ptr = geometry_wrapper(86);
+        my_ptr = geometry_wrapper(87);
       else
         error('Arguments do not match any overload of MyVector12 constructor');
       end
@@ -22,7 +22,7 @@ classdef MyVector12 < handle
     end
 
     function delete(obj)
-      geometry_wrapper(87, obj.ptr_MyVector12);
+      geometry_wrapper(88, obj.ptr_MyVector12);
     end
 
     function display(obj), obj.print(''); end

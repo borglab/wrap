@@ -69,6 +69,7 @@ PYBIND11_MODULE(geometry_py, m_) {
         .def(py::init<>())
         .def(py::init< double, const gtsam::Matrix&>(), py::arg("a"), py::arg("b"))
         .def("return_pair",[](Test* self,const gtsam::Vector& v,const gtsam::Matrix& A){return self->return_pair(v, A);}, py::arg("v"), py::arg("A"))
+        .def("return_pair",[](Test* self,const gtsam::Vector& v){return self->return_pair(v);}, py::arg("v"))
         .def("return_bool",[](Test* self, bool value){return self->return_bool(value);}, py::arg("value"))
         .def("return_size_t",[](Test* self, size_t value){return self->return_size_t(value);}, py::arg("value"))
         .def("return_int",[](Test* self, int value){return self->return_int(value);}, py::arg("value"))
@@ -126,6 +127,10 @@ PYBIND11_MODULE(geometry_py, m_) {
         .def("return_ptrs",[](MyTemplate<gtsam::Matrix>* self,const std::shared_ptr<gtsam::Matrix>& p1,const std::shared_ptr<gtsam::Matrix>& p2){return self->return_ptrs(p1, p2);}, py::arg("p1"), py::arg("p2"))
         .def_static("Level",[](const gtsam::Matrix& K){return MyTemplate<gtsam::Matrix>::Level(K);}, py::arg("K"));
 
+    py::class_<PrimitiveRef<double>, std::shared_ptr<PrimitiveRef<double>>>(m_, "PrimitiveRefdouble")
+        .def(py::init<>())
+        .def_static("Brutal",[](const double& t){return PrimitiveRef<double>::Brutal(t);}, py::arg("t"));
+
     py::class_<MyVector<3>, std::shared_ptr<MyVector<3>>>(m_, "MyVector3")
         .def(py::init<>());
 
@@ -135,6 +140,9 @@ PYBIND11_MODULE(geometry_py, m_) {
     py::class_<MyFactor<gtsam::Pose2, gtsam::Matrix>, std::shared_ptr<MyFactor<gtsam::Pose2, gtsam::Matrix>>>(m_, "MyFactorPosePoint2")
         .def(py::init< size_t,  size_t,  double, const std::shared_ptr<gtsam::noiseModel::Base>&>(), py::arg("key1"), py::arg("key2"), py::arg("measured"), py::arg("noiseModel"));
 
+    m_.def("load2D",[]( string filename,const std::shared_ptr<Test>& model, int maxID, bool addNoise, bool smart){return ::load2D(filename, model, maxID, addNoise, smart);}, py::arg("filename"), py::arg("model"), py::arg("maxID"), py::arg("addNoise"), py::arg("smart"));
+    m_.def("load2D",[]( string filename,const std::shared_ptr<gtsam::noiseModel::Diagonal>& model, int maxID, bool addNoise, bool smart){return ::load2D(filename, model, maxID, addNoise, smart);}, py::arg("filename"), py::arg("model"), py::arg("maxID"), py::arg("addNoise"), py::arg("smart"));
+    m_.def("load2D",[]( string filename,const std::shared_ptr<gtsam::noiseModel::Diagonal>& model){return ::load2D(filename, model);}, py::arg("filename"), py::arg("model"));
     m_.def("aGlobalFunction",[](){return ::aGlobalFunction();});
     m_.def("overloadedGlobalFunction",[]( int a){return ::overloadedGlobalFunction(a);}, py::arg("a"));
     m_.def("overloadedGlobalFunction",[]( int a, double b){return ::overloadedGlobalFunction(a, b);}, py::arg("a"), py::arg("b"));

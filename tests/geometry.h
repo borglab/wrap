@@ -2,6 +2,9 @@
 
 class VectorNotEigen;
 virtual class ns::OtherClass;
+class gtsam::NonlinearFactorGraph;
+class gtsam::Values;
+class gtsam::noiseModel::Diagonal;
 
 namespace gtsam {
 
@@ -53,6 +56,7 @@ class Test {
   Test();
 
   pair<Vector,Matrix> return_pair (Vector v, Matrix A) const; // intentionally the first method
+  pair<Vector,Matrix> return_pair (Vector v) const; // overload
 
   bool   return_bool   (bool   value) const; // comment after a line!
   size_t return_size_t (size_t value) const;
@@ -90,6 +94,9 @@ class Test {
   // even more comments at the end!
 };
 
+pair<gtsam::NonlinearFactorGraph*, gtsam::Values*> load2D(string filename, Test* model, int maxID, bool addNoise, bool smart);
+pair<gtsam::NonlinearFactorGraph*, gtsam::Values*> load2D(string filename, gtsam::noiseModel::Diagonal* model, int maxID, bool addNoise, bool smart);
+pair<gtsam::NonlinearFactorGraph*, gtsam::Values*> load2D(string filename, gtsam::noiseModel::Diagonal* model);
 
 Vector aGlobalFunction();
 

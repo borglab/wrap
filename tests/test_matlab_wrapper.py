@@ -122,6 +122,7 @@ class TestWrap(unittest.TestCase):
             '+gtsam/Point3.m',
             'Test.m',
             'MyBase.m',
+            'load2D.m',
             'MyTemplatePoint2.m',
             'MyTemplateMatrix.m',
             'MyVector3.m',
