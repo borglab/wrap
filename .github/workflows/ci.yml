@@ -23,9 +23,6 @@ jobs:
           - name: ubuntu-18.04
             os: ubuntu-18.04
 
-          - name: macOS-10.15
-            os: macOS-10.15
-
     steps:
       - name: Checkout
         uses: actions/checkout@master
