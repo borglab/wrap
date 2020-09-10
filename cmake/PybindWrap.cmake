@@ -44,6 +44,7 @@ add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../pybind11 pybind11)
 # module_template: The template file (.tpl) from which to generate the Pybind11 module.
 # libs: Libraries to link with.
 # dependencies: Dependencies which need to be built before the wrapper.
+# use_boost (optional): Flag indicating whether to include Boost.
 function(pybind_wrap
          target
          interface_header
