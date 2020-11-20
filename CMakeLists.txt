@@ -7,7 +7,7 @@ project(GTwrap VERSION 1.0)
 # General configuration
 
 # Sets the path to the interface parser.
-set(GTWRAP_SOURCE_DIR ${CMAKE_SOURCE_DIR})
+set(GTWRAP_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 set(WRAP_PYTHON_VERSION "Default"
     CACHE STRING
@@ -44,7 +44,7 @@ else()
 endif()
 
 configure_file(cmake/PybindWrap.cmake.in
-               ${CMAKE_SOURCE_DIR}/cmake/PybindWrap.cmake @ONLY)
+               ${CMAKE_CURRENT_SOURCE_DIR}/cmake/PybindWrap.cmake @ONLY)
 # Install scripts
 install(FILES
     cmake/PybindWrap.cmake cmake/gtwrapConfig.cmake
