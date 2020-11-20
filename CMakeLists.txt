@@ -44,10 +44,10 @@ else()
 endif()
 
 configure_file(cmake/PybindWrap.cmake.in
-               ${CMAKE_BINARY_DIR}/cmake/PybindWrap.cmake @ONLY)
+               ${CMAKE_SOURCE_DIR}/cmake/PybindWrap.cmake @ONLY)
 # Install scripts
 install(FILES
-    ${CMAKE_BINARY_DIR}/cmake/PybindWrap.cmake cmake/gtwrapConfig.cmake
+    cmake/PybindWrap.cmake cmake/gtwrapConfig.cmake
     DESTINATION "${SCRIPT_INSTALL_DIR}/gtwrap")
 
 
