@@ -41,7 +41,7 @@ pybind_wrap(${PROJECT_NAME}_py # target
             )
 ```
 
-For more information, please follow our [tutorial]https://github.com/borglab/gtsam-project-python).
+For more information, please follow our [tutorial](https://github.com/borglab/gtsam-project-python).
 
 ## GTSAM Python wrapper
 
