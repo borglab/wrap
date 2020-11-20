@@ -43,10 +43,11 @@ else()
     set(SCRIPT_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/lib/cmake")
 endif()
 
-configure_file(cmake/PybindWrap.cmake.in ${CMAKE_CURRENT_LIST_DIR}/cmake/PybindWrap.cmake @ONLY)
+configure_file(cmake/PybindWrap.cmake.in
+               ${CMAKE_BINARY_DIR}/cmake/PybindWrap.cmake @ONLY)
 # Install scripts
 install(FILES
-    cmake/PybindWrap.cmake
+    ${CMAKE_BINARY_DIR}/cmake/PybindWrap.cmake
     DESTINATION "${SCRIPT_INSTALL_DIR}/GTSAMCMakeTools")
 
 
