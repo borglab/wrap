@@ -66,4 +66,4 @@ endif()
 # We install in development mode (-e flag) so any updates
 # to the package are automatically propagated.
 execute_process(COMMAND ${Python3_EXECUTABLE} -m pip install -e . ${_pip_args}
-                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
