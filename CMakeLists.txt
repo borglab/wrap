@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.12)
 
 # Set the project name and version
 project(GTwrap VERSION 1.0)
@@ -21,17 +21,20 @@ unset(PYTHON_MAJOR_VERSION CACHE)
 
 # Allow override from command line
 if(WRAP_PYTHON_VERSION STREQUAL "Default")
-    find_package(PythonInterp REQUIRED)
-    find_package(PythonLibs REQUIRED)
+    # Check for Python3 or Python2 in order
+    find_package(Python COMPONENTS Interpreter Development)
+
+    set(WRAP_PYTHON_VERSION "${Python_VERSION_MAJOR}.${Python_VERSION_MINOR}"
+        CACHE
+        STRING
+        "The version of Python to build the wrappers against."
+        FORCE)
+
 else()
-    find_package(PythonInterp
-                ${WRAP_PYTHON_VERSION}
-                EXACT
-                REQUIRED)
-    find_package(PythonLibs
-                ${WRAP_PYTHON_VERSION}
-                EXACT
-                REQUIRED)
+    find_package(Python ${WRAP_PYTHON_VERSION}
+                 COMPONENTS Interpreter Development
+                 EXACT
+                 REQUIRED)
 endif()
 
 
@@ -53,7 +56,8 @@ install(FILES
 
 ##############################
 # Install the Python package
-find_package(Python3 COMPONENTS Interpreter REQUIRED)
+find_package(Python ${WRAP_PYTHON_VERSION}
+             COMPONENTS Interpreter REQUIRED)
 
 # Detect virtualenv and set Pip args accordingly
 # https://www.scivision.dev/cmake-install-python-package/
@@ -65,5 +69,5 @@ endif()
 
 # We install in development mode (-e flag) so any updates
 # to the package are automatically propagated.
-execute_process(COMMAND ${Python3_EXECUTABLE} -m pip install -e . ${_pip_args}
+execute_process(COMMAND ${Python_EXECUTABLE} -m pip install -e . ${_pip_args}
                 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
