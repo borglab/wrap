@@ -46,11 +46,6 @@ else()
   set(_pip_args "--user")
 endif()
 
-# Install dependencies.
-execute_process(COMMAND
-                ${Python_EXECUTABLE} -m pip install -r requirements.txt ${_pip_args}
-                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-
 # We install in development mode (-e flag) so any updates to the package are
 # automatically propagated.
 execute_process(COMMAND ${Python_EXECUTABLE} -m pip install -e . ${_pip_args}
