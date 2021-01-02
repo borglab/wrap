@@ -6,9 +6,6 @@ project(GTwrap VERSION 1.0)
 # ##############################################################################
 # General configuration
 
-# # Sets the path to the interface parser.
-# set(GTWRAP_SOURCE_DIR ${CMAKE_INSTALL_PREFIX}/gtwrap)
-
 set(WRAP_PYTHON_VERSION
     "Default"
     CACHE STRING "The Python version to use for wrapping")
@@ -24,15 +21,17 @@ else()
   set(SCRIPT_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/lib/cmake")
 endif()
 
-# Install scripts
-install(FILES cmake/PybindWrap.cmake cmake/gtwrapConfig.cmake
+# Install scripts to the standard CMake script directory.
+install(FILES cmake/gtwrapConfig.cmake cmake/PybindWrap.cmake
               cmake/GtwrapUtils.cmake
         DESTINATION "${SCRIPT_INSTALL_DIR}/gtwrap")
 
-# Install wrapping scripts
+# Install wrapping scripts as binaries to `CMAKE_INSTALL_PREFIX/bin` so they can
+# be invoked for wrapping.
 install(PROGRAMS scripts/pybind_wrap.py scripts/matlab_wrap.py TYPE BIN)
 
-# Install pybind11 directory
+# Install pybind11 directory to `CMAKE_INSTALL_PREFIX/lib/pybind11` This will
+# allow the gtwrapConfig.cmake file to load it later.
 install(DIRECTORY pybind11 TYPE LIB)
 
 # ##############################################################################
