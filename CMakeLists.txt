@@ -38,5 +38,3 @@ install(PROGRAMS scripts/pybind_wrap.py scripts/matlab_wrap.py TYPE BIN)
 # Install pybind11 directory to `CMAKE_INSTALL_PREFIX/lib/pybind11` This will
 # allow the gtwrapConfig.cmake file to load it later.
 install(DIRECTORY pybind11 DESTINATION "${CMAKE_INSTALL_LIBDIR}/gtwrap")
-
-message(STATUS "DATADIR: ${CMAKE_INSTALL_DATADIR}")
