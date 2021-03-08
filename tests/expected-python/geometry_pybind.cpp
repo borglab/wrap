@@ -48,10 +48,10 @@ PYBIND11_MODULE(geometry_py, m_) {
         gtsam::deserialize(serialized, *self);
     }, py::arg("serialized"))
 .def(py::pickle(
-    [](const gtsam::Point2 &a){{ // __getstate__
+    [](const gtsam::Point2 &a){ // __getstate__
         /* Returns a string that encodes the state of the object */
         return py::make_tuple(gtsam::serialize(a));
-    }},
+    },
     [](py::tuple t){ // __setstate__
         gtsam::Point2 obj;
         gtsam::deserialize(t[0].cast<std::string>(), obj);
