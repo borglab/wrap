@@ -85,7 +85,7 @@ class PybindWrapper(object):
                             gtsam::deserialize(t[0].cast<std::string>(), obj);
                             return obj;
                         }}))
-                    '''.format(class_inst=cpp_class + '*'))
+                    '''.format(class_inst=cpp_class + '*', cpp_class=cpp_class))
 
         is_method = isinstance(method, instantiator.InstantiatedMethod)
         is_static = isinstance(method, parser.StaticMethod)
