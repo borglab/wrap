@@ -81,6 +81,7 @@ PYBIND11_MODULE(geometry_py, m_) {
         gtsam::deserialize(t[0].cast<std::string>(), obj);
         return obj;
     }))
+    
         .def_static("staticFunction",[](){return gtsam::Point3::staticFunction();})
         .def_static("StaticFunctionRet",[]( double z){return gtsam::Point3::StaticFunctionRet(z);}, py::arg("z"));
 
