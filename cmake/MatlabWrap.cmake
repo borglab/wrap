@@ -54,9 +54,9 @@ endif()
 # Consistent and user-friendly wrap function
 function(matlab_wrap interfaceHeader linkLibraries
          extraIncludeDirs extraMexFlags ignore_classes)
-  wrap_and_install_library(interfaceHeader linkLibraries
-                           extraIncludeDirs extraMexFlags
-                           ignore_classes)
+  wrap_and_install_library("${interfaceHeader}" "${linkLibraries}"
+                           "${extraIncludeDirs}" "${extraMexFlags}"
+                           "${ignore_classes}")
 endfunction()
 
 # Wrapping function.  Builds a mex module from the provided
