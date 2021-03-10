@@ -223,8 +223,7 @@ function(wrap_library_internal interfaceHeader linkLibraries extraIncludeDirs
   find_package(PythonInterp ${WRAP_PYTHON_VERSION} EXACT)
   find_package(PythonLibs ${WRAP_PYTHON_VERSION} EXACT)
 
-  set(_ignore
-    gtsam::Point2
+  set(_ignore gtsam::Point2
     gtsam::Point3
     gtsam::BearingRangeFactor
     gtsam::BearingRangeFactor2D
