@@ -1485,6 +1485,9 @@ class MatlabWrapper(object):
 
         includes_list = sorted(list(self.includes.keys()), key=lambda include: include.header)
 
+        # Check the number of includes.
+        # If no includes, do nothing, if 1 then just append newline.
+        # if more than one, concatenate them with newlines.
         if len(includes_list) == 0:
             pass
         elif len(includes_list) == 1:
