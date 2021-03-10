@@ -51,7 +51,15 @@ if(WRAP_CUSTOM_MATLAB_PATH)
   endif()
 endif()
 
-# User-friendly wrapping function.  Builds a mex module from the provided
+# Consistent and user-friendly wrap function
+function(matlab_wrap interfaceHeader linkLibraries
+         extraIncludeDirs extraMexFlags ignore_classes)
+  wrap_and_install_library(interfaceHeader linkLibraries
+                           extraIncludeDirs extraMexFlags
+                           ignore_classes)
+endfunction()
+
+# Wrapping function.  Builds a mex module from the provided
 # interfaceHeader. For example, for the interface header gtsam.h, this will
 # build the wrap module 'gtsam'.
 #
@@ -65,8 +73,9 @@ endif()
 # already been added by include_directories.  Again, normally, leave this empty.
 # extraMexFlags:    Any *additional* flags to pass to the compiler when building
 # the wrap code.  Normally, leave this empty.
+# ignore_classes:  List of classes to ignore in the wrapping.
 function(wrap_and_install_library interfaceHeader linkLibraries
-         extraIncludeDirs extraMexFlags)
+         extraIncludeDirs extraMexFlags ignore_classes)
   wrap_library_internal("${interfaceHeader}" "${linkLibraries}"
                         "${extraIncludeDirs}" "${mexFlags}")
   install_wrapped_library_internal("${interfaceHeader}")
@@ -223,12 +232,6 @@ function(wrap_library_internal interfaceHeader linkLibraries extraIncludeDirs
   find_package(PythonInterp ${WRAP_PYTHON_VERSION} EXACT)
   find_package(PythonLibs ${WRAP_PYTHON_VERSION} EXACT)
 
-  set(_ignore gtsam::Point2
-    gtsam::Point3
-    gtsam::BearingRangeFactor
-    gtsam::BearingRangeFactor2D
-    gtsam::BearingRangeFactorPose2)
-
   add_custom_command(
     OUTPUT ${generated_cpp_file}
     DEPENDS ${interfaceHeader} ${module_library_target} ${otherLibraryTargets}
@@ -238,7 +241,7 @@ function(wrap_library_internal interfaceHeader linkLibraries extraIncludeDirs
       "PYTHONPATH=${GTWRAP_PACKAGE_DIR}${GTWRAP_PATH_SEPARATOR}$ENV{PYTHONPATH}"
       ${PYTHON_EXECUTABLE} ${MATLAB_WRAP_SCRIPT} --src ${interfaceHeader}
       --module_name ${moduleName} --out ${generated_files_path}
-      --top_module_namespaces ${moduleName} --ignore ${_ignore}
+      --top_module_namespaces ${moduleName} --ignore ${ignore_classes}
     VERBATIM
     WORKING_DIRECTORY ${generated_files_path})
 
