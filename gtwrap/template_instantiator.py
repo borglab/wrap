@@ -219,7 +219,7 @@ class InstantiatedClass(parser.Class):
             self.template,
             self.is_virtual,
             self.name,
-            self.parent_class,
+            [self.parent_class],
             self.ctors,
             self.methods,
             self.static_methods,
