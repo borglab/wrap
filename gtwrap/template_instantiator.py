@@ -1,7 +1,15 @@
+"""Code to help instantiate classes, methods and functions which are templated."""
+
+# pylint: disable=too-many-arguments, too-many-instance-attributes, no-self-use, no-else-return, too-many-arguments, unused-format-string-argument, unused-variable
+
 import gtwrap.interface_parser as parser
 
 
-def instantiate_type(ctype, template_typenames, instantiations, cpp_typename, instantiated_class=None):
+def instantiate_type(ctype,
+                     template_typenames,
+                     instantiations,
+                     cpp_typename,
+                     instantiated_class=None):
     """
     Instantiate template typename for @p ctype.
     @return If ctype's name is in the @p template_typenames, return the
@@ -20,7 +28,6 @@ def instantiate_type(ctype, template_typenames, instantiations, cpp_typename, in
             is_basis=ctype.is_basis,
         )
     elif str_arg_typename == 'This':
-        # import sys
         if instantiated_class:
             name = instantiated_class.original.name
             namespaces_name = instantiated_class.namespaces()
@@ -29,8 +36,8 @@ def instantiate_type(ctype, template_typenames, instantiations, cpp_typename, in
             #     ctype, instantiations, cpp_typename, instantiated_class.instantiations
             # ), file=sys.stderr)
             cpp_typename = parser.Typename(
-                namespaces_name, instantiations=[inst for inst in instantiated_class.instantiations]
-            )
+                namespaces_name,
+                instantiations=instantiated_class.instantiations)
         return parser.Type(
             typename=cpp_typename,
             is_const=ctype.is_const,
@@ -70,12 +77,18 @@ def instantiate_args_list(args_list, template_typenames, instantiations,
 
 def instantiate_return_type(return_type, template_typenames, instantiations,
                             cpp_typename, instantiated_class=None):
-    new_type1 = instantiate_type(
-        return_type.type1, template_typenames, instantiations, cpp_typename, instantiated_class=instantiated_class)
+    """Instantiate the return type."""
+    new_type1 = instantiate_type(return_type.type1,
+                                 template_typenames,
+                                 instantiations,
+                                 cpp_typename,
+                                 instantiated_class=instantiated_class)
     if return_type.type2:
-        new_type2 = instantiate_type(
-            return_type.type2, template_typenames, instantiations,
-            cpp_typename, instantiated_class=instantiated_class)
+        new_type2 = instantiate_type(return_type.type2,
+                                     template_typenames,
+                                     instantiations,
+                                     cpp_typename,
+                                     instantiated_class=instantiated_class)
     else:
         new_type2 = ''
     return parser.ReturnType(new_type1, new_type2)
@@ -133,11 +146,20 @@ class InstantiatedMethod(parser.Method):
             )
             self.args = parser.ArgumentList(instantiated_args)
 
+        super().__init__(self.template,
+                         self.name,
+                         self.return_type,
+                         self.args,
+                         self.is_const,
+                         parent=self.parent)
+
     def to_cpp(self):
+        """Generate the C++ code for wrapping."""
         if self.original.template:
-            return "{}<{}>".format(self.original.name, self.instantiation)
+            ret = "{}<{}>".format(self.original.name, self.instantiation)
         else:
-            return self.original.name
+            ret = self.original.name
+        return ret
 
     def __repr__(self):
         return "Instantiated {}".format(
@@ -146,7 +168,10 @@ class InstantiatedMethod(parser.Method):
 
 
 class InstantiatedClass(parser.Class):
-    def __init__(self, original, instantiations=[], new_name=''):
+    """
+    Instantiate the class defined in the interface file.
+    """
+    def __init__(self, original, instantiations=(), new_name=''):
         """
         Template <T, U>
         Instantiations: [T1, U1]
@@ -190,6 +215,18 @@ class InstantiatedClass(parser.Class):
                 for inst in method.template.instantiations[0]:
                     self.methods.append(InstantiatedMethod(method, inst))
 
+        super().__init__(
+            self.template,
+            self.is_virtual,
+            self.name,
+            self.parent_class,
+            self.ctors,
+            self.methods,
+            self.static_methods,
+            self.properties,
+            parent=self.parent,
+        )
+
     def __repr__(self):
         return "{virtual} class {name} [{cpp_class}]: {parent_class}\n"\
             "{ctors}\n{static_methods}\n{methods}".format(
@@ -204,6 +241,7 @@ class InstantiatedClass(parser.Class):
             )
 
     def instantiate_ctors(self):
+        """Instantiate the class constructors."""
         instantiated_ctors = []
         for ctor in self.original.ctors:
             instantiated_args = instantiate_args_list(
@@ -220,6 +258,7 @@ class InstantiatedClass(parser.Class):
         return instantiated_ctors
 
     def instantiate_static_methods(self):
+        """Instantiate static methods in the class."""
         instantiated_static_methods = []
         for static_method in self.original.static_methods:
             instantiated_args = instantiate_args_list(
@@ -274,6 +313,7 @@ class InstantiatedClass(parser.Class):
         return class_instantiated_methods
 
     def instantiate_properties(self):
+        """Instantiate the class properties."""
         instantiated_properties = instantiate_args_list(
             self.original.properties,
             self.original.template.typenames,
@@ -283,6 +323,7 @@ class InstantiatedClass(parser.Class):
         return instantiated_properties
 
     def cpp_class(self):
+        """Generate the C++ code for wrapping."""
         return self.cpp_typename().to_cpp()
 
     def cpp_typename(self):
@@ -303,7 +344,10 @@ class InstantiatedClass(parser.Class):
 
 def instantiate_namespace_inplace(namespace):
     """
-    @param[in/out] namespace The namespace which content will be replaced with
+    Instantiate the classes and other elements in the `namespace` content and
+    assign it back to the namespace content attribute.
+
+    @param[in/out] namespace The namespace whose content will be replaced with
         the instantiated content.
     """
     instantiated_content = []
