@@ -115,7 +115,8 @@ PYBIND11_MODULE(geometry_py, m_) {
                         gtsam::RedirectCout redirect;
                         a.print();
                         return redirect.str();
-                    });
+                    })
+        .def_readwrite("model_ptr", &Test::model_ptr);
 
     py::class_<MyBase, std::shared_ptr<MyBase>>(m_, "MyBase");
 
