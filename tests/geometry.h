@@ -160,3 +160,7 @@ class MyVector {
 // comments at the end!
 
 // even more comments at the end!
+
+// Class with multiple instantiated templates
+template<T = {int}, U = {double, float}>
+class MultipleTemplates {};

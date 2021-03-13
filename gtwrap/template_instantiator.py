@@ -2,6 +2,7 @@
 
 # pylint: disable=too-many-arguments, too-many-instance-attributes, no-self-use, no-else-return, too-many-arguments, unused-format-string-argument, unused-variable
 
+import itertools
 from copy import deepcopy
 from typing import List
 
@@ -125,7 +126,7 @@ def instantiate_name(original_name, instantiations):
     inst_name = ''
 
     return "{}{}".format(original_name, "".join(
-        [inst.instantiated_name() for inst in instantiations]))
+        [inst.instantiated_name().capitalize().replace('_', '') for inst in instantiations]))
 
 
 class InstantiatedMethod(parser.Method):
@@ -145,6 +146,7 @@ class InstantiatedMethod(parser.Method):
             self.return_type = original.return_type
             self.args = original.args
         else:
+            #TODO(Varun) enable multiple templates for methods
             if len(self.original.template.typenames) > 1:
                 raise ValueError("Can only instantiate template method with "
                                  "single template parameter.")
@@ -381,15 +383,14 @@ def instantiate_namespace_inplace(namespace):
                 instantiated_content.append(
                     InstantiatedClass(original_class, []))
             else:
-                if (len(original_class.template.typenames) > 1
-                        and original_class.template.instantiations[0]):
-                    raise ValueError(
-                        "Can't instantiate multi-parameter templates here. "
-                        "Please use typedef template instantiation."
-                    )
-                for inst in original_class.template.instantiations[0]:
+                # Use itertools to get all possible combinations of instantiations
+                # Works even if one template does not have an instantiation list
+                for instantiations in itertools.product(
+                        *original_class.template.instantiations):
                     instantiated_content.append(
-                        InstantiatedClass(original_class, [inst]))
+                        InstantiatedClass(original_class,
+                                          list(instantiations)))
+
         elif isinstance(element, parser.TypedefTemplateInstantiation):
             typedef_inst = element
             original_class = namespace.top_level().find_class(
