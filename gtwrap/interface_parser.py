@@ -11,28 +11,12 @@ Author: Duy Nguyen Ta, Fan Jiang, Matthew Sklar, Varun Agrawal, and Frank Dellae
 
 # pylint: disable=unnecessary-lambda, unused-import, expression-not-assigned, no-else-return, protected-access, too-few-public-methods, too-many-arguments
 
-from pyparsing import (
-    alphas,
-    alphanums,
-    cppStyleComment,
-    delimitedList,
-    empty,
-    nums,
-    stringEnd,
-    CharsNotIn,
-    Forward,
-    Group,
-    Keyword,
-    Literal,
-    OneOrMore,
-    Optional,
-    Or,
-    ParseException,
-    ParserElement,
-    Suppress,
-    Word,
-    ZeroOrMore,
-)
+import typing
+
+from pyparsing import (CharsNotIn, Forward, Group, Keyword, Literal, OneOrMore,
+                       Optional, Or, ParseException, ParserElement, Suppress,
+                       Word, ZeroOrMore, alphanums, alphas, cppStyleComment,
+                       delimitedList, empty, nums, stringEnd)
 
 ParserElement.enablePackrat()
 
@@ -93,12 +77,13 @@ class Typename:
         self.name = namespaces_name[-1]
 
         if instantiations:
-            if not isinstance(instantiations, list):
+            if not isinstance(instantiations, typing.Iterable):
                 self.instantiations = instantiations.asList()
             else:
                 self.instantiations = instantiations
         else:
             self.instantiations = []
+
         if self.name in ["Matrix", "Vector"] and not self.namespaces:
             self.namespaces = ["gtsam"]
 
@@ -396,6 +381,9 @@ class Template:
         ti_list = typename_and_instantiations_list
         self.typenames = [ti.typename for ti in ti_list]
         self.instantiations = [ti.instantiations for ti in ti_list]
+
+    def __repr__(self):
+        return "<{0}>".format(", ".join(self.typenames))
 
 
 class Method:

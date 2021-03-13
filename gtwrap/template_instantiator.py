@@ -1,23 +1,45 @@
-"""Code to help instantiate classes, methods and functions which are templated."""
+"""Code to help instantiate templated classes, methods and functions."""
 
 # pylint: disable=too-many-arguments, too-many-instance-attributes, no-self-use, no-else-return, too-many-arguments, unused-format-string-argument, unused-variable
+
+import itertools
+from copy import deepcopy
+from typing import List
 
 import gtwrap.interface_parser as parser
 
 
-def instantiate_type(ctype,
-                     template_typenames,
-                     instantiations,
-                     cpp_typename,
+def instantiate_type(ctype: parser.Type,
+                     template_typenames: List[str],
+                     instantiations: List[parser.Typename],
+                     cpp_typename: parser.Typename,
                      instantiated_class=None):
     """
     Instantiate template typename for @p ctype.
+
+    Args:
+        instiated_class (InstantiatedClass):
+
     @return If ctype's name is in the @p template_typenames, return the
         corresponding type to replace in @p instantiations.
         If ctype name is `This`, return the new typename @p `cpp_typename`.
         Otherwise, return the original ctype.
     """
+    # make a deep copy so that there is no overwriting of original template params
+    ctype = deepcopy(ctype)
+
+    # Check if the return type has template parameters
+    if len(ctype.typename.instantiations) > 0:
+        for idx, instantiation in enumerate(ctype.typename.instantiations):
+            if instantiation.name in template_typenames:
+                template_idx = template_typenames.index(instantiation.name)
+                ctype.typename.instantiations[idx] = instantiations[
+                    template_idx]
+
+        return ctype
+
     str_arg_typename = str(ctype.typename)
+
     if str_arg_typename in template_typenames:
         idx = template_typenames.index(str_arg_typename)
         return parser.Type(
@@ -104,7 +126,7 @@ def instantiate_name(original_name, instantiations):
     inst_name = ''
 
     return "{}{}".format(original_name, "".join(
-        [inst.instantiated_name() for inst in instantiations]))
+        [inst.instantiated_name().capitalize().replace('_', '') for inst in instantiations]))
 
 
 class InstantiatedMethod(parser.Method):
@@ -124,6 +146,7 @@ class InstantiatedMethod(parser.Method):
             self.return_type = original.return_type
             self.args = original.args
         else:
+            #TODO(Varun) enable multiple templates for methods
             if len(self.original.template.typenames) > 1:
                 raise ValueError("Can only instantiate template method with "
                                  "single template parameter.")
@@ -360,15 +383,14 @@ def instantiate_namespace_inplace(namespace):
                 instantiated_content.append(
                     InstantiatedClass(original_class, []))
             else:
-                if (len(original_class.template.typenames) > 1
-                        and original_class.template.instantiations[0]):
-                    raise ValueError(
-                        "Can't instantiate multi-parameter templates here. "
-                        "Please use typedef template instantiation."
-                    )
-                for inst in original_class.template.instantiations[0]:
+                # Use itertools to get all possible combinations of instantiations
+                # Works even if one template does not have an instantiation list
+                for instantiations in itertools.product(
+                        *original_class.template.instantiations):
                     instantiated_content.append(
-                        InstantiatedClass(original_class, [inst]))
+                        InstantiatedClass(original_class,
+                                          list(instantiations)))
+
         elif isinstance(element, parser.TypedefTemplateInstantiation):
             typedef_inst = element
             original_class = namespace.top_level().find_class(
