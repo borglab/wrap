@@ -510,10 +510,6 @@ class Property:
     def __init__(self, ctype, name, parent=''):
         self.ctype = ctype
         self.name = name
-        # Check type constraints: no pointer, no ref.
-        # if self.ctype.is_ptr or self.ctype.is_ref:
-        #     raise ValueError("Can't deal with pointer/ref class properties.")
-
         self.parent = parent
 
     def __repr__(self):
