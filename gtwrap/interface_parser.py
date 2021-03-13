@@ -397,6 +397,9 @@ class Template:
         self.typenames = [ti.typename for ti in ti_list]
         self.instantiations = [ti.instantiations for ti in ti_list]
 
+    def __repr__(self):
+        return "<{0}>".format(", ".join(self.typenames))
+
 
 class Method:
     """

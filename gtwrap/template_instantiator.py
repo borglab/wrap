@@ -1,23 +1,44 @@
-"""Code to help instantiate classes, methods and functions which are templated."""
+"""Code to help instantiate templated classes, methods and functions."""
 
 # pylint: disable=too-many-arguments, too-many-instance-attributes, no-self-use, no-else-return, too-many-arguments, unused-format-string-argument, unused-variable
+
+from copy import deepcopy
+from typing import List
 
 import gtwrap.interface_parser as parser
 
 
-def instantiate_type(ctype,
-                     template_typenames,
-                     instantiations,
-                     cpp_typename,
+def instantiate_type(ctype: parser.Type,
+                     template_typenames: List[str],
+                     instantiations: List[parser.Typename],
+                     cpp_typename: parser.Typename,
                      instantiated_class=None):
     """
     Instantiate template typename for @p ctype.
+
+    Args:
+        instiated_class (InstantiatedClass):
+
     @return If ctype's name is in the @p template_typenames, return the
         corresponding type to replace in @p instantiations.
         If ctype name is `This`, return the new typename @p `cpp_typename`.
         Otherwise, return the original ctype.
     """
+    # make a deep copy so that there is no overwriting of original template params
+    ctype = deepcopy(ctype)
+
+    # Check if the return type has template parameters
+    if len(ctype.typename.instantiations) > 0:
+        for idx, instantiation in enumerate(ctype.typename.instantiations):
+            if instantiation.name in template_typenames:
+                template_idx = template_typenames.index(instantiation.name)
+                ctype.typename.instantiations[idx] = instantiations[
+                    template_idx]
+
+        return ctype
+
     str_arg_typename = str(ctype.typename)
+
     if str_arg_typename in template_typenames:
         idx = template_typenames.index(str_arg_typename)
         return parser.Type(
