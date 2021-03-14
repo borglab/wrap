@@ -10,7 +10,7 @@ import os.path as osp
 import sys
 import textwrap
 from functools import partial, reduce
-from typing import Iterable
+from typing import Dict, Iterable, List, Union
 
 import gtwrap.interface_parser as parser
 import gtwrap.template_instantiator as instantiator
@@ -57,7 +57,7 @@ class MatlabWrapper(object):
     # Methods that should be ignored
     ignore_methods = ['pickle']
     # Datatypes that do not need to be checked in methods
-    not_check_type = []
+    not_check_type: list = []
     # Data types that are primitive types
     not_ptr_type = ['int', 'double', 'bool', 'char', 'unsigned char', 'size_t']
     # Ignore the namespace for these datatypes
@@ -65,16 +65,16 @@ class MatlabWrapper(object):
     # The amount of times the wrapper has created a call to geometry_wrapper
     wrapper_id = 0
     # Map each wrapper id to what its collector function namespace, class, type, and string format
-    wrapper_map = {}
+    wrapper_map: dict = {}
     # Set of all the includes in the namespace
-    includes = {}
+    includes: Dict[parser.Include, int] = {}
     # Set of all classes in the namespace
-    classes = []
-    classes_elems = {}
+    classes: List[Union[parser.Class, instantiator.InstantiatedClass]] = []
+    classes_elems: Dict[Union[parser.Class, instantiator.InstantiatedClass], int] = {}
     # Id for ordering global functions in the wrapper
     global_function_id = 0
     # Files and their content
-    content = []
+    content: List[str] = []
 
     def __init__(self,
                  module,
@@ -1076,13 +1076,12 @@ class MatlabWrapper(object):
                            method_name=static_overload.name)),
                                            prefix='    ')
 
-            method_text += textwrap.indent(textwrap.dedent('''\
+            method_text += textwrap.indent(textwrap.dedent("""\
                                     end\n
-                '''.format(name=''.join(format_name))),
-                                           prefix="  ")
+                """), prefix="  ")
 
         if serialize:
-            method_text += textwrap.indent(textwrap.dedent('''\
+            method_text += textwrap.indent(textwrap.dedent("""\
                 function varargout = string_deserialize(varargin)
                   % STRING_DESERIALIZE usage: string_deserialize() : returns {class_name}
                   % Doxygen can be found at https://gtsam.org/doxygen/
@@ -1096,7 +1095,7 @@ class MatlabWrapper(object):
                   % LOADOBJ Saves the object to a matlab-readable format
                   obj = {class_name}.string_deserialize(sobj);
                 end
-            ''').format(
+            """).format(
                 class_name=namespace_name + '.' + instantiated_class.name,
                 wrapper=self._wrapper_name(),
                 id=self._update_wrapper_id(
