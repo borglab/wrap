@@ -128,8 +128,6 @@ class PybindWrapper:
                    else py_method + "_",
                    opt_self="{cpp_class}* self".format(
                        cpp_class=cpp_class) if is_method else "",
-                   cpp_class=cpp_class,
-                   cpp_method=cpp_method,
                    opt_comma=',' if is_method and args_names else '',
                    args_signature_with_names=args_signature_with_names,
                    function_call=function_call,

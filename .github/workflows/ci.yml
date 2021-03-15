@@ -36,17 +36,15 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           brew install cmake ninja boost
-      - name: Build (Linux)
+      - name: Python Dependencies
         if: runner.os == 'Linux'
         run: |
           sudo pip$PYTHON_VERSION install -r requirements.txt
-          cd tests
-          python$PYTHON_VERSION test_pybind_wrapper.py
-          python$PYTHON_VERSION test_matlab_wrapper.py
-      - name: Build (macOS)
         if: runner.os == 'macOS'
         run: |
           pip$PYTHON_VERSION install -r requirements.txt
+      - name: Build and Test
+        run: |
           cd tests
           python$PYTHON_VERSION test_pybind_wrapper.py
           python$PYTHON_VERSION test_matlab_wrapper.py
