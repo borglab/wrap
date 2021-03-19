@@ -1879,7 +1879,7 @@ def generate_content(cc_content, path, verbose=False):
         print(message, file=sys.stderr)
 
     for c in cc_content:
-        if isinstance(c, Iterable):
+        if isinstance(c, list):
             if len(c) == 0:
                 continue
             _debug("c object: {}".format(c[0][0]))
@@ -1895,7 +1895,7 @@ def generate_content(cc_content, path, verbose=False):
                 _debug("sub object: {}".format(sub_content[1][0][0]))
                 generate_content(sub_content[1], path_to_folder)
 
-        elif isinstance(c[1], Iterable):
+        elif isinstance(c[1], list):
             path_to_folder = osp.join(path, c[0])
 
             _debug("[generate_content_global]: {}".format(path_to_folder))
