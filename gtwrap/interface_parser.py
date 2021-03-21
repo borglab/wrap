@@ -43,7 +43,10 @@ ParserElement.enablePackrat()
 # rule for identifiers (e.g. variable names)
 IDENT = Word(alphas + '_', alphanums + '_') ^ Word(nums)
 
-POINTER, REF = map(Literal, "*&")
+POINTER = Literal("*")
+SHARED_POINTER = Word("**", exact=2)
+REF = Literal('&')
+
 LPAREN, RPAREN, LBRACE, RBRACE, COLON, SEMI_COLON = map(Suppress, "(){}:;")
 LOPBRACK, ROPBRACK, COMMA, EQUAL = map(Suppress, "<>,=")
 CONST, VIRTUAL, CLASS, STATIC, PAIR, TEMPLATE, TYPEDEF, INCLUDE = map(
@@ -157,25 +160,31 @@ class Type:
         rule = (
             Optional(CONST("is_const"))  #
             + Typename.rule("typename")  #
-            + Optional(POINTER("is_ptr") | REF("is_ref"))
+            + Optional(SHARED_POINTER("is_shared_ptr") | POINTER("is_ptr") | REF("is_ref"))
         ).setParseAction(
             lambda t: Type._QualifiedType(
                 Typename.from_parse_result(t.typename),
                 t.is_const,
+                t.is_shared_ptr,
                 t.is_ptr,
                 t.is_ref,
             )
         )
 
-        def __init__(self, typename: Typename, is_const: str, is_ptr: str, is_ref: str):
+        def __init__(self, typename: Typename, is_const: str,
+                     is_shared_ptr: str, is_ptr: str, is_ref: str):
             self.typename = typename
             self.is_const = is_const
+            self.is_shared_ptr = is_shared_ptr
             self.is_ptr = is_ptr
             self.is_ref = is_ref
 
     class _BasisType:
         """
-        Basis types don't have qualifiers and only allow copy-by-value.
+        Basis types are the built-in types in C++.
+
+        They only allow copy-by-value, i.e. (double& x) is illegal,
+        and cannot be used with smart pointers.
         """
 
         rule = Or(BASIS_TYPES).setParseAction(lambda t: Typename(t))
@@ -184,10 +193,11 @@ class Type:
         _BasisType.rule("basis") | _QualifiedType.rule("qualified")  # BR
     ).setParseAction(lambda t: Type.from_parse_result(t))
 
-    def __init__(self, typename: Typename, is_const: str, is_ptr: str,
-                 is_ref: str, is_basis: bool):
+    def __init__(self, typename: Typename, is_const: str, is_shared_ptr: str,
+                 is_ptr: str, is_ref: str, is_basis: bool):
         self.typename = typename
         self.is_const = is_const
+        self.is_shared_ptr = is_shared_ptr
         self.is_ptr = is_ptr
         self.is_ref = is_ref
         self.is_basis = is_basis
@@ -199,6 +209,7 @@ class Type:
             return Type(
                 typename=t.basis,
                 is_const='',
+                is_shared_ptr='',
                 is_ptr='',
                 is_ref='',
                 is_basis=True,
@@ -207,6 +218,7 @@ class Type:
             return Type(
                 typename=t.qualified.typename,
                 is_const=t.qualified.is_const,
+                is_shared_ptr=t.qualified.is_shared_ptr,
                 is_ptr=t.qualified.is_ptr,
                 is_ref=t.qualified.is_ref,
                 is_basis=False,
@@ -215,9 +227,9 @@ class Type:
             raise ValueError("Parse result is not a Type?")
 
     def __repr__(self) -> str:
-        return '{} {}{}{}'.format(
-            self.typename, self.is_const, self.is_ptr, self.is_ref
-        )
+        return "{self.typename} " \
+            "{self.is_const}{self.is_shared_ptr}{self.is_ptr}{self.is_ref}".format(
+            self=self)
 
     def to_cpp(self, use_boost: bool) -> str:
         """
@@ -227,19 +239,23 @@ class Type:
         Treat Matrix and Vector as "const Matrix&" and "const Vector&" resp.
         """
         shared_ptr_ns = "boost" if use_boost else "std"
-        return ("{const} {shared_ptr}{typename}"
-                "{shared_ptr_ropbracket}{ref}".format(
-                    const="const" if
-                    (self.is_const or self.is_ptr
-                     or self.typename.name in ["Matrix", "Vector"]) else "",
-                    typename=self.typename.to_cpp(),
-                    shared_ptr="{}::shared_ptr<".format(shared_ptr_ns)
-                    if self.is_ptr else "",
-                    shared_ptr_ropbracket=">" if self.is_ptr else "",
-                    ref="&" if
-                    (self.is_ref or self.is_ptr
-                     or self.typename.name in ["Matrix", "Vector"]) else "",
-                ))
+
+        if self.is_shared_ptr:
+            typename = "{ns}::shared_ptr<{typename}>".format(
+                ns=shared_ptr_ns, typename=self.typename.to_cpp())
+        elif self.is_ptr:
+            typename = "{typename}*".format(typename=self.typename.to_cpp())
+        elif self.is_ref or self.typename.name in ["Matrix", "Vector"]:
+            typename = typename = "{typename}&".format(
+                typename=self.typename.to_cpp())
+        else:
+            typename = self.typename.to_cpp()
+
+        return ("{const} {typename}".format(
+            const="const" if
+            (self.is_const
+             or self.typename.name in ["Matrix", "Vector"]) else "",
+            typename=typename))
 
 
 class Argument:
@@ -652,6 +668,9 @@ class Class:
         """Get the namespaces which this class is nested under as a list."""
         return collect_namespaces(self)
 
+    def __repr__(self):
+        return "Class: {self.name}".format(self=self)
+
 
 class TypedefTemplateInstantiation:
     """
@@ -730,23 +749,26 @@ class GlobalFunction:
     Rule to parse functions defined in the global scope.
     """
     rule = (
-        ReturnType.rule("return_type")  #
+        Optional(Template.rule("template"))
+        + ReturnType.rule("return_type")  #
         + IDENT("name")  #
         + LPAREN  #
         + ArgumentList.rule("args_list")  #
         + RPAREN  #
         + SEMI_COLON  #
-    ).setParseAction(
-        lambda t: GlobalFunction(t.name, t.return_type, t.args_list))
+    ).setParseAction(lambda t: GlobalFunction(t.name, t.return_type, t.
+                                              args_list, t.template))
 
     def __init__(self,
                  name: str,
                  return_type: ReturnType,
                  args_list: ArgumentList,
+                 template: Template,
                  parent: str = ''):
         self.name = name
         self.return_type = return_type
         self.args = args_list
+        self.template = template
         self.is_const = None
 
         self.parent = parent

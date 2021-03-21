@@ -52,8 +52,8 @@ The python wrapper supports keyword arguments for functions/methods. Hence, the 
     - Class variables are read-write so they can be updated directly in Python.
 
 - Pointer types
-    - To declare a pointer type (including shared pointers), simply add an asterisk (i.e. `*`) to the class name.
-    - E.g. `gtsam::noiseModel::Base*` to define the wrapping for the `Base` noise model shared pointer.
+    - To declare a simple pointer, simply add an asterisk (i.e. `*`) to the class name, e.g.`double*`.
+    - To declare a shared pointer (e.g. `gtsam::noiseModel::Base::shared_ptr`), just use a double asterisk, i.e. `**`. E.g. `gtsam::noiseModel::Base**` to define the wrapping for the `Base` noise model shared pointer.
 
 - Comments can use either C++ or C style, with multiple lines.
 
@@ -78,7 +78,7 @@ The python wrapper supports keyword arguments for functions/methods. Hence, the 
     - Can have multiple functions of the same name in different namespaces.
 
 - Using classes defined in other modules
-    - If you are using a class `OtherClass` not wrapped in an interface file, add `class OtherClass;` as a forward declaration to avoid a dependency error.
+    - If you are using a class `OtherClass` not wrapped in an interface file, add `class OtherClass;` as a forward declaration to avoid a dependency error. `OtherClass` should be in the same project.
 
 - Virtual inheritance
     - Specify fully-qualified base classes, i.e. `virtual class Derived : ns::Base {` where `ns` is the namespace.
@@ -140,9 +140,9 @@ The python wrapper supports keyword arguments for functions/methods. Hence, the 
 
 - Forward declarations and class definitions for **Pybind**:
     - Need to specify the base class (both this forward class and base class are declared in an external Pybind header)
-      This is so that Pybind can generate proper inheritance.
+    - This is so that Pybind can generate proper inheritance.
 
-      Example when wrapping a gtsam-based project:
+    - Example for when wrapping a gtsam-based project:
 
         ```cpp
          // forward declarations
@@ -153,8 +153,7 @@ The python wrapper supports keyword arguments for functions/methods. Hence, the 
          virtual class MyFactor : gtsam::NoiseModelFactor {...};
          ```
 
-   - **DO NOT** re-define an overriden function already declared in the external (forward-declared) base class
-       - This will cause an ambiguity problem in Pybind header file.
+   - **DO NOT** re-define an overriden function already declared in the external (forward-declared) base class. This will cause an ambiguity problem in the Pybind header file.
 
 
 ### TODO
