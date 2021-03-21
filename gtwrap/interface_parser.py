@@ -187,7 +187,20 @@ class Type:
         and cannot be used with smart pointers.
         """
 
-        rule = Or(BASIS_TYPES).setParseAction(lambda t: Typename(t))
+        rule = (
+            # Optional(CONST("is_const")) +  #
+            Or(BASIS_TYPES)("typename")  #
+            + Optional(POINTER("is_ptr"))  #
+        ).setParseAction(lambda t: Type._BasisType(
+            # Set the first value in the list as a pseudo-namespace
+            Typename(['', t.typename]),
+            '',
+            t.is_ptr))
+
+        def __init__(self, typename: Typename, is_const: str, is_ptr: str):
+            self.typename = typename
+            self.is_const = is_const
+            self.is_ptr = is_ptr
 
     rule = (
         _BasisType.rule("basis") | _QualifiedType.rule("qualified")  # BR
@@ -207,10 +220,10 @@ class Type:
         """Return the resulting Type from parsing the source."""
         if t.basis:
             return Type(
-                typename=t.basis,
-                is_const='',
+                typename=t.basis.typename,
+                is_const=t.basis.is_const,
                 is_shared_ptr='',
-                is_ptr='',
+                is_ptr=t.basis.is_ptr,
                 is_ref='',
                 is_basis=True,
             )
@@ -251,8 +264,8 @@ class Type:
         else:
             typename = self.typename.to_cpp()
 
-        return ("{const} {typename}".format(
-            const="const" if
+        return ("{const}{typename}".format(
+            const="const " if
             (self.is_const
              or self.typename.name in ["Matrix", "Vector"]) else "",
             typename=typename))

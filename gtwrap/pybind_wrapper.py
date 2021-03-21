@@ -118,7 +118,7 @@ class PybindWrapper:
                          ))
 
         ret = ('{prefix}.{cdef}("{py_method}",'
-               '[]({opt_self}{opt_comma}{args_signature_with_names}){{'
+               '[]({opt_self}{opt_comma} {args_signature_with_names}){{'
                '{function_call}'
                '}}'
                '{py_args_names}){suffix}'.format(
