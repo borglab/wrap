@@ -168,3 +168,7 @@ class MyVector {
 // Class with multiple instantiated templates
 template<T = {int}, U = {double, float}>
 class MultipleTemplates {};
+
+// A templated free/global function. Multiple templates supported.
+template<T1 = {string, double}, T2 = {size_t}, R = {double}>
+R CoolFunction(const T& x, T2 y);
