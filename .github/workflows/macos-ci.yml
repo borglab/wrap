@@ -1,6 +1,6 @@
 name: Wrap CI for macOS
 
-on: [push, pull_request]
+on: [pull_request]
 
 jobs:
   build:
