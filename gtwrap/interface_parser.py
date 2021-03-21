@@ -158,23 +158,20 @@ class Type:
         """Type with qualifiers, such as `const`."""
 
         rule = (
-            Optional(CONST("is_const"))  #
-            + Typename.rule("typename")  #
+            Typename.rule("typename")  #
             + Optional(SHARED_POINTER("is_shared_ptr") | POINTER("is_ptr") | REF("is_ref"))
         ).setParseAction(
             lambda t: Type._QualifiedType(
                 Typename.from_parse_result(t.typename),
-                t.is_const,
                 t.is_shared_ptr,
                 t.is_ptr,
                 t.is_ref,
             )
         )
 
-        def __init__(self, typename: Typename, is_const: str,
-                     is_shared_ptr: str, is_ptr: str, is_ref: str):
+        def __init__(self, typename: Typename, is_shared_ptr: str, is_ptr: str,
+                     is_ref: str):
             self.typename = typename
-            self.is_const = is_const
             self.is_shared_ptr = is_shared_ptr
             self.is_ptr = is_ptr
             self.is_ref = is_ref
@@ -185,25 +182,40 @@ class Type:
 
         They only allow copy-by-value, i.e. (double& x) is illegal,
         and cannot be used with smart pointers.
+
+        The only exception is when using templates.
+        If the template type is used as a const ref, the basis type will also be a const ref.
+
+        E.g.
+            ```
+            template<T = {double}>
+            void func(const T& x);
+            ```
+
+            will give
+
+            ```
+            m_.def("CoolFunctionDoubleDouble",[](const double& s) {
+                return wrap_example::CoolFunction<double,double>(s);
+            }, py::arg("s"));
+            ```
         """
 
         rule = (
-            # Optional(CONST("is_const")) +  #
             Or(BASIS_TYPES)("typename")  #
             + Optional(POINTER("is_ptr"))  #
         ).setParseAction(lambda t: Type._BasisType(
             # Set the first value in the list as a pseudo-namespace
             Typename(['', t.typename]),
-            '',
             t.is_ptr))
 
-        def __init__(self, typename: Typename, is_const: str, is_ptr: str):
+        def __init__(self, typename: Typename, is_ptr: str):
             self.typename = typename
-            self.is_const = is_const
             self.is_ptr = is_ptr
 
     rule = (
-        _BasisType.rule("basis") | _QualifiedType.rule("qualified")  # BR
+        Optional(CONST("is_const"))  #
+        + (_BasisType.rule("basis") | _QualifiedType.rule("qualified"))  # BR
     ).setParseAction(lambda t: Type.from_parse_result(t))
 
     def __init__(self, typename: Typename, is_const: str, is_shared_ptr: str,
@@ -221,7 +233,7 @@ class Type:
         if t.basis:
             return Type(
                 typename=t.basis.typename,
-                is_const=t.basis.is_const,
+                is_const=t.is_const,
                 is_shared_ptr='',
                 is_ptr=t.basis.is_ptr,
                 is_ref='',
@@ -230,7 +242,7 @@ class Type:
         elif t.qualified:
             return Type(
                 typename=t.qualified.typename,
-                is_const=t.qualified.is_const,
+                is_const=t.is_const,
                 is_shared_ptr=t.qualified.is_shared_ptr,
                 is_ptr=t.qualified.is_ptr,
                 is_ref=t.qualified.is_ref,
@@ -783,7 +795,6 @@ class GlobalFunction:
         self.return_type = return_type
         self.args = args_list
         self.template = template
-        self.is_const = None
 
         self.parent = parent
         self.return_type.parent = self

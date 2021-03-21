@@ -173,7 +173,6 @@ class InstantiatedGlobalFunction(parser.GlobalFunction):
             )
             self.args = parser.ArgumentList(instantiated_args)
 
-
         super().__init__(self.name,
                          self.return_type,
                          self.args,
