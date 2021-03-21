@@ -875,16 +875,17 @@ class Namespace:
             content = []
         return Namespace(t.name, content)
 
-    def find_class(self, typename: Typename) -> Class:
+    def find_class_or_function(
+            self, typename: Typename) -> Union[Class, GlobalFunction]:
         """
-        Find the Class object given its typename.
+        Find the Class or GlobalFunction object given its typename.
         We have to traverse the tree of namespaces.
         """
         found_namespaces = find_sub_namespace(self, typename.namespaces)
         res = []
         for namespace in found_namespaces:
-            classes = (c for c in namespace.content if isinstance(c, Class))
-            res += [c for c in classes if c.name == typename.name]
+            classes_and_funcs = (c for c in namespace.content if isinstance(c, (Class, GlobalFunction)))
+            res += [c for c in classes_and_funcs if c.name == typename.name]
         if not res:
             raise ValueError(
                 "Cannot find class {} in module!".format(typename.name)

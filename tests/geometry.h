@@ -171,4 +171,10 @@ class MultipleTemplates {};
 
 // A templated free/global function. Multiple templates supported.
 template<T1 = {string, double}, T2 = {size_t}, R = {double}>
-R CoolFunction(const T& x, T2 y);
+R MultiTemplatedFunction(const T& x, T2 y);
+
+// Check if we can typedef the templated function
+template<T>
+void TemplatedFunction(const T& t);
+
+typedef TemplatedFunction<gtsam::Rot3> TemplatedFunctionRot3;

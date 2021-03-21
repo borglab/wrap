@@ -143,7 +143,7 @@ class InstantiatedGlobalFunction(parser.GlobalFunction):
         template<T = {double}>
         T add(const T& x, const T& y);
     """
-    def __init__(self, original, instantiations=()):
+    def __init__(self, original, instantiations=(), new_name=''):
         self.original = original
         self.instantiations = instantiations
         self.template = ''
@@ -154,7 +154,8 @@ class InstantiatedGlobalFunction(parser.GlobalFunction):
             self.return_type = original.return_type
             self.args = original.args
         else:
-            self.name = instantiate_name(original.name, self.instantiations)
+            self.name = instantiate_name(
+                original.name, instantiations) if not new_name else new_name
             self.return_type = instantiate_return_type(
                 original.return_type,
                 self.original.template.typenames,
@@ -471,15 +472,22 @@ def instantiate_namespace_inplace(namespace):
 
         elif isinstance(element, parser.TypedefTemplateInstantiation):
             typedef_inst = element
-            original_class = namespace.top_level().find_class(
+            top_level = namespace.top_level()
+            original_element = top_level.find_class_or_function(
                 typedef_inst.typename)
-            typedef_content.append(
-                InstantiatedClass(
-                    original_class,
-                    typedef_inst.typename.instantiations,
-                    typedef_inst.new_name
-                )
-            )
+
+            # Check if element is a typedef'd class or function.
+            if isinstance(original_element, parser.Class):
+                typedef_content.append(
+                    InstantiatedClass(original_element,
+                                      typedef_inst.typename.instantiations,
+                                      typedef_inst.new_name))
+            elif isinstance(original_element, parser.GlobalFunction):
+                typedef_content.append(
+                    InstantiatedGlobalFunction(
+                        original_element, typedef_inst.typename.instantiations,
+                        typedef_inst.new_name))
+
         elif isinstance(element, parser.Namespace):
             instantiate_namespace_inplace(element)
             instantiated_content.append(element)
