@@ -1,0 +1,40 @@
+name: Wrap CI for Linux
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    name: Tests for 🐍 ${{ matrix.python_version }}
+    runs-on: ubuntu-18.04
+
+    env:
+      PYTHON_VERSION: ${{ matrix.python_version }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python_version: [3.6, 3.7, 3.8, 3.9]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get -y update
+          sudo apt install cmake build-essential pkg-config libpython-dev python-numpy libboost-all-dev
+
+      - name: Set up Python ${{ matrix.python_version }}
+        uses: actions/setup-python@v2
+        with:
+          python_version: ${{ matrix.python_version }}
+
+      - name: Python Dependencies
+        run: |
+          sudo pip$PYTHON_VERSION install -r requirements.txt
+
+      - name: Build and Test
+        run: |
+          cd tests
+          # Use Pytest to run all the tests.
+          pytest
