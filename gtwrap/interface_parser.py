@@ -254,7 +254,8 @@ class Type:
         shared_ptr_ns = "boost" if use_boost else "std"
 
         if self.is_shared_ptr:
-            typename = "{ns}::shared_ptr<{typename}>".format(
+            # always pass by reference: https://stackoverflow.com/a/8741626/1236990
+            typename = "{ns}::shared_ptr<{typename}>&".format(
                 ns=shared_ptr_ns, typename=self.typename.to_cpp())
         elif self.is_ptr:
             typename = "{typename}*".format(typename=self.typename.to_cpp())
