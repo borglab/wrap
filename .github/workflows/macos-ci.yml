@@ -7,9 +7,6 @@ jobs:
     name: Tests for 🐍 ${{ matrix.python_version }}
     runs-on: macos-10.15
 
-    env:
-      PYTHON_VERSION: ${{ matrix.python_version }}
-
     strategy:
       fail-fast: false
       matrix:
@@ -30,7 +27,7 @@ jobs:
 
       - name: Python Dependencies
         run: |
-          pip$PYTHON_VERSION install -r requirements.txt
+          pip install -r requirements.txt
 
       - name: Build and Test
         run: |

@@ -7,9 +7,6 @@ jobs:
     name: Tests for 🐍 ${{ matrix.python_version }}
     runs-on: ubuntu-18.04
 
-    env:
-      PYTHON_VERSION: ${{ matrix.python_version }}
-
     strategy:
       fail-fast: false
       matrix:
@@ -31,7 +28,7 @@ jobs:
 
       - name: Python Dependencies
         run: |
-          sudo pip$PYTHON_VERSION install -r requirements.txt
+          sudo pip install -r requirements.txt
 
       - name: Build and Test
         run: |
