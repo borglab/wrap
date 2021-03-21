@@ -76,6 +76,10 @@ The python wrapper supports keyword arguments for functions/methods. Hence, the 
     - Functions specified outside of a class are **global**.
     - Can be overloaded with different arguments.
     - Can have multiple functions of the same name in different namespaces.
+    - Functions can be templated and have multiple template arguments, e.g.
+        ```cpp
+        template<T, >
+        ```
 
 - Using classes defined in other modules
     - If you are using a class `OtherClass` not wrapped in an interface file, add `class OtherClass;` as a forward declaration to avoid a dependency error. `OtherClass` should be in the same project.
