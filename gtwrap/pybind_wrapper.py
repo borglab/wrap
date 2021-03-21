@@ -161,7 +161,11 @@ class PybindWrapper:
         return ret
 
     def wrap_methods(self, methods, cpp_class, prefix='\n' + ' ' * 8, suffix=''):
-        """Wrap all the methods in the `cpp_class`."""
+        """
+        Wrap all the methods in the `cpp_class`.
+
+        This function is also used to wrap global functions.
+        """
         res = ""
         for method in methods:
 
@@ -323,7 +327,8 @@ class PybindWrapper:
             # Global functions.
             all_funcs = [
                 func for func in namespace.content
-                if isinstance(func, parser.GlobalFunction)
+                if isinstance(func, (parser.GlobalFunction,
+                                     instantiator.InstantiatedGlobalFunction))
             ]
             wrapped += self.wrap_methods(
                 all_funcs,

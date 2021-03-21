@@ -128,11 +128,69 @@ def instantiate_name(original_name, instantiations):
     for inst in instantiations:
         # Ensure the first character of the type is capitalized
         name = inst.instantiated_name()
-        # Using `capitalize` on the complete causes other caps to be lower case
+        # Using `capitalize` on the complete name causes other caps to be lower case
         instantiated_names.append(name.replace(name[0], name[0].capitalize()))
 
     return "{}{}".format(original_name, "".join(instantiated_names))
 
+class InstantiatedGlobalFunction(parser.GlobalFunction):
+    """
+    Instantiate global functions.
+
+    E.g.
+        template<T = {double}>
+        T add(const T& x, const T& y);
+    """
+    def __init__(self, original, instantiations=()):
+        self.original = original
+        self.instantiations = instantiations
+        self.template = ''
+        self.parent = original.parent
+
+        if not original.template:
+            self.name = original.name
+            self.return_type = original.return_type
+            self.args = original.args
+        else:
+            self.name = instantiate_name(original.name, self.instantiations)
+            self.return_type = instantiate_return_type(
+                original.return_type,
+                self.original.template.typenames,
+                self.instantiations,
+                # Keyword type name `This` should already be replaced in the
+                # previous class template instantiation round.
+                cpp_typename='',
+            )
+            instantiated_args = instantiate_args_list(
+                original.args.args_list,
+                self.original.template.typenames,
+                self.instantiations,
+                # Keyword type name `This` should already be replaced in the
+                # previous class template instantiation round.
+                cpp_typename='',
+            )
+            self.args = parser.ArgumentList(instantiated_args)
+
+
+        super().__init__(self.name,
+                         self.return_type,
+                         self.args,
+                         self.template,
+                         parent=self.parent)
+
+    def to_cpp(self):
+        """Generate the C++ code for wrapping."""
+        if self.original.template:
+            instantiated_names = [inst.instantiated_name() for inst in self.instantiations]
+            ret = "{}<{}>".format(self.original.name, ",".join(instantiated_names))
+        else:
+            ret = self.original.name
+        return ret
+
+    def __repr__(self):
+        return "Instantiated {}".format(
+            super(InstantiatedGlobalFunction, self).__repr__()
+        )
 
 class InstantiatedMethod(parser.Method):
     """
@@ -395,6 +453,20 @@ def instantiate_namespace_inplace(namespace):
                     instantiated_content.append(
                         InstantiatedClass(original_class,
                                           list(instantiations)))
+
+        elif isinstance(element, parser.GlobalFunction):
+            original_func = element
+            if not original_func.template:
+                instantiated_content.append(
+                    InstantiatedGlobalFunction(original_func, []))
+            else:
+                # Use itertools to get all possible combinations of instantiations
+                # Works even if one template does not have an instantiation list
+                for instantiations in itertools.product(
+                        *original_func.template.instantiations):
+                    instantiated_content.append(
+                        InstantiatedGlobalFunction(original_func,
+                                                   list(instantiations)))
 
         elif isinstance(element, parser.TypedefTemplateInstantiation):
             typedef_inst = element
