@@ -62,7 +62,7 @@ class Test {
   Test();
 
   // Test a shared ptr property
-  gtsam::noiseModel::Base** model_ptr;
+  gtsam::noiseModel::Base* model_ptr;
 
   pair<Vector,Matrix> return_pair (Vector v, Matrix A) const; // intentionally the first method
   pair<Vector,Matrix> return_pair (Vector v) const; // overload
@@ -87,14 +87,14 @@ class Test {
 
   bool return_field(const Test& t) const;
 
-  Test** return_TestPtr(const Test** value) const;
-  Test  return_Test(Test** value) const;
+  Test* return_TestPtr(const Test* value) const;
+  Test  return_Test(Test* value) const;
 
   gtsam::Point2* return_Point2Ptr(bool value) const;
 
-  pair<Test**,Test**> create_ptrs () const;
-  pair<Test ,Test**> create_MixedPtrs () const;
-  pair<Test**,Test**> return_ptrs (Test** p1, Test** p2) const;
+  pair<Test*,Test*> create_ptrs () const;
+  pair<Test ,Test*> create_MixedPtrs () const;
+  pair<Test*,Test*> return_ptrs (Test* p1, Test* p2) const;
 
   void print() const;
 
@@ -103,9 +103,9 @@ class Test {
   // even more comments at the end!
 };
 
-pair<gtsam::NonlinearFactorGraph**, gtsam::Values**> load2D(string filename, Test** model, int maxID, bool addNoise, bool smart);
-pair<gtsam::NonlinearFactorGraph**, gtsam::Values**> load2D(string filename, const gtsam::noiseModel::Diagonal** model, int maxID, bool addNoise, bool smart);
-pair<gtsam::NonlinearFactorGraph**, gtsam::Values**> load2D(string filename, gtsam::noiseModel::Diagonal* model);
+pair<gtsam::NonlinearFactorGraph*, gtsam::Values*> load2D(string filename, Test* model, int maxID, bool addNoise, bool smart);
+pair<gtsam::NonlinearFactorGraph*, gtsam::Values*> load2D(string filename, const gtsam::noiseModel::Diagonal* model, int maxID, bool addNoise, bool smart);
+pair<gtsam::NonlinearFactorGraph*, gtsam::Values*> load2D(string filename, gtsam::noiseModel::Diagonal@ model);
 
 Vector aGlobalFunction();
 
@@ -128,12 +128,12 @@ virtual class MyTemplate : MyBase {
 
   // Stress test templates and pointer combinations
   void accept_T(const T& value) const;
-  void accept_Tptr(T** value) const;
-  T** return_Tptr(T** value) const;
-  T  return_T(T* value) const;
-  pair<T**,T**> create_ptrs () const;
-  pair<T ,T**> create_MixedPtrs () const;
-  pair<T**,T**> return_ptrs (T** p1, T** p2) const;
+  void accept_Tptr(T* value) const;
+  T* return_Tptr(T* value) const;
+  T  return_T(T@ value) const;
+  pair<T*,T*> create_ptrs () const;
+  pair<T ,T*> create_MixedPtrs () const;
+  pair<T*,T*> return_ptrs (T* p1, T* p2) const;
 
   static This Level(const T& K);
 };
@@ -141,7 +141,7 @@ virtual class MyTemplate : MyBase {
 // A doubly templated class
 template<POSE, POINT>
 class MyFactor {
-  MyFactor(size_t key1, size_t key2, double measured, const gtsam::noiseModel::Base** noiseModel);
+  MyFactor(size_t key1, size_t key2, double measured, const gtsam::noiseModel::Base* noiseModel);
 };
 
 // and a typedef specializing it

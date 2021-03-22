@@ -43,9 +43,7 @@ ParserElement.enablePackrat()
 # rule for identifiers (e.g. variable names)
 IDENT = Word(alphas + '_', alphanums + '_') ^ Word(nums)
 
-POINTER = Literal("*")
-SHARED_POINTER = Word("**", exact=2)
-REF = Literal('&')
+RAW_POINTER, SHARED_POINTER, REF = map(Literal, "@*&")
 
 LPAREN, RPAREN, LBRACE, RBRACE, COLON, SEMI_COLON = map(Suppress, "(){}:;")
 LOPBRACK, ROPBRACK, COMMA, EQUAL = map(Suppress, "<>,=")
@@ -159,7 +157,7 @@ class Type:
 
         rule = (
             Typename.rule("typename")  #
-            + Optional(SHARED_POINTER("is_shared_ptr") | POINTER("is_ptr") | REF("is_ref"))
+            + Optional(SHARED_POINTER("is_shared_ptr") | RAW_POINTER("is_ptr") | REF("is_ref"))
         ).setParseAction(
             lambda t: Type._QualifiedType(
                 Typename.from_parse_result(t.typename),
@@ -203,7 +201,7 @@ class Type:
 
         rule = (
             Or(BASIS_TYPES)("typename")  #
-            + Optional(POINTER("is_ptr"))  #
+            + Optional(RAW_POINTER("is_ptr"))  #
         ).setParseAction(lambda t: Type._BasisType(
             # Set the first value in the list as a pseudo-namespace
             Typename(['', t.typename]),
