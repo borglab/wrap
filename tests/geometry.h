@@ -104,7 +104,6 @@ class Test {
 };
 
 pair<gtsam::NonlinearFactorGraph**, gtsam::Values**> load2D(string filename, Test** model, int maxID, bool addNoise, bool smart);
-pair<gtsam::NonlinearFactorGraph**, gtsam::Values**> load2D(string filename, gtsam::noiseModel::Diagonal** model, int maxID, bool addNoise, bool smart);
 pair<gtsam::NonlinearFactorGraph**, gtsam::Values**> load2D(string filename, const gtsam::noiseModel::Diagonal** model, int maxID, bool addNoise, bool smart);
 pair<gtsam::NonlinearFactorGraph**, gtsam::Values**> load2D(string filename, gtsam::noiseModel::Diagonal* model);
 

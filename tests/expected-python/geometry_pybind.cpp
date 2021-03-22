@@ -136,7 +136,6 @@ PYBIND11_MODULE(geometry_py, m_) {
         .def(py::init<size_t, size_t, double, const std::shared_ptr<gtsam::noiseModel::Base>&>(), py::arg("key1"), py::arg("key2"), py::arg("measured"), py::arg("noiseModel"));
 
     m_.def("load2D",[](string filename, std::shared_ptr<Test>& model, int maxID, bool addNoise, bool smart){return ::load2D(filename, model, maxID, addNoise, smart);}, py::arg("filename"), py::arg("model"), py::arg("maxID"), py::arg("addNoise"), py::arg("smart"));
-    m_.def("load2D",[](string filename, std::shared_ptr<gtsam::noiseModel::Diagonal>& model, int maxID, bool addNoise, bool smart){return ::load2D(filename, model, maxID, addNoise, smart);}, py::arg("filename"), py::arg("model"), py::arg("maxID"), py::arg("addNoise"), py::arg("smart"));
     m_.def("load2D",[](string filename, const std::shared_ptr<gtsam::noiseModel::Diagonal>& model, int maxID, bool addNoise, bool smart){return ::load2D(filename, model, maxID, addNoise, smart);}, py::arg("filename"), py::arg("model"), py::arg("maxID"), py::arg("addNoise"), py::arg("smart"));
     m_.def("load2D",[](string filename, gtsam::noiseModel::Diagonal* model){return ::load2D(filename, model);}, py::arg("filename"), py::arg("model"));
     m_.def("aGlobalFunction",[](){return ::aGlobalFunction();});
