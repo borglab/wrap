@@ -52,7 +52,7 @@ The python wrapper supports keyword arguments for functions/methods. Hence, the 
     - Class variables are read-write so they can be updated directly in Python.
 
 - Pointer types
-    - To declare a simple pointer, simply add an asterisk (i.e. `*`) to the class name, e.g.`double*`.
+    - To declare a simple/raw pointer, simply add an asterisk (i.e. `*`) to the class name, e.g.`double*`.
     - To declare a shared pointer (e.g. `gtsam::noiseModel::Base::shared_ptr`), just use a double asterisk, i.e. `**`. E.g. `gtsam::noiseModel::Base**` to define the wrapping for the `Base` noise model shared pointer.
 
 - Comments can use either C++ or C style, with multiple lines.

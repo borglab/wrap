@@ -145,9 +145,20 @@ class MatlabWrapper(object):
         """
         return x + '\n' + ('' if y == '' else '  ') + y
 
+    def _is_shared_ptr(self, arg_type):
+        """
+        Determine if the `interface_parser.Type` should be treated as a
+        shared pointer in the wrapper.
+        """
+        return arg_type.is_shared_ptr or (
+            arg_type.typename.name not in self.not_ptr_type
+            and arg_type.typename.name not in self.ignore_namespace
+            and arg_type.typename.name != 'string')
+
     def _is_ptr(self, arg_type):
-        """Determine if the interface_parser.Type should be treated as a
-        pointer in the wrapper.
+        """
+        Determine if the `interface_parser.Type` should be treated as a
+        raw pointer in the wrapper.
         """
         return arg_type.is_ptr or (
             arg_type.typename.name not in self.not_ptr_type
@@ -514,9 +525,14 @@ class MatlabWrapper(object):
                            name=arg.name,
                            id=arg_id)),
                                              prefix='  ')
-            elif self._is_ptr(arg.ctype) and \
+
+            elif (self._is_shared_ptr(arg.ctype) or self._is_ptr(arg.ctype)) and \
                     arg.ctype.typename.name not in self.ignore_namespace:
-                call_type = arg.ctype.is_ptr
+                if arg.ctype.is_shared_ptr:
+                    call_type = arg.ctype.is_shared_ptr
+                else:
+                    call_type = arg.ctype.is_ptr
+
                 body_args += textwrap.indent(textwrap.dedent('''\
                     {std_boost}::shared_ptr<{ctype_sep}> {name} = unwrap_shared_ptr< {ctype_sep} >(in[{id}], "ptr_{ctype}");
                 '''.format(std_boost='boost' if constructor else 'boost',
@@ -529,6 +545,7 @@ class MatlabWrapper(object):
                                              prefix='  ')
                 if call_type == "":
                     params += "*"
+
             else:
                 body_args += textwrap.indent(textwrap.dedent('''\
                     {ctype} {name} = unwrap< {ctype} >(in[{id}]);
@@ -1276,10 +1293,10 @@ class MatlabWrapper(object):
         pair_value = 'first' if func_id == 0 else 'second'
         new_line = '\n' if func_id == 0 else ''
 
-        if self._is_ptr(return_type):
+        if self._is_shared_ptr(return_type) or self._is_ptr(return_type):
             shared_obj = 'pairResult.' + pair_value
 
-            if not return_type.is_ptr:
+            if not (return_type.is_shared_ptr or return_type.is_ptr):
                 shared_obj = 'boost::make_shared<{name}>({shared_obj})' \
                     .format(name=self._format_type_name(return_type.typename),
                             shared_obj='pairResult.' + pair_value)
@@ -1344,7 +1361,7 @@ class MatlabWrapper(object):
 
         if return_1_name != 'void':
             if return_count == 1:
-                if self._is_ptr(return_1):
+                if self._is_shared_ptr(return_1) or self._is_ptr(return_1):
                     sep_method_name = partial(self._format_type_name,
                                               return_1.typename,
                                               include_namespace=True)
@@ -1353,7 +1370,7 @@ class MatlabWrapper(object):
                         expanded += self.wrap_collector_function_shared_return(
                             return_1.typename, obj, 0, new_line=False)
 
-                    if return_1.is_ptr:
+                    if return_1.is_shared_ptr or return_1.is_ptr:
                         shared_obj = '{obj},"{method_name_sep}"'.format(
                             obj=obj, method_name_sep=sep_method_name('.'))
                     else:
