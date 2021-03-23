@@ -17,6 +17,12 @@ class Point2 {
  int dim() const;
  char returnChar() const;
  void argChar(char a) const;
+ void argChar(char* a) const;
+ void argChar(char& a) const;
+ void argChar(char@ a) const;
+ void argChar(const char* a) const;
+ void argChar(const char& a) const;
+ void argChar(const char@ a) const;
  void argUChar(unsigned char a) const;
  void eigenArguments(Vector v, Matrix m) const;
  VectorNotEigen vectorConfusion();

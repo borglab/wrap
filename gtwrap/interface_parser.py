@@ -200,15 +200,19 @@ class Type:
 
         rule = (
             Or(BASIS_TYPES)("typename")  #
-            + Optional(RAW_POINTER("is_ptr"))  #
+            + Optional(SHARED_POINTER("is_shared_ptr") | RAW_POINTER("is_ptr") | REF("is_ref"))  #
         ).setParseAction(lambda t: Type._BasisType(
             # Set the first value in the list as a pseudo-namespace
             Typename(['', t.typename]),
-            t.is_ptr))
+            t.is_shared_ptr,
+            t.is_ptr,
+            t.is_ref))
 
-        def __init__(self, typename: Typename, is_ptr: str):
+        def __init__(self, typename: Typename, is_shared_ptr: str, is_ptr: str, is_ref: str):
             self.typename = typename
             self.is_ptr = is_ptr
+            self.is_shared_ptr = is_shared_ptr
+            self.is_ref = is_ref
 
     rule = (
         Optional(CONST("is_const"))  #
@@ -231,9 +235,9 @@ class Type:
             return Type(
                 typename=t.basis.typename,
                 is_const=t.is_const,
-                is_shared_ptr='',
+                is_shared_ptr=t.basis.is_shared_ptr,
                 is_ptr=t.basis.is_ptr,
-                is_ref='',
+                is_ref=t.basis.is_ref,
                 is_basis=True,
             )
         elif t.qualified:
