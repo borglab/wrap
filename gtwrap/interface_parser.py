@@ -72,7 +72,6 @@ BASIS_TYPES = map(
         "size_t",
         "double",
         "float",
-        "string",
     ],
 )
 
@@ -882,7 +881,8 @@ class Namespace:
         found_namespaces = find_sub_namespace(self, typename.namespaces)
         res = []
         for namespace in found_namespaces:
-            classes_and_funcs = (c for c in namespace.content if isinstance(c, (Class, GlobalFunction)))
+            classes_and_funcs = (c for c in namespace.content
+                                 if isinstance(c, (Class, GlobalFunction)))
             res += [c for c in classes_and_funcs if c.name == typename.name]
         if not res:
             raise ValueError(
