@@ -175,13 +175,9 @@ class Type:
 
     class _BasisType:
         """
-        Basis types are the built-in types in C++.
+        Basis types are the built-in types in C++ such as double, int, char, etc.
 
-        They only allow copy-by-value, i.e. (double& x) is illegal,
-        and cannot be used with smart pointers.
-
-        The only exception is when using templates.
-        If the template type is used as a const ref, the basis type will also be a const ref.
+        When using templates, the basis type will take on the same form as the template.
 
         E.g.
             ```
