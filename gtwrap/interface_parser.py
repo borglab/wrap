@@ -149,70 +149,70 @@ class Typename:
         return not res
 
 
-class Type:
-    """The type value that is parsed, e.g. void, string, size_t."""
-    class _QualifiedType:
-        """Type with qualifiers, such as `const`."""
-
-        rule = (
-            Typename.rule("typename")  #
-            + Optional(SHARED_POINTER("is_shared_ptr") | RAW_POINTER("is_ptr") | REF("is_ref"))
-        ).setParseAction(
-            lambda t: Type._QualifiedType(
-                Typename.from_parse_result(t.typename),
-                t.is_shared_ptr,
-                t.is_ptr,
-                t.is_ref,
-            )
-        )
-
-        def __init__(self, typename: Typename, is_shared_ptr: str, is_ptr: str,
-                     is_ref: str):
-            self.typename = typename
-            self.is_shared_ptr = is_shared_ptr
-            self.is_ptr = is_ptr
-            self.is_ref = is_ref
-
-    class _BasisType:
-        """
-        Basis types are the built-in types in C++ such as double, int, char, etc.
-
-        When using templates, the basis type will take on the same form as the template.
-
-        E.g.
-            ```
-            template<T = {double}>
-            void func(const T& x);
-            ```
-
-            will give
-
-            ```
-            m_.def("CoolFunctionDoubleDouble",[](const double& s) {
-                return wrap_example::CoolFunction<double,double>(s);
-            }, py::arg("s"));
-            ```
-        """
-
-        rule = (
-            Or(BASIS_TYPES)("typename")  #
-            + Optional(SHARED_POINTER("is_shared_ptr") | RAW_POINTER("is_ptr") | REF("is_ref"))  #
-        ).setParseAction(lambda t: Type._BasisType(
-            # Set the first value in the list as a pseudo-namespace
-            Typename(['', t.typename]),
-            t.is_shared_ptr,
-            t.is_ptr,
-            t.is_ref))
-
-        def __init__(self, typename: Typename, is_shared_ptr: str, is_ptr: str, is_ref: str):
-            self.typename = typename
-            self.is_ptr = is_ptr
-            self.is_shared_ptr = is_shared_ptr
-            self.is_ref = is_ref
+class QualifiedType:
+    """Type with qualifiers, such as `const`."""
 
     rule = (
+        Typename.rule("typename")  #
+        + Optional(SHARED_POINTER("is_shared_ptr") | RAW_POINTER("is_ptr") | REF("is_ref"))
+    ).setParseAction(
+        lambda t: QualifiedType(
+            Typename.from_parse_result(t.typename),
+            t.is_shared_ptr,
+            t.is_ptr,
+            t.is_ref,
+        )
+    )
+
+    def __init__(self, typename: Typename, is_shared_ptr: str, is_ptr: str,
+                    is_ref: str):
+        self.typename = typename
+        self.is_shared_ptr = is_shared_ptr
+        self.is_ptr = is_ptr
+        self.is_ref = is_ref
+
+class BasisType:
+    """
+    Basis types are the built-in types in C++ such as double, int, char, etc.
+
+    When using templates, the basis type will take on the same form as the template.
+
+    E.g.
+        ```
+        template<T = {double}>
+        void func(const T& x);
+        ```
+
+        will give
+
+        ```
+        m_.def("CoolFunctionDoubleDouble",[](const double& s) {
+            return wrap_example::CoolFunction<double,double>(s);
+        }, py::arg("s"));
+        ```
+    """
+
+    rule = (
+        Or(BASIS_TYPES)("typename")  #
+        + Optional(SHARED_POINTER("is_shared_ptr") | RAW_POINTER("is_ptr") | REF("is_ref"))  #
+    ).setParseAction(lambda t: BasisType(
+        # Set the first value in the list as a pseudo-namespace
+        Typename(['', t.typename]),
+        t.is_shared_ptr,
+        t.is_ptr,
+        t.is_ref))
+
+    def __init__(self, typename: Typename, is_shared_ptr: str, is_ptr: str, is_ref: str):
+        self.typename = typename
+        self.is_ptr = is_ptr
+        self.is_shared_ptr = is_shared_ptr
+        self.is_ref = is_ref
+
+class Type:
+    """The type value that is parsed, e.g. void, string, size_t."""
+    rule = (
         Optional(CONST("is_const"))  #
-        + (_BasisType.rule("basis") | _QualifiedType.rule("qualified"))  # BR
+        + (BasisType.rule("basis") | QualifiedType.rule("qualified"))  # BR
     ).setParseAction(lambda t: Type.from_parse_result(t))
 
     def __init__(self, typename: Typename, is_const: str, is_shared_ptr: str,
