@@ -1,258 +1,366 @@
-# TODO(duy): make them proper tests!!!
+"""
+GTSAM Copyright 2010-2020, Georgia Tech Research Corporation,
+Atlanta, Georgia 30332-0415
+All Rights Reserved
+
+See LICENSE for the license information
+
+Tests for interface_parser.
+
+Author: Varun Agrawal
+"""
+
+# pylint: disable=import-error,wrong-import-position
+
+import os
+import sys
 import unittest
 
-import sys, os
+from pyparsing import ParseException
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from gtwrap.interface_parser import *
+from gtwrap.interface_parser import (ArgumentList, Class, Constructor,
+                                     ForwardDeclaration, GlobalFunction,
+                                     Include, Method, Module, Namespace,
+                                     ReturnType, StaticMethod, Type,
+                                     TypedefTemplateInstantiation, Typename,
+                                     find_sub_namespace)
 
 
-class TestPyparsing(unittest.TestCase):
+class TestInterfaceParser(unittest.TestCase):
+    """Test driver for all classes in interface_parser.py."""
+    def test_typename(self):
+        """Test parsing of Typename."""
+        typename = Typename.rule.parseString("size_t")[0]
+        self.assertEqual("size_t", typename.name)
+
+    def test_type(self):
+        """Test for Type."""
+        t = Type.rule.parseString("int x")[0]
+        self.assertEqual("int", t.typename.name)
+        self.assertTrue(t.is_basis)
+
+        t = Type.rule.parseString("T x")[0]
+        self.assertEqual("T", t.typename.name)
+        self.assertTrue(not t.is_basis)
+
+        t = Type.rule.parseString("const int x")[0]
+        self.assertEqual("int", t.typename.name)
+        self.assertTrue(t.is_basis)
+        self.assertTrue(t.is_const)
+
+    def test_empty_arguments(self):
+        """Test no arguments."""
+        empty_args = ArgumentList.rule.parseString("")[0]
+        self.assertEqual(0, len(empty_args))
+
     def test_argument_list(self):
+        """Test arguments list for a method/function."""
         arg_string = "int a, C1 c1, C2& c2, C3* c3, "\
             "const C4 c4, const C5& c5,"\
             "const C6* c6"
-        args = ArgumentList.rule.parseString(arg_string)
-        print(ArgumentList(args))
+        args = ArgumentList.rule.parseString(arg_string)[0]
 
+        self.assertEqual(7, len(args.args_list))
+        self.assertEqual(['a', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6'],
+                         args.args_names())
 
-empty_args = ArgumentList.rule.parseString("")[0]
-print(empty_args)
+    def test_argument_list_qualifiers(self):
+        """
+        Test arguments list where the arguments are qualified with `const`
+        and can be either raw pointers, shared pointers or references.
+        """
+        arg_string = "double x1, double* x2, double& x3, double@ x4, " \
+            "const double x5, const double* x6, const double& x7, const double@ x8"
+        args = ArgumentList.rule.parseString(arg_string)[0].args_list
+        self.assertEqual(8, len(args))
+        self.assertFalse(args[1].ctype.is_ptr and args[1].ctype.is_shared_ptr
+                         and args[1].ctype.is_ref)
+        self.assertTrue(args[1].ctype.is_shared_ptr)
+        self.assertTrue(args[2].ctype.is_ref)
+        self.assertTrue(args[3].ctype.is_ptr)
+        self.assertTrue(args[4].ctype.is_const)
+        self.assertTrue(args[5].ctype.is_shared_ptr and args[5].ctype.is_const)
+        self.assertTrue(args[6].ctype.is_ref and args[6].ctype.is_const)
+        self.assertTrue(args[7].ctype.is_ptr and args[7].ctype.is_const)
 
-arg_string = "int a, C1 c1, C2& c2, C3* c3, "\
-    "const C4 c4, const C5& c5,"\
-    "const C6* c6"
-args = ArgumentList.rule.parseString(arg_string)[0]
-print(args)
+    def test_return_type(self):
+        """Test ReturnType"""
+        # Test void
+        return_type = ReturnType.rule.parseString("void")[0]
+        self.assertEqual("void", return_type.type1.typename.name)
+        self.assertTrue(return_type.type1.is_basis)
 
-# Test ReturnType
-ReturnType.rule.parseString("pair<fdsa, rewcds>")[0]
-ReturnType.rule.parseString("cdwdc")[0]
+        # Test basis type
+        return_type = ReturnType.rule.parseString("size_t")[0]
+        self.assertEqual("size_t", return_type.type1.typename.name)
+        self.assertTrue(not return_type.type2)
+        self.assertTrue(return_type.type1.is_basis)
 
-# expect throw
-# ReturnType.parseString("int&")
-# ReturnType.parseString("const int")
+        # Test with qualifiers
+        return_type = ReturnType.rule.parseString("int&")[0]
+        self.assertEqual("int", return_type.type1.typename.name)
+        self.assertTrue(return_type.type1.is_basis
+                        and return_type.type1.is_ref)
 
-ret = Class.rule.parseString("""
-virtual class SymbolicFactorGraph {
-  SymbolicFactorGraph();
-  SymbolicFactorGraph(const gtsam::SymbolicBayesNet& bayesNet);
-  SymbolicFactorGraph(const gtsam::SymbolicBayesTree& bayesTree);
+        return_type = ReturnType.rule.parseString("const int")[0]
+        self.assertEqual("int", return_type.type1.typename.name)
+        self.assertTrue(return_type.type1.is_basis
+                        and return_type.type1.is_const)
 
-  // From FactorGraph.
-  void push_back(gtsam::SymbolicFactor* factor);
-  void print(string s) const;
-  bool equals(const gtsam::SymbolicFactorGraph& rhs, double tol) const;
-  size_t size() const;
-  bool exists(size_t idx) const;
+        # Test pair return
+        return_type = ReturnType.rule.parseString("pair<char, int>")[0]
+        self.assertEqual("char", return_type.type1.typename.name)
+        self.assertEqual("int", return_type.type2.typename.name)
 
-  // Standard interface
-  gtsam::KeySet keys() const;
-  void push_back(const gtsam::SymbolicFactorGraph& graph);
-  void push_back(const gtsam::SymbolicBayesNet& bayesNet);
-  void push_back(const gtsam::SymbolicBayesTree& bayesTree);
+    def test_method(self):
+        """Test for a class method."""
+        ret = Method.rule.parseString("int f();")[0]
+        self.assertEqual("f", ret.name)
+        self.assertEqual(0, len(ret.args))
+        self.assertTrue(not ret.is_const)
 
-  /* Advanced interface */
-  void push_factor(size_t key);
-  void push_factor(size_t key1, size_t key2);
-  void push_factor(size_t key1, size_t key2, size_t key3);
-  void push_factor(size_t key1, size_t key2, size_t key3, size_t key4);
+        ret = Method.rule.parseString("int f() const;")[0]
+        self.assertEqual("f", ret.name)
+        self.assertEqual(0, len(ret.args))
+        self.assertTrue(ret.is_const)
 
-  gtsam::SymbolicBayesNet* eliminateSequential();
-  gtsam::SymbolicBayesNet* eliminateSequential(
-      const gtsam::Ordering& ordering);
-  gtsam::SymbolicBayesTree* eliminateMultifrontal();
-  gtsam::SymbolicBayesTree* eliminateMultifrontal(
-      const gtsam::Ordering& ordering);
-  pair<gtsam::SymbolicBayesNet*, gtsam::SymbolicFactorGraph*>
-      eliminatePartialSequential(const gtsam::Ordering& ordering);
-  pair<gtsam::SymbolicBayesNet*, gtsam::SymbolicFactorGraph*>
-      eliminatePartialSequential(const gtsam::KeyVector& keys);
-  pair<gtsam::SymbolicBayesTree*, gtsam::SymbolicFactorGraph*>
-      eliminatePartialMultifrontal(const gtsam::Ordering& ordering);
-  gtsam::SymbolicBayesNet* marginalMultifrontalBayesNet(
-      const gtsam::Ordering& ordering);
-  gtsam::SymbolicBayesNet* marginalMultifrontalBayesNet(
-      const gtsam::KeyVector& key_vector,
-      const gtsam::Ordering& marginalizedVariableOrdering);
-  gtsam::SymbolicFactorGraph* marginal(const gtsam::KeyVector& key_vector);
-};
-""")[0]
+        ret = Method.rule.parseString(
+            "int f(const int x, const Class& c, Class* t) const;")[0]
+        self.assertEqual("f", ret.name)
+        self.assertEqual(3, len(ret.args))
 
-ret = Class.rule.parseString("""
-virtual class Base {
-};
-""")[0]
+    def test_static_method(self):
+        """Test for static methods."""
+        ret = StaticMethod.rule.parseString("static int f();")[0]
+        self.assertEqual("f", ret.name)
+        self.assertEqual(0, len(ret.args))
 
-ret = Class.rule.parseString("""
-virtual class Null: gtsam::noiseModel::mEstimator::Base {
-  Null();
-  void print(string s) const;
-  static gtsam::noiseModel::mEstimator::Null* Create();
+        ret = StaticMethod.rule.parseString(
+            "static int f(const int x, const Class& c, Class* t);")[0]
+        self.assertEqual("f", ret.name)
+        self.assertEqual(3, len(ret.args))
 
-  // enabling serialization functionality
-  void serializable() const;
-};
-""")[0]
+    def test_constructor(self):
+        """Test for class constructor."""
+        ret = Constructor.rule.parseString("f();")[0]
+        self.assertEqual("f", ret.name)
+        self.assertEqual(0, len(ret.args))
 
-retFactorIndices = Class.rule.parseString("""
-class FactorIndices {};
-""")[0]
+        ret = Constructor.rule.parseString(
+            "f(const int x, const Class& c, Class* t);")[0]
+        self.assertEqual("f", ret.name)
+        self.assertEqual(3, len(ret.args))
 
-retIsam2 = Class.rule.parseString("""
-class ISAM2 {
-  ISAM2();
-  ISAM2(const gtsam::ISAM2Params& params);
-  ISAM2(const gtsam::ISAM2& other);
+    def test_typedef_template_instantiation(self):
+        """Test for typedef'd instantiation of a template."""
+        typedef = TypedefTemplateInstantiation.rule.parseString("""
+        typedef gtsam::BearingFactor<gtsam::Pose2, gtsam::Point2, gtsam::Rot2>
+            BearingFactor2D;
+        """)[0]
+        self.assertEqual("BearingFactor2D", typedef.new_name)
+        self.assertEqual("BearingFactor", typedef.typename.name)
+        self.assertEqual(["gtsam"], typedef.typename.namespaces)
+        self.assertEqual(3, len(typedef.typename.instantiations))
 
-  bool equals(const gtsam::ISAM2& other, double tol) const;
-  void print(string s) const;
-  void printStats() const;
-  void saveGraph(string s) const;
-
-  gtsam::ISAM2Result update();
-  gtsam::ISAM2Result update(const gtsam::NonlinearFactorGraph& newFactors,
-    const gtsam::Values& newTheta);
-  gtsam::ISAM2Result update(const gtsam::NonlinearFactorGraph& newFactors,
-    const gtsam::Values& newTheta, const gtsam::FactorIndices&
-    removeFactorIndices);
-  gtsam::ISAM2Result update(const gtsam::NonlinearFactorGraph& newFactors,
-    const gtsam::Values& newTheta,
-    const gtsam::FactorIndices& removeFactorIndices,
-    const gtsam::KeyGroupMap& constrainedKeys);
-
-  gtsam::Values getLinearizationPoint() const;
-  gtsam::Values calculateEstimate() const;
-  template <VALUE = {gtsam::Point2, gtsam::Rot2, gtsam::Pose2, gtsam::Point3,
-                     gtsam::Rot3, gtsam::Pose3, gtsam::Cal3_S2, gtsam::Cal3DS2,
-                     gtsam::Cal3Bundler, gtsam::EssentialMatrix,
-                     gtsam::SimpleCamera, Vector, Matrix}>
-  VALUE calculateEstimate(size_t key) const;
-  gtsam::Values calculateBestEstimate() const;
-  Matrix marginalCovariance(size_t key) const;
-  gtsam::VectorValues getDelta() const;
-  gtsam::NonlinearFactorGraph getFactorsUnsafe() const;
-  gtsam::VariableIndex getVariableIndex() const;
-  gtsam::ISAM2Params params() const;
-};
-""")[0]
-# if __name__ == '__main__':
-#     unittest.main()
-
-typename = Typename.rule.parseString("rew")[0]
-ret = ReturnType.rule.parseString("pair<fdsa, rewcds>")[0]
-ret1 = Method.rule.parseString(
-    "int f(const int x, const Class& c, Class* t) const;")[0]
-ret = Method.rule.parseString("int f() const;")[0]
-
-ret1 = StaticMethod.rule.parseString(
-    "static int f(const int x, const Class& c, Class* t);")[0]
-ret = StaticMethod.rule.parseString("static int f();")[0]
-ret1 = Constructor.rule.parseString(
-    "f(const int x, const Class& c, Class* t);")[0]
-ret = Constructor.rule.parseString("f();")[0]
-
-typedef = TypedefTemplateInstantiation.rule.parseString("""
-typedef gtsam::BearingFactor<gtsam::Pose2, gtsam::Point2, gtsam::Rot2>
-    BearingFactor2D;
-""")[0]
-
-include = Include.rule.parseString("#include <gtsam/slam/PriorFactor.h>")[0]
-print(include)
-
-fwd = ForwardDeclaration.rule.parseString(
-    "virtual class Test:gtsam::Point3;")[0]
-
-func = GlobalFunction.rule.parseString("""
-gtsam::Values localToWorld(const gtsam::Values& local,
-    const gtsam::Pose2& base, const gtsam::KeyVector& keys);
-""")[0]
-print(func)
-
-try:
-    namespace = Namespace.rule.parseString("""
-namespace gtsam {
-#include <gtsam/geometry/Point2.h>
-class Point2 {
-Point2();
-Point2(double x, double y);
-double x() const;
-double y() const;
-int dim() const;
-char returnChar() const;
-void argChar(char a) const;
-void argUChar(unsigned char a) const;
-void eigenArguments(Vector v, Matrix m) const;
-VectorNotEigen vectorConfusion();
-};
-
-#include <gtsam/geometry/Point3.h>
-class Point3 {
-Point3(double x, double y, double z);
-double norm() const;
-
-// static functions - use static keyword and uppercase
-static double staticFunction();
-static gtsam::Point3 StaticFunctionRet(double z);
-
-// enabling serialization functionality
-void serialize() const; // Just triggers a flag internally
-};
-
-}
-    """)
-except ParseException as pe:
-    print(pe.markInputline())
-
-# filename = "tools/workspace/pybind_wrapper/gtsam.h"
-# with open(filename, "r") as f:
-#     content = f.read()
-# module = Module.parseString(content)
-
-module = Module.parseString("""
-namespace one {
-    namespace two {
-        namespace three {
-            class Class123 {
+    def test_base_class(self):
+        """Test a base class."""
+        ret = Class.rule.parseString("""
+            virtual class Base {
             };
-        }
-        class Class12a {
+            """)[0]
+        self.assertEqual("Base", ret.name)
+        self.assertEqual(0, len(ret.ctors))
+        self.assertEqual(0, len(ret.methods))
+        self.assertEqual(0, len(ret.static_methods))
+        self.assertEqual(0, len(ret.properties))
+        self.assertTrue(ret.is_virtual)
+
+    def test_empty_class(self):
+        """Test an empty class declaration."""
+        ret = Class.rule.parseString("""
+            class FactorIndices {};
+        """)[0]
+        self.assertEqual("FactorIndices", ret.name)
+        self.assertEqual(0, len(ret.ctors))
+        self.assertEqual(0, len(ret.methods))
+        self.assertEqual(0, len(ret.static_methods))
+        self.assertEqual(0, len(ret.properties))
+        self.assertTrue(not ret.is_virtual)
+
+    def test_class(self):
+        """Test a non-trivial class."""
+        ret = Class.rule.parseString("""
+        class SymbolicFactorGraph {
+            SymbolicFactorGraph();
+            SymbolicFactorGraph(const gtsam::SymbolicBayesNet& bayesNet);
+            SymbolicFactorGraph(const gtsam::SymbolicBayesTree& bayesTree);
+
+            // Dummy static method
+            static gtsam::SymbolidFactorGraph CreateGraph();
+
+            void push_back(gtsam::SymbolicFactor* factor);
+            void print(string s) const;
+            bool equals(const gtsam::SymbolicFactorGraph& rhs, double tol) const;
+            size_t size() const;
+            bool exists(size_t idx) const;
+
+            // Standard interface
+            gtsam::KeySet keys() const;
+            void push_back(const gtsam::SymbolicFactorGraph& graph);
+            void push_back(const gtsam::SymbolicBayesNet& bayesNet);
+            void push_back(const gtsam::SymbolicBayesTree& bayesTree);
+
+            /* Advanced interface */
+            void push_factor(size_t key);
+            void push_factor(size_t key1, size_t key2);
+            void push_factor(size_t key1, size_t key2, size_t key3);
+            void push_factor(size_t key1, size_t key2, size_t key3, size_t key4);
+
+            gtsam::SymbolicBayesNet* eliminateSequential();
+            gtsam::SymbolicBayesNet* eliminateSequential(
+                const gtsam::Ordering& ordering);
+            gtsam::SymbolicBayesTree* eliminateMultifrontal();
+            gtsam::SymbolicBayesTree* eliminateMultifrontal(
+                const gtsam::Ordering& ordering);
+            pair<gtsam::SymbolicBayesNet*, gtsam::SymbolicFactorGraph*>
+                eliminatePartialSequential(const gtsam::Ordering& ordering);
+            pair<gtsam::SymbolicBayesNet*, gtsam::SymbolicFactorGraph*>
+                eliminatePartialSequential(const gtsam::KeyVector& keys);
+            pair<gtsam::SymbolicBayesTree*, gtsam::SymbolicFactorGraph*>
+                eliminatePartialMultifrontal(const gtsam::Ordering& ordering);
+            gtsam::SymbolicBayesNet* marginalMultifrontalBayesNet(
+                const gtsam::Ordering& ordering);
+            gtsam::SymbolicBayesNet* marginalMultifrontalBayesNet(
+                const gtsam::KeyVector& key_vector,
+                const gtsam::Ordering& marginalizedVariableOrdering);
+            gtsam::SymbolicFactorGraph* marginal(const gtsam::KeyVector& key_vector);
+            };
+        """)[0]
+
+        self.assertEqual("SymbolicFactorGraph", ret.name)
+        self.assertEqual(3, len(ret.ctors))
+        self.assertEqual(23, len(ret.methods))
+        self.assertEqual(1, len(ret.static_methods))
+        self.assertEqual(0, len(ret.properties))
+        self.assertTrue(not ret.is_virtual)
+
+    def test_class_inheritance(self):
+        """Test for class inheritance."""
+        ret = Class.rule.parseString("""
+        virtual class Null: gtsam::noiseModel::mEstimator::Base {
+          Null();
+          void print(string s) const;
+          static gtsam::noiseModel::mEstimator::Null* Create();
+
+          // enabling serialization functionality
+          void serializable() const;
         };
-    }
-    namespace two_dummy {
-        namespace three_dummy{
+        """)[0]
+        self.assertEqual("Null", ret.name)
+        self.assertEqual(1, len(ret.ctors))
+        self.assertEqual(2, len(ret.methods))
+        self.assertEqual(1, len(ret.static_methods))
+        self.assertEqual(0, len(ret.properties))
+        self.assertEqual("Base", ret.parent_class.name)
+        self.assertEqual(["gtsam", "noiseModel", "mEstimator"],
+                         ret.parent_class.namespaces)
+        self.assertTrue(ret.is_virtual)
 
+    def test_include(self):
+        """Test for include statements."""
+        include = Include.rule.parseString(
+            "#include <gtsam/slam/PriorFactor.h>")[0]
+        self.assertEqual("gtsam/slam/PriorFactor.h", include.header)
+
+    def test_forward_declaration(self):
+        """Test for forward declarations."""
+        fwd = ForwardDeclaration.rule.parseString(
+            "virtual class Test:gtsam::Point3;")[0]
+
+        fwd_name = fwd.name.asList()[0]
+        self.assertEqual("Test", fwd_name.name)
+        self.assertTrue(fwd.is_virtual)
+
+    def test_function(self):
+        """Test for global/free function."""
+        func = GlobalFunction.rule.parseString("""
+        gtsam::Values localToWorld(const gtsam::Values& local,
+            const gtsam::Pose2& base, const gtsam::KeyVector& keys);
+        """)[0]
+        self.assertEqual("localToWorld", func.name)
+        self.assertEqual("Values", func.return_type.type1.typename.name)
+        self.assertEqual(3, len(func.args))
+
+    def test_namespace(self):
+        """Test for namespace parsing."""
+        namespace = Namespace.rule.parseString("""
+        namespace gtsam {
+          #include <gtsam/geometry/Point2.h>
+          class Point2 {
+            Point2();
+            Point2(double x, double y);
+            double x() const;
+            double y() const;
+            int dim() const;
+            char returnChar() const;
+            void argChar(char a) const;
+            void argUChar(unsigned char a) const;
+          };
+
+          #include <gtsam/geometry/Point3.h>
+          class Point3 {
+            Point3(double x, double y, double z);
+            double norm() const;
+
+            // static functions - use static keyword and uppercase
+            static double staticFunction();
+            static gtsam::Point3 StaticFunctionRet(double z);
+
+            // enabling serialization functionality
+            void serialize() const; // Just triggers a flag internally
+          };
+        }""")[0]
+        self.assertEqual("gtsam", namespace.name)
+
+    def test_module(self):
+        """Test module parsing."""
+        module = Module.parseString("""
+        namespace one {
+            namespace two {
+                namespace three {
+                    class Class123 {
+                    };
+                }
+                class Class12a {
+                };
+            }
+            namespace two_dummy {
+                namespace three_dummy{
+
+                }
+                namespace fourth_dummy{
+
+                }
+            }
+            namespace two {
+                class Class12b {
+
+                };
+            }
         }
-        namespace fourth_dummy{
 
-        }
-    }
-    namespace two {
-        class Class12b {
-
+        class Global{
         };
-    }
-}
+        """)
 
-class Global{
-};
-""")
+        # print("module: ", module)
+        # print(dir(module.content[0].name))
+        self.assertEqual(["one", "Global"], [x.name for x in module.content])
+        self.assertEqual(["two", "two_dummy", "two"],
+                         [x.name for x in module.content[0].content])
 
-print("module: ", module)
 
-sub_namespace = find_sub_namespace(module, ['one', 'two', 'three'])
-print("Found namespace:", sub_namespace[0].name)
-print(find_sub_namespace(module, ['one', 'two_test', 'three']))
-print(find_sub_namespace(module, ['one', 'two']))
-
-found_class = module.find_class_or_function(
-    Typename(namespaces_name=['one', 'two', 'three', 'Class123']))
-print(found_class)
-
-found_class = module.find_class_or_function(
-    Typename(namespaces_name=['one', 'two', 'Class12b']))
-print(found_class.name)
-
-found_class = module.find_class_or_function(
-    Typename(namespaces_name=['one', 'two', 'Class12a']))
-print(found_class.name)
+if __name__ == '__main__':
+    unittest.main()

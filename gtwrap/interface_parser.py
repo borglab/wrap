@@ -328,6 +328,9 @@ class ArgumentList:
     def __repr__(self) -> str:
         return self.args_list.__repr__()
 
+    def __len__(self) -> int:
+        return len(self.args_list)
+
     def args_names(self) -> List[str]:
         """Return a list of the names of all the arguments."""
         return [arg.name for arg in self.args_list]
