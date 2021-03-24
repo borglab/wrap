@@ -5,10 +5,10 @@
 %FunRange()
 %
 %-------Methods-------
-%range(double d) : returns This
+%range(double d) : returns FunRange
 %
 %-------Static Methods-------
-%create() : returns This
+%create() : returns FunRange
 %
 %-------Serialization Interface-------
 %string_serialize() : returns string
@@ -40,7 +40,7 @@ classdef FunRange < handle
     function disp(obj), obj.display; end
     %DISP Calls print on the object
     function varargout = range(this, varargin)
-      % RANGE usage: range(double d) : returns This
+      % RANGE usage: range(double d) : returns FunRange
       % Doxygen can be found at https://gtsam.org/doxygen/
       if length(varargin) == 1 && isa(varargin{1},'double')
         varargout{1} = class_wrapper(3, this, varargin{:});
@@ -53,7 +53,7 @@ classdef FunRange < handle
 
   methods(Static = true)
     function varargout = Create(varargin)
-      % CREATE usage: create() : returns This
+      % CREATE usage: create() : returns FunRange
       % Doxygen can be found at https://gtsam.org/doxygen/
       if length(varargin) == 0
         varargout{1} = class_wrapper(4, varargin{:});

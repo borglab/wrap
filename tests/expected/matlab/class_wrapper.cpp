@@ -169,13 +169,13 @@ void FunRange_range_3(int nargout, mxArray *out[], int nargin, const mxArray *in
   checkArguments("range",nargout,nargin-1,1);
   auto obj = unwrap_shared_ptr<FunRange>(in[0], "ptr_FunRange");
   double d = unwrap< double >(in[1]);
-  out[0] = wrap_shared_ptr(boost::make_shared<This>(obj->range(d)),"This", false);
+  out[0] = wrap_shared_ptr(boost::make_shared<FunRange>(obj->range(d)),"FunRange", false);
 }
 
 void FunRange_create_4(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   checkArguments("FunRange.create",nargout,nargin,0);
-  out[0] = wrap_shared_ptr(boost::make_shared<This>(FunRange::create()),"This", false);
+  out[0] = wrap_shared_ptr(boost::make_shared<FunRange>(FunRange::create()),"FunRange", false);
 }
 
 void FunDouble_collectorInsertAndMakeBase_5(int nargout, mxArray *out[], int nargin, const mxArray *in[])
