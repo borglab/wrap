@@ -5,7 +5,7 @@ Date: May 2019
 """
 import filecmp
 import os
-import os.path as path
+from os import path
 import shutil
 import sys
 import unittest
@@ -34,8 +34,8 @@ class TestDocument(unittest.TestCase):
     DIR_NAME = path.dirname(__file__)
 
     DOC_DIR = 'doc-test-files'
-    OUTPUT_XML_DIR = 'actual-xml-generation'
-    EXPECTED_XML_DIR = 'expected-xml-generation'
+    OUTPUT_XML_DIR = 'actual/xml'
+    EXPECTED_XML_DIR = 'expected/xml'
 
     DOC_DIR_PATH = path.abspath(path.join(DIR_NAME, DOC_DIR))
     OUTPUT_XML_DIR_PATH = path.abspath(path.join(DIR_NAME, OUTPUT_XML_DIR))
@@ -45,13 +45,14 @@ class TestDocument(unittest.TestCase):
         """Test parse_xml.generate_xml"""
         if path.exists(self.OUTPUT_XML_DIR_PATH):
             shutil.rmtree(self.OUTPUT_XML_DIR_PATH, ignore_errors=True)
+
         parser.generate_xml(self.DOC_DIR_PATH,
                             self.OUTPUT_XML_DIR_PATH,
                             quiet=True)
 
         self.assertTrue(os.path.isdir(self.OUTPUT_XML_DIR_PATH))
 
-        xml_path = path.join(self.OUTPUT_XML_DIR_PATH, 'xml')
+        xml_path = self.OUTPUT_XML_DIR_PATH
         if path.exists(xml_path):
             shutil.rmtree(xml_path)
         parser.generate_xml(self.DOC_DIR_PATH,
