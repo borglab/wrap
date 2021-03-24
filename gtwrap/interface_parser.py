@@ -72,7 +72,6 @@ BASIS_TYPES = map(
         "size_t",
         "double",
         "float",
-        "string",
     ],
 )
 
@@ -176,13 +175,9 @@ class Type:
 
     class _BasisType:
         """
-        Basis types are the built-in types in C++.
+        Basis types are the built-in types in C++ such as double, int, char, etc.
 
-        They only allow copy-by-value, i.e. (double& x) is illegal,
-        and cannot be used with smart pointers.
-
-        The only exception is when using templates.
-        If the template type is used as a const ref, the basis type will also be a const ref.
+        When using templates, the basis type will take on the same form as the template.
 
         E.g.
             ```
@@ -201,15 +196,19 @@ class Type:
 
         rule = (
             Or(BASIS_TYPES)("typename")  #
-            + Optional(RAW_POINTER("is_ptr"))  #
+            + Optional(SHARED_POINTER("is_shared_ptr") | RAW_POINTER("is_ptr") | REF("is_ref"))  #
         ).setParseAction(lambda t: Type._BasisType(
             # Set the first value in the list as a pseudo-namespace
             Typename(['', t.typename]),
-            t.is_ptr))
+            t.is_shared_ptr,
+            t.is_ptr,
+            t.is_ref))
 
-        def __init__(self, typename: Typename, is_ptr: str):
+        def __init__(self, typename: Typename, is_shared_ptr: str, is_ptr: str, is_ref: str):
             self.typename = typename
             self.is_ptr = is_ptr
+            self.is_shared_ptr = is_shared_ptr
+            self.is_ref = is_ref
 
     rule = (
         Optional(CONST("is_const"))  #
@@ -232,9 +231,9 @@ class Type:
             return Type(
                 typename=t.basis.typename,
                 is_const=t.is_const,
-                is_shared_ptr='',
+                is_shared_ptr=t.basis.is_shared_ptr,
                 is_ptr=t.basis.is_ptr,
-                is_ref='',
+                is_ref=t.basis.is_ref,
                 is_basis=True,
             )
         elif t.qualified:
@@ -328,6 +327,9 @@ class ArgumentList:
 
     def __repr__(self) -> str:
         return self.args_list.__repr__()
+
+    def __len__(self) -> int:
+        return len(self.args_list)
 
     def args_names(self) -> List[str]:
         """Return a list of the names of all the arguments."""
@@ -882,7 +884,8 @@ class Namespace:
         found_namespaces = find_sub_namespace(self, typename.namespaces)
         res = []
         for namespace in found_namespaces:
-            classes_and_funcs = (c for c in namespace.content if isinstance(c, (Class, GlobalFunction)))
+            classes_and_funcs = (c for c in namespace.content
+                                 if isinstance(c, (Class, GlobalFunction)))
             res += [c for c in classes_and_funcs if c.name == typename.name]
         if not res:
             raise ValueError(
