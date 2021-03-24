@@ -170,20 +170,14 @@ class QualifiedType:
         Typename.rule("typename")  #
         + Optional(SHARED_POINTER("is_shared_ptr") | RAW_POINTER("is_ptr") | REF("is_ref"))
     ).setParseAction(
-        lambda t: QualifiedType(
-            Typename.from_parse_result(t.typename),
-            t.is_shared_ptr,
-            t.is_ptr,
-            t.is_ref,
-        )
+        lambda t: QualifiedType(t)
     )
 
-    def __init__(self, typename: Typename, is_shared_ptr: str, is_ptr: str,
-                    is_ref: str):
-        self.typename = typename
-        self.is_shared_ptr = is_shared_ptr
-        self.is_ptr = is_ptr
-        self.is_ref = is_ref
+    def __init__(self, t: ParseResults):
+        self.typename = Typename.from_parse_result(t.typename)
+        self.is_shared_ptr = t.is_shared_ptr
+        self.is_ptr = t.is_ptr
+        self.is_ref = t.is_ref
 
 class BasisType:
     """
@@ -209,18 +203,13 @@ class BasisType:
     rule = (
         Or(BASIS_TYPES)("typename")  #
         + Optional(SHARED_POINTER("is_shared_ptr") | RAW_POINTER("is_ptr") | REF("is_ref"))  #
-    ).setParseAction(lambda t: BasisType(
-        # Set the first value in the list as a pseudo-namespace
-        Typename([t.typename]),
-        t.is_shared_ptr,
-        t.is_ptr,
-        t.is_ref))
+    ).setParseAction(lambda t: BasisType(t))
 
-    def __init__(self, typename: Typename, is_shared_ptr: str, is_ptr: str, is_ref: str):
-        self.typename = typename
-        self.is_ptr = is_ptr
-        self.is_shared_ptr = is_shared_ptr
-        self.is_ref = is_ref
+    def __init__(self, t: ParseResults):
+        self.typename = Typename([t.typename])
+        self.is_ptr = t.is_ptr
+        self.is_shared_ptr = t.is_shared_ptr
+        self.is_ref = t.is_ref
 
 class Type:
     """The type value that is parsed, e.g. void, string, size_t."""
@@ -260,7 +249,7 @@ class Type:
                 is_basis=False,
             )
         else:
-            raise ValueError("Parse result is not a Type?")
+            raise ValueError("Parse result is not a Type")
 
     def __repr__(self) -> str:
         return "{self.typename} " \
