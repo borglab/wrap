@@ -31,8 +31,13 @@ jobs:
           sudo pip3 install -U pip setuptools
           sudo pip3 install -r requirements.txt
 
-      - name: Build and Test
+      - name: Build
         run: |
+          mkdir build && cd build
+          cmake ..
+          cd ..
+      
+      - name: Test
           cd tests
           # Use Pytest to run all the tests.
           pytest
