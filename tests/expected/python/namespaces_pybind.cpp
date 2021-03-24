@@ -22,8 +22,8 @@ using namespace std;
 
 namespace py = pybind11;
 
-PYBIND11_MODULE(testNamespaces_py, m_) {
-    m_.doc() = "pybind11 wrapper of testNamespaces_py";
+PYBIND11_MODULE(namespaces_py, m_) {
+    m_.doc() = "pybind11 wrapper of namespaces_py";
 
     pybind11::module m_ns1 = m_.def_submodule("ns1", "ns1 submodule");
 

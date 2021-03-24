@@ -26,6 +26,7 @@ sys.path.append(osp.dirname(osp.dirname(osp.abspath(__file__))))
 class TestWrap(unittest.TestCase):
     """Tests for Python wrapper based on Pybind11."""
     TEST_DIR = osp.dirname(osp.realpath(__file__))
+    INTERFACE_DIR = osp.join(TEST_DIR, 'fixtures')
 
     def wrap_content(self, content, module_name, output_dir):
         """
@@ -59,46 +60,75 @@ class TestWrap(unittest.TestCase):
 
         return output
 
+    def compare_and_diff(self, file, actual):
+        """
+        Compute the comparison between the expected and actual file,
+        and assert if diff is zero.
+        """
+        expected = osp.join(self.TEST_DIR, 'expected', 'python', file)
+        success = filecmp.cmp(actual, expected)
+
+        if not success:
+            os.system("diff {} {}".format(actual, expected))
+        self.assertTrue(success, "Mismatch for file {0}".format(file))
+
     def test_geometry(self):
         """
         Check generation of python geometry wrapper.
         python3 ../pybind_wrapper.py --src geometry.h --module_name
             geometry_py --out output/geometry_py.cc
         """
-        with open(osp.join(self.TEST_DIR, 'fixtures', 'geometry.h'), 'r') as f:
+        with open(osp.join(self.INTERFACE_DIR, 'geometry.i'), 'r') as f:
             content = f.read()
 
         output = self.wrap_content(content, 'geometry_py',
                                    osp.join('actual', 'python'))
 
-        expected = osp.join(self.TEST_DIR, 'expected', 'python',
-                            'geometry_pybind.cpp')
-        success = filecmp.cmp(output, expected)
+        self.compare_and_diff('geometry_pybind.cpp', output)
 
-        if not success:
-            os.system("diff {} {}".format(output, expected))
-        self.assertTrue(success)
+    def test_functions(self):
+        """Test interface file with function info."""
+        with open(osp.join(self.INTERFACE_DIR, 'functions.i'), 'r') as f:
+            content = f.read()
+
+        output = self.wrap_content(content, 'functions_py',
+                                   osp.join('actual', 'python'))
+
+        self.compare_and_diff('functions_pybind.cpp', output)
+
+    def test_class(self):
+        """Test interface file with only class info."""
+        with open(osp.join(self.INTERFACE_DIR, 'class.i'), 'r') as f:
+            content = f.read()
+
+        output = self.wrap_content(content, 'class_py',
+                                   osp.join('actual', 'python'))
+
+        self.compare_and_diff('class_pybind.cpp', output)
+
+    def test_inheritance(self):
+        """Test interface file with class inheritance definitions."""
+        with open(osp.join(self.INTERFACE_DIR, 'inheritance.i'), 'r') as f:
+            content = f.read()
+
+        output = self.wrap_content(content, 'inheritance_py',
+                                   osp.join('actual', 'python'))
+
+        self.compare_and_diff('inheritance_pybind.cpp', output)
 
     def test_namespaces(self):
         """
-        Check generation of python geometry wrapper.
-        python3 ../pybind_wrapper.py --src testNamespaces.h --module_name
-            testNamespaces_py --out output/testNamespaces_py.cc
+        Check generation of python wrapper for namespace definition.
+        python3 ../pybind_wrapper.py --src namespaces.i --module_name
+            namespaces_py --out output/namespaces_py.cpp
         """
-        with open(osp.join(self.TEST_DIR, 'testNamespaces.h'), 'r') as f:
+        with open(osp.join(self.INTERFACE_DIR, 'namespaces.i'), 'r') as f:
             content = f.read()
 
-        output = self.wrap_content(content, 'testNamespaces_py',
+        output = self.wrap_content(content, 'namespaces_py',
                                    osp.join('actual', 'python'))
 
-        expected = osp.join(
-            self.TEST_DIR,
-            osp.join('expected', 'python', 'testNamespaces_py.cpp'))
-        success = filecmp.cmp(output, expected)
-
-        if not success:
-            os.system("diff {} {}".format(output, expected))
-        self.assertTrue(success)
+        self.compare_and_diff('namespaces_pybind.cpp', output)
 
 
 if __name__ == '__main__':
