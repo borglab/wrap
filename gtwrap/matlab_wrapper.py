@@ -76,7 +76,9 @@ class MatlabWrapper(object):
     # Files and their content
     content: List[str] = []
 
-    wrapper_file_template = "matlab_wrapper.tpl"
+    # Ensure the template file is always picked up from the correct directory.
+    dir_path = osp.dirname(osp.realpath(__file__))
+    wrapper_file_template = osp.join(dir_path, "matlab_wrapper.tpl")
 
     def __init__(self,
                  module,
