@@ -206,9 +206,10 @@ class InstantiatedMethod(parser.Method):
     """
     We can only instantiate template methods with a single template parameter.
     """
-    def __init__(self, original, instantiation=''):
+
+    def __init__(self, original, instantiations=''):
         self.original = original
-        self.instantiation = instantiation
+        self.instantiations = instantiations
         self.template = ''
         self.is_const = original.is_const
         self.parent = original.parent
@@ -218,23 +219,20 @@ class InstantiatedMethod(parser.Method):
             self.return_type = original.return_type
             self.args = original.args
         else:
-            #TODO(Varun) enable multiple templates for methods
-            if len(self.original.template.typenames) > 1:
-                raise ValueError("Can only instantiate template method with "
-                                 "single template parameter.")
-            self.name = instantiate_name(original.name, [self.instantiation])
+            self.name = instantiate_name(original.name, self.instantiations)
             self.return_type = instantiate_return_type(
                 original.return_type,
-                [self.original.template.typenames[0]],
-                [self.instantiation],
+                self.original.template.typenames,
+                self.instantiations,
                 # Keyword type name `This` should already be replaced in the
                 # previous class template instantiation round.
                 cpp_typename='',
             )
+
             instantiated_args = instantiate_args_list(
                 original.args.args_list,
-                [self.original.template.typenames[0]],
-                [self.instantiation],
+                self.original.template.typenames,
+                self.instantiations,
                 # Keyword type name `This` should already be replaced in the
                 # previous class template instantiation round.
                 cpp_typename='',
@@ -251,7 +249,9 @@ class InstantiatedMethod(parser.Method):
     def to_cpp(self):
         """Generate the C++ code for wrapping."""
         if self.original.template:
-            ret = "{}<{}>".format(self.original.name, self.instantiation)
+            ret = "{}<{}>".format(
+                self.original.name,
+                ",".join([x.name for x in self.instantiations]))
         else:
             ret = self.original.name
         return ret
@@ -307,11 +307,10 @@ class InstantiatedClass(parser.Class):
             if not method.template:
                 self.methods.append(InstantiatedMethod(method, ''))
             else:
-                assert len(
-                    method.template.typenames) == 1, ""\
-                    "Can only instantiate single template methods"
-                for inst in method.template.instantiations[0]:
-                    self.methods.append(InstantiatedMethod(method, inst))
+                instantiations = []
+                # Get all combinations of template parameters
+                for instantiations in itertools.product(*method.template.instantiations):
+                    self.methods.append(InstantiatedMethod(method, instantiations))
 
         super().__init__(
             self.template,
