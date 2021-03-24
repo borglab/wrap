@@ -77,29 +77,45 @@ BASIS_TYPES = map(
 
 
 class Typename:
-    """Template typename list, with full namespaces."""
+    """
+    Generic type which can be either a basic type or a class type,
+    similar to C++'s `typename` aka a qualified dependent type.
+    Contains type name with full namespace and template arguments.
+
+    E.g.
+    ```
+    gtsam::PinholeCamera<gtsam::Cal3S2>
+    ```
+
+    will give the name as `PinholeCamera`, namespace as `gtsam`,
+    and template instantiations as `[gtsam::Cal3S2]`.
+
+    Args:
+        namespaces_and_name: A list representing the namespaces of the type
+            with the type being the last element.
+        instantiations: Template parameters to the type.
+    """
 
     namespaces_name_rule = delimitedList(IDENT, "::")
     instantiation_name_rule = delimitedList(IDENT, "::")
     rule = Forward()
-
     rule << (
-        namespaces_name_rule("namespaces_name")  #
+        namespaces_name_rule("namespaces_and_name")  #
         + Optional(
             (LOPBRACK + delimitedList(rule, ",")("instantiations") + ROPBRACK))
-    ).setParseAction(lambda t: Typename(t.namespaces_name, t.instantiations))
+    ).setParseAction(lambda t: Typename(t.namespaces_and_name, t.instantiations))
 
     def __init__(self,
-                 namespaces_name: pyparsing.ParseResults,
+                 namespaces_and_name: ParseResults,
                  instantiations: Union[tuple, list, str, ParseResults] = ()):
-        self.namespaces = namespaces_name[:-1]
-        self.name = namespaces_name[-1]
+        self.name = namespaces_and_name[-1]  # the name is the last element in this list
+        self.namespaces = namespaces_and_name[:-1]
 
         if instantiations:
-            if not isinstance(instantiations, Iterable):
-                self.instantiations = instantiations.asList()
-            else:
+            if isinstance(instantiations, Iterable):
                 self.instantiations = instantiations  # type: ignore
+            else:
+                self.instantiations = instantiations.asList()
         else:
             self.instantiations = []
 
@@ -108,7 +124,7 @@ class Typename:
 
     @staticmethod
     def from_parse_result(parse_result: Union[str, list]):
-        """Return the typename from the parsed result."""
+        """Unpack the parsed result to get the Typename instance."""
         return parse_result[0]
 
     def __repr__(self) -> str:
@@ -140,79 +156,66 @@ class Typename:
         if isinstance(other, Typename):
             return str(self) == str(other)
         else:
-            return NotImplemented
+            return False
 
     def __ne__(self, other) -> bool:
         res = self.__eq__(other)
-        if res is NotImplemented:
-            return res
         return not res
 
 
-class Type:
-    """The type value that is parsed, e.g. void, string, size_t."""
-    class _QualifiedType:
-        """Type with qualifiers, such as `const`."""
-
-        rule = (
-            Typename.rule("typename")  #
-            + Optional(SHARED_POINTER("is_shared_ptr") | RAW_POINTER("is_ptr") | REF("is_ref"))
-        ).setParseAction(
-            lambda t: Type._QualifiedType(
-                Typename.from_parse_result(t.typename),
-                t.is_shared_ptr,
-                t.is_ptr,
-                t.is_ref,
-            )
-        )
-
-        def __init__(self, typename: Typename, is_shared_ptr: str, is_ptr: str,
-                     is_ref: str):
-            self.typename = typename
-            self.is_shared_ptr = is_shared_ptr
-            self.is_ptr = is_ptr
-            self.is_ref = is_ref
-
-    class _BasisType:
-        """
-        Basis types are the built-in types in C++ such as double, int, char, etc.
-
-        When using templates, the basis type will take on the same form as the template.
-
-        E.g.
-            ```
-            template<T = {double}>
-            void func(const T& x);
-            ```
-
-            will give
-
-            ```
-            m_.def("CoolFunctionDoubleDouble",[](const double& s) {
-                return wrap_example::CoolFunction<double,double>(s);
-            }, py::arg("s"));
-            ```
-        """
-
-        rule = (
-            Or(BASIS_TYPES)("typename")  #
-            + Optional(SHARED_POINTER("is_shared_ptr") | RAW_POINTER("is_ptr") | REF("is_ref"))  #
-        ).setParseAction(lambda t: Type._BasisType(
-            # Set the first value in the list as a pseudo-namespace
-            Typename(['', t.typename]),
-            t.is_shared_ptr,
-            t.is_ptr,
-            t.is_ref))
-
-        def __init__(self, typename: Typename, is_shared_ptr: str, is_ptr: str, is_ref: str):
-            self.typename = typename
-            self.is_ptr = is_ptr
-            self.is_shared_ptr = is_shared_ptr
-            self.is_ref = is_ref
+class QualifiedType:
+    """Type with qualifiers, such as `const`."""
 
     rule = (
+        Typename.rule("typename")  #
+        + Optional(SHARED_POINTER("is_shared_ptr") | RAW_POINTER("is_ptr") | REF("is_ref"))
+    ).setParseAction(
+        lambda t: QualifiedType(t)
+    )
+
+    def __init__(self, t: ParseResults):
+        self.typename = Typename.from_parse_result(t.typename)
+        self.is_shared_ptr = t.is_shared_ptr
+        self.is_ptr = t.is_ptr
+        self.is_ref = t.is_ref
+
+class BasisType:
+    """
+    Basis types are the built-in types in C++ such as double, int, char, etc.
+
+    When using templates, the basis type will take on the same form as the template.
+
+    E.g.
+        ```
+        template<T = {double}>
+        void func(const T& x);
+        ```
+
+        will give
+
+        ```
+        m_.def("CoolFunctionDoubleDouble",[](const double& s) {
+            return wrap_example::CoolFunction<double,double>(s);
+        }, py::arg("s"));
+        ```
+    """
+
+    rule = (
+        Or(BASIS_TYPES)("typename")  #
+        + Optional(SHARED_POINTER("is_shared_ptr") | RAW_POINTER("is_ptr") | REF("is_ref"))  #
+    ).setParseAction(lambda t: BasisType(t))
+
+    def __init__(self, t: ParseResults):
+        self.typename = Typename([t.typename])
+        self.is_ptr = t.is_ptr
+        self.is_shared_ptr = t.is_shared_ptr
+        self.is_ref = t.is_ref
+
+class Type:
+    """The type value that is parsed, e.g. void, string, size_t."""
+    rule = (
         Optional(CONST("is_const"))  #
-        + (_BasisType.rule("basis") | _QualifiedType.rule("qualified"))  # BR
+        + (BasisType.rule("basis") | QualifiedType.rule("qualified"))  # BR
     ).setParseAction(lambda t: Type.from_parse_result(t))
 
     def __init__(self, typename: Typename, is_const: str, is_shared_ptr: str,
@@ -246,7 +249,7 @@ class Type:
                 is_basis=False,
             )
         else:
-            raise ValueError("Parse result is not a Type?")
+            raise ValueError("Parse result is not a Type")
 
     def __repr__(self) -> str:
         return "{self.typename} " \

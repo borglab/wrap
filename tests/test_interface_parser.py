@@ -35,6 +35,12 @@ class TestInterfaceParser(unittest.TestCase):
         typename = Typename.rule.parseString("size_t")[0]
         self.assertEqual("size_t", typename.name)
 
+        typename = Typename.rule.parseString("gtsam::PinholeCamera<gtsam::Cal3S2>")[0]
+        self.assertEqual("PinholeCamera", typename.name)
+        self.assertEqual(["gtsam"], typename.namespaces)
+        self.assertEqual("Cal3S2", typename.instantiations[0].name)
+        self.assertEqual(["gtsam"], typename.instantiations[0].namespaces)
+
     def test_type(self):
         """Test for Type."""
         t = Type.rule.parseString("int x")[0]
