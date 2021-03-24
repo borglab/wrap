@@ -164,8 +164,10 @@ class TestWrap(unittest.TestCase):
         self.generate_content(cc_content)
 
         files = [
-            'load2D.m', 'aGlobalFunction.m', 'overloadedGlobalFunction.m',
-            'functions_wrapper.cpp'
+            'functions_wrapper.cpp', 'load2D.m', 'aGlobalFunction.m',
+            'MultiTemplatedFunctionDoubleSize_tDouble.m',
+            'MultiTemplatedFunctionStringSize_tDouble.m',
+            'overloadedGlobalFunction.m', 'TemplatedFunctionRot3.m'
         ]
 
         for file in files:
@@ -195,16 +197,41 @@ class TestWrap(unittest.TestCase):
         self.generate_content(cc_content)
 
         files = [
-            'class_wrapper.cpp',
-            'FunDouble.m',
-            'FunRange.m',
-            'MyFactorPosePoint2.m',
-            'MyTemplateMatrix.m',
-            'MyTemplatePoint2.m',
-            'MyVector3.m',
-            'MyVector12.m',
-            'PrimitiveRefDouble.m',
-            'Test.m',
+            'class_wrapper.cpp', 'FunDouble.m', 'FunRange.m',
+            'MultipleTemplatesIntDouble.m', 'MultipleTemplatesIntFloat.m',
+            'MyFactorPosePoint2.m', 'MyVector3.m', 'MyVector12.m',
+            'PrimitiveRefDouble.m', 'Test.m'
+        ]
+
+        for file in files:
+            self.compare_and_diff(file)
+
+    def test_inheritance(self):
+        """Test interface file with class inheritance definitions."""
+        with open(osp.join(self.INTERFACE_DIR, 'inheritance.i'), 'r') as f:
+            content = f.read()
+
+        if not osp.exists(self.MATLAB_ACTUAL_DIR):
+            os.mkdir(self.MATLAB_ACTUAL_DIR)
+
+        module = parser.Module.parseString(content)
+
+        instantiator.instantiate_namespace_inplace(module)
+
+        wrapper = MatlabWrapper(
+            module=module,
+            module_name='inheritance',
+            top_module_namespace=['gtsam'],
+            ignore_classes=[''],
+        )
+
+        cc_content = wrapper.wrap()
+
+        self.generate_content(cc_content)
+
+        files = [
+            'inheritance_wrapper.cpp', 'MyBase.m', 'MyTemplateMatrix.m',
+            'MyTemplatePoint2.m'
         ]
 
         for file in files:
