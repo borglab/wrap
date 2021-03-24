@@ -33,6 +33,7 @@ jobs:
         run: cmake .
 
       - name: Test
+        run: |
           cd tests
           # Use Pytest to run all the tests.
           pytest
