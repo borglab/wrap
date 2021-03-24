@@ -10,11 +10,10 @@ import os
 import os.path as osp
 import sys
 import unittest
-import os.path as osp
 
 from loguru import logger
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(osp.dirname(osp.dirname(osp.abspath(__file__))))
 
 import gtwrap.interface_parser as parser
 import gtwrap.template_instantiator as instantiator
@@ -25,7 +24,8 @@ class TestWrap(unittest.TestCase):
     """
     Test the Matlab wrapper
     """
-    TEST_DIR = os.path.dirname(os.path.realpath(__file__))
+    TEST_DIR = osp.dirname(osp.realpath(__file__))
+    INTERFACE_DIR = osp.join(TEST_DIR, "fixtures")
     MATLAB_TEST_DIR = osp.join(TEST_DIR, "expected", "matlab")
     MATLAB_ACTUAL_DIR = osp.join(TEST_DIR, "actual", "matlab")
 
@@ -52,7 +52,7 @@ class TestWrap(unittest.TestCase):
                 logger.debug("c object: {}".format(c[0][0]))
                 path_to_folder = osp.join(path, c[0][0])
 
-                if not os.path.isdir(path_to_folder):
+                if not osp.isdir(path_to_folder):
                     try:
                         os.makedirs(path_to_folder, exist_ok=True)
                     except OSError:
@@ -67,7 +67,7 @@ class TestWrap(unittest.TestCase):
 
                 logger.debug(
                     "[generate_content_global]: {}".format(path_to_folder))
-                if not os.path.isdir(path_to_folder):
+                if not osp.isdir(path_to_folder):
                     try:
                         os.makedirs(path_to_folder, exist_ok=True)
                     except OSError:
@@ -83,7 +83,7 @@ class TestWrap(unittest.TestCase):
                 path_to_file = osp.join(path, c[0])
 
                 logger.debug("[generate_content]: {}".format(path_to_file))
-                if not os.path.isdir(path_to_file):
+                if not osp.isdir(path_to_file):
                     try:
                         os.mkdir(path)
                     except OSError:
@@ -93,24 +93,28 @@ class TestWrap(unittest.TestCase):
                     f.write(c[1])
 
     def compare_and_diff(self, file):
-        output = self.MATLAB_ACTUAL_DIR + file
-        expected = self.MATLAB_TEST_DIR + file
+        """
+        Compute the comparison between the expected and actual file,
+        and assert if diff is zero.
+        """
+        output = osp.join(self.MATLAB_ACTUAL_DIR, file)
+        expected = osp.join(self.MATLAB_TEST_DIR, file)
         success = filecmp.cmp(output, expected)
         if not success:
             print("Differ in file: {}".format(file))
             os.system("diff {} {}".format(output, expected))
-        self.assertTrue(success)
+        self.assertTrue(success, "Mismatch for file {0}".format(file))
 
-    def test_geometry_matlab(self):
+    def test_geometry(self):
         """
         Check generation of matlab geometry wrapper.
         python3 wrap/matlab_wrapper.py --src wrap/tests/geometry.h
             --module_name geometry --out wrap/tests/actual-matlab
         """
-        with open(osp.join(self.TEST_DIR, 'fixtures', 'geometry.h'), 'r') as f:
+        with open(osp.join(self.INTERFACE_DIR, 'geometry.i'), 'r') as f:
             content = f.read()
 
-        if not os.path.exists(self.MATLAB_ACTUAL_DIR):
+        if not osp.exists(self.MATLAB_ACTUAL_DIR):
             os.mkdir(self.MATLAB_ACTUAL_DIR)
 
         module = parser.Module.parseString(content)
@@ -129,21 +133,16 @@ class TestWrap(unittest.TestCase):
 
         self.generate_content(cc_content)
 
-        self.assertTrue(os.path.isdir(osp.join(self.MATLAB_ACTUAL_DIR, '+gtsam')))
+        self.assertTrue(osp.isdir(osp.join(self.MATLAB_ACTUAL_DIR, '+gtsam')))
 
-        files = [
-            '+gtsam/Point2.m', '+gtsam/Point3.m', 'Test.m', 'MyBase.m',
-            'load2D.m', 'MyTemplatePoint2.m', 'MyTemplateMatrix.m',
-            'MyVector3.m', 'MyVector12.m', 'MyFactorPosePoint2.m',
-            'aGlobalFunction.m', 'overloadedGlobalFunction.m',
-            'geometry_wrapper.cpp'
-        ]
+        files = ['+gtsam/Point2.m', '+gtsam/Point3.m']
 
         for file in files:
             self.compare_and_diff(file)
 
     def test_class(self):
-        with open(osp.join(self.TEST_DIR, 'fixtures', 'class.i'), 'r') as f:
+        """Test interface file with only class info."""
+        with open(osp.join(self.INTERFACE_DIR, 'class.i'), 'r') as f:
             content = f.read()
 
         if not osp.exists(self.MATLAB_ACTUAL_DIR):
@@ -163,7 +162,15 @@ class TestWrap(unittest.TestCase):
         cc_content = wrapper.wrap()
 
         self.generate_content(cc_content)
-        self.compare_and_diff("class_wrapper.cpp")
+
+        files = [
+            'FunRange.m', 'FunDouble.m', 'Test.m', 'MyFactorPosePoint2.m',
+            'PrimitiveRefDouble.m', 'MyTemplatePoint2.m', 'MyTemplateMatrix.m',
+            'MyVector3.m', 'MyVector12.m', 'class_wrapper.cpp'
+        ]
+
+        for file in files:
+            self.compare_and_diff(file)
 
 
 if __name__ == '__main__':
