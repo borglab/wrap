@@ -246,9 +246,13 @@ class InstantiatedMethod(parser.Method):
     def to_cpp(self):
         """Generate the C++ code for wrapping."""
         if self.original.template:
-            ret = "{}<{}>".format(
-                self.original.name,
-                ",".join([x.name for x in self.instantiations]))
+            instantiation_list = [
+                # Get the fully qualified name
+                "::".join(x.namespaces + [x.name])
+                for x in self.instantiations
+            ]
+            ret = "{}<{}>".format(self.original.name,
+                                  ",".join(instantiation_list))
         else:
             ret = self.original.name
         return ret
