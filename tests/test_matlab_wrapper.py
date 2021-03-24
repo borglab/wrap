@@ -140,6 +140,37 @@ class TestWrap(unittest.TestCase):
         for file in files:
             self.compare_and_diff(file)
 
+    def test_functions(self):
+        """Test interface file with function info."""
+        with open(osp.join(self.INTERFACE_DIR, 'functions.i'), 'r') as f:
+            content = f.read()
+
+        if not osp.exists(self.MATLAB_ACTUAL_DIR):
+            os.mkdir(self.MATLAB_ACTUAL_DIR)
+
+        module = parser.Module.parseString(content)
+
+        instantiator.instantiate_namespace_inplace(module)
+
+        wrapper = MatlabWrapper(
+            module=module,
+            module_name='functions',
+            top_module_namespace=['gtsam'],
+            ignore_classes=[''],
+        )
+
+        cc_content = wrapper.wrap()
+
+        self.generate_content(cc_content)
+
+        files = [
+            'load2D.m', 'aGlobalFunction.m', 'overloadedGlobalFunction.m',
+            'functions_wrapper.cpp'
+        ]
+
+        for file in files:
+            self.compare_and_diff(file)
+
     def test_class(self):
         """Test interface file with only class info."""
         with open(osp.join(self.INTERFACE_DIR, 'class.i'), 'r') as f:
@@ -164,9 +195,16 @@ class TestWrap(unittest.TestCase):
         self.generate_content(cc_content)
 
         files = [
-            'FunRange.m', 'FunDouble.m', 'Test.m', 'MyFactorPosePoint2.m',
-            'PrimitiveRefDouble.m', 'MyTemplatePoint2.m', 'MyTemplateMatrix.m',
-            'MyVector3.m', 'MyVector12.m', 'class_wrapper.cpp'
+            'class_wrapper.cpp',
+            'FunDouble.m',
+            'FunRange.m',
+            'MyFactorPosePoint2.m',
+            'MyTemplateMatrix.m',
+            'MyTemplatePoint2.m',
+            'MyVector3.m',
+            'MyVector12.m',
+            'PrimitiveRefDouble.m',
+            'Test.m',
         ]
 
         for file in files:
