@@ -118,7 +118,7 @@ class TestWrap(unittest.TestCase):
 
     def test_namespaces(self):
         """
-        Check generation of python wrapper for namespace definition.
+        Check generation of python wrapper for full namespace definition.
         python3 ../pybind_wrapper.py --src namespaces.i --module_name
             namespaces_py --out output/namespaces_py.cpp
         """

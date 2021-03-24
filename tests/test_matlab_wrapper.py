@@ -135,7 +135,7 @@ class TestWrap(unittest.TestCase):
 
         self.assertTrue(osp.isdir(osp.join(self.MATLAB_ACTUAL_DIR, '+gtsam')))
 
-        files = ['+gtsam/Point2.m', '+gtsam/Point3.m']
+        files = ['+gtsam/Point2.m', '+gtsam/Point3.m', 'geometry_wrapper.cpp']
 
         for file in files:
             self.compare_and_diff(file)
@@ -164,7 +164,7 @@ class TestWrap(unittest.TestCase):
         self.generate_content(cc_content)
 
         files = [
-            'functions_wrapper.cpp', 'load2D.m', 'aGlobalFunction.m',
+            'functions_wrapper.cpp', 'aGlobalFunction.m', 'load2D.m',
             'MultiTemplatedFunctionDoubleSize_tDouble.m',
             'MultiTemplatedFunctionStringSize_tDouble.m',
             'overloadedGlobalFunction.m', 'TemplatedFunctionRot3.m'
@@ -232,6 +232,41 @@ class TestWrap(unittest.TestCase):
         files = [
             'inheritance_wrapper.cpp', 'MyBase.m', 'MyTemplateMatrix.m',
             'MyTemplatePoint2.m'
+        ]
+
+        for file in files:
+            self.compare_and_diff(file)
+
+    def test_namspaces(self):
+        """
+        Test interface file with full namespace definition.
+        """
+        with open(osp.join(self.INTERFACE_DIR, 'namespaces.i'), 'r') as f:
+            content = f.read()
+
+        if not osp.exists(self.MATLAB_ACTUAL_DIR):
+            os.mkdir(self.MATLAB_ACTUAL_DIR)
+
+        module = parser.Module.parseString(content)
+
+        instantiator.instantiate_namespace_inplace(module)
+
+        wrapper = MatlabWrapper(
+            module=module,
+            module_name='namespaces',
+            top_module_namespace=['gtsam'],
+            ignore_classes=[''],
+        )
+
+        cc_content = wrapper.wrap()
+
+        self.generate_content(cc_content)
+
+        files = [
+            'namespaces_wrapper.cpp', '+ns1/aGlobalFunction.m',
+            '+ns1/ClassA.m', '+ns1/ClassB.m', '+ns2/+ns3/ClassB.m',
+            '+ns2/aGlobalFunction.m', '+ns2/ClassA.m', '+ns2/ClassC.m',
+            '+ns2/overloadedGlobalFunction.m', 'ClassD.m'
         ]
 
         for file in files:
