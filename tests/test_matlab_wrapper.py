@@ -10,6 +10,7 @@ import os
 import os.path as osp
 import sys
 import unittest
+import os.path as osp
 
 from loguru import logger
 
@@ -91,6 +92,15 @@ class TestWrap(unittest.TestCase):
                 with open(path_to_file, 'w') as f:
                     f.write(c[1])
 
+    def compare_and_diff(self, file):
+        output = self.MATLAB_ACTUAL_DIR + file
+        expected = self.MATLAB_TEST_DIR + file
+        success = filecmp.cmp(output, expected)
+        if not success:
+            print("Differ in file: {}".format(file))
+            os.system("diff {} {}".format(output, expected))
+        self.assertTrue(success)
+
     def test_geometry_matlab(self):
         """
         Check generation of matlab geometry wrapper.
@@ -119,15 +129,6 @@ class TestWrap(unittest.TestCase):
 
         self.generate_content(cc_content)
 
-        def compare_and_diff(file):
-            output = osp.join(self.MATLAB_ACTUAL_DIR, file)
-            expected = osp.join(self.MATLAB_TEST_DIR, file)
-            success = filecmp.cmp(output, expected)
-            if not success:
-                print("Differ in file: {}".format(file))
-                os.system("diff {} {}".format(output, expected))
-            self.assertTrue(success)
-
         self.assertTrue(os.path.isdir(osp.join(self.MATLAB_ACTUAL_DIR, '+gtsam')))
 
         files = [
@@ -139,7 +140,30 @@ class TestWrap(unittest.TestCase):
         ]
 
         for file in files:
-            compare_and_diff(file)
+            self.compare_and_diff(file)
+
+    def test_class(self):
+        with open(osp.join(self.TEST_DIR, 'fixtures', 'class.i'), 'r') as f:
+            content = f.read()
+
+        if not osp.exists(self.MATLAB_ACTUAL_DIR):
+            os.mkdir(self.MATLAB_ACTUAL_DIR)
+
+        module = parser.Module.parseString(content)
+
+        instantiator.instantiate_namespace_inplace(module)
+
+        wrapper = MatlabWrapper(
+            module=module,
+            module_name='class',
+            top_module_namespace=['gtsam'],
+            ignore_classes=[''],
+        )
+
+        cc_content = wrapper.wrap()
+
+        self.generate_content(cc_content)
+        self.compare_and_diff("class_wrapper.cpp")
 
 
 if __name__ == '__main__':
