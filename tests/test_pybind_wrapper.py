@@ -27,6 +27,11 @@ class TestWrap(unittest.TestCase):
     """Tests for Python wrapper based on Pybind11."""
     TEST_DIR = osp.dirname(osp.realpath(__file__))
     INTERFACE_DIR = osp.join(TEST_DIR, 'fixtures')
+    PYTHON_TEST_DIR = osp.join(TEST_DIR, 'expected', 'python')
+    PYTHON_ACTUAL_DIR = osp.join(TEST_DIR, "actual", "python")
+
+    # Create the `actual/python` directory
+    os.makedirs(PYTHON_ACTUAL_DIR, exist_ok=True)
 
     def wrap_content(self, content, module_name, output_dir):
         """
@@ -65,7 +70,7 @@ class TestWrap(unittest.TestCase):
         Compute the comparison between the expected and actual file,
         and assert if diff is zero.
         """
-        expected = osp.join(self.TEST_DIR, 'expected', 'python', file)
+        expected = osp.join(self.PYTHON_TEST_DIR, file)
         success = filecmp.cmp(actual, expected)
 
         if not success:
@@ -82,7 +87,7 @@ class TestWrap(unittest.TestCase):
             content = f.read()
 
         output = self.wrap_content(content, 'geometry_py',
-                                   osp.join('actual', 'python'))
+                                   self.PYTHON_ACTUAL_DIR)
 
         self.compare_and_diff('geometry_pybind.cpp', output)
 
@@ -92,7 +97,7 @@ class TestWrap(unittest.TestCase):
             content = f.read()
 
         output = self.wrap_content(content, 'functions_py',
-                                   osp.join('actual', 'python'))
+                                   self.PYTHON_ACTUAL_DIR)
 
         self.compare_and_diff('functions_pybind.cpp', output)
 
@@ -101,8 +106,7 @@ class TestWrap(unittest.TestCase):
         with open(osp.join(self.INTERFACE_DIR, 'class.i'), 'r') as f:
             content = f.read()
 
-        output = self.wrap_content(content, 'class_py',
-                                   osp.join('actual', 'python'))
+        output = self.wrap_content(content, 'class_py', self.PYTHON_ACTUAL_DIR)
 
         self.compare_and_diff('class_pybind.cpp', output)
 
@@ -112,7 +116,7 @@ class TestWrap(unittest.TestCase):
             content = f.read()
 
         output = self.wrap_content(content, 'inheritance_py',
-                                   osp.join('actual', 'python'))
+                                   self.PYTHON_ACTUAL_DIR)
 
         self.compare_and_diff('inheritance_pybind.cpp', output)
 
@@ -126,7 +130,7 @@ class TestWrap(unittest.TestCase):
             content = f.read()
 
         output = self.wrap_content(content, 'namespaces_py',
-                                   osp.join('actual', 'python'))
+                                   self.PYTHON_ACTUAL_DIR)
 
         self.compare_and_diff('namespaces_pybind.cpp', output)
 

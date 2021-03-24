@@ -29,6 +29,9 @@ class TestWrap(unittest.TestCase):
     MATLAB_TEST_DIR = osp.join(TEST_DIR, "expected", "matlab")
     MATLAB_ACTUAL_DIR = osp.join(TEST_DIR, "actual", "matlab")
 
+    # Create the `actual/matlab` directory
+    os.makedirs(MATLAB_ACTUAL_DIR, exist_ok=True)
+
     # set the log level to INFO by default
     logger.remove()  # remove the default sink
     logger.add(sys.stderr, format="{time} {level} {message}", level="INFO")
