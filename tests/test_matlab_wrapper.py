@@ -3,10 +3,11 @@ Unit tests for Matlab wrap program
 Author: Matthew Sklar, Varun Agrawal
 Date: March 2019
 """
-# pylint: disable=import-error, wrong-import-position, too-many-branches
+# pylint: disable=import-error, wrong-import-position
 
 import filecmp
 import os
+import os.path as osp
 import sys
 import unittest
 
@@ -23,9 +24,9 @@ class TestWrap(unittest.TestCase):
     """
     Test the Matlab wrapper
     """
-    TEST_DIR = os.path.dirname(os.path.realpath(__file__)) + "/"
-    MATLAB_TEST_DIR = TEST_DIR + "expected-matlab/"
-    MATLAB_ACTUAL_DIR = TEST_DIR + "actual-matlab/"
+    TEST_DIR = os.path.dirname(os.path.realpath(__file__))
+    MATLAB_TEST_DIR = osp.join(TEST_DIR, "expected", "matlab")
+    MATLAB_ACTUAL_DIR = osp.join(TEST_DIR, "actual", "matlab")
 
     # set the log level to INFO by default
     logger.remove()  # remove the default sink
@@ -48,7 +49,7 @@ class TestWrap(unittest.TestCase):
                 if len(c) == 0:
                     continue
                 logger.debug("c object: {}".format(c[0][0]))
-                path_to_folder = path + '/' + c[0][0]
+                path_to_folder = osp.join(path, c[0][0])
 
                 if not os.path.isdir(path_to_folder):
                     try:
@@ -61,23 +62,24 @@ class TestWrap(unittest.TestCase):
                     self.generate_content(sub_content[1], path_to_folder)
 
             elif isinstance(c[1], list):
-                path_to_folder = path + '/' + c[0]
+                path_to_folder = osp.join(path, c[0])
 
-                logger.debug("[generate_content_global]: {}".format(path_to_folder))
+                logger.debug(
+                    "[generate_content_global]: {}".format(path_to_folder))
                 if not os.path.isdir(path_to_folder):
                     try:
                         os.makedirs(path_to_folder, exist_ok=True)
                     except OSError:
                         pass
                 for sub_content in c[1]:
-                    path_to_file = path_to_folder + '/' + sub_content[0]
+                    path_to_file = osp.join(path_to_folder, sub_content[0])
                     logger.debug(
                         "[generate_global_method]: {}".format(path_to_file))
                     with open(path_to_file, 'w') as f:
                         f.write(sub_content[1])
 
             else:
-                path_to_file = path + '/' + c[0]
+                path_to_file = osp.join(path, c[0])
 
                 logger.debug("[generate_content]: {}".format(path_to_file))
                 if not os.path.isdir(path_to_file):
@@ -95,7 +97,7 @@ class TestWrap(unittest.TestCase):
         python3 wrap/matlab_wrapper.py --src wrap/tests/geometry.h
             --module_name geometry --out wrap/tests/actual-matlab
         """
-        with open(self.TEST_DIR + 'geometry.h', 'r') as f:
+        with open(osp.join(self.TEST_DIR, 'fixtures', 'geometry.h'), 'r') as f:
             content = f.read()
 
         if not os.path.exists(self.MATLAB_ACTUAL_DIR):
@@ -118,15 +120,15 @@ class TestWrap(unittest.TestCase):
         self.generate_content(cc_content)
 
         def compare_and_diff(file):
-            output = self.MATLAB_ACTUAL_DIR + file
-            expected = self.MATLAB_TEST_DIR + file
+            output = osp.join(self.MATLAB_ACTUAL_DIR, file)
+            expected = osp.join(self.MATLAB_TEST_DIR, file)
             success = filecmp.cmp(output, expected)
             if not success:
                 print("Differ in file: {}".format(file))
                 os.system("diff {} {}".format(output, expected))
             self.assertTrue(success)
 
-        self.assertTrue(os.path.isdir(self.MATLAB_ACTUAL_DIR + '+gtsam'))
+        self.assertTrue(os.path.isdir(osp.join(self.MATLAB_ACTUAL_DIR, '+gtsam')))
 
         files = [
             '+gtsam/Point2.m', '+gtsam/Point3.m', 'Test.m', 'MyBase.m',
