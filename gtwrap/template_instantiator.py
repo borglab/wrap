@@ -206,7 +206,6 @@ class InstantiatedMethod(parser.Method):
     """
     We can only instantiate template methods with a single template parameter.
     """
-
     def __init__(self, original, instantiations=''):
         self.original = original
         self.instantiations = instantiations
@@ -214,30 +213,28 @@ class InstantiatedMethod(parser.Method):
         self.is_const = original.is_const
         self.parent = original.parent
 
-        if not original.template:
-            self.name = original.name
-            self.return_type = original.return_type
-            self.args = original.args
-        else:
-            self.name = instantiate_name(original.name, self.instantiations)
-            self.return_type = instantiate_return_type(
-                original.return_type,
-                self.original.template.typenames,
-                self.instantiations,
-                # Keyword type name `This` should already be replaced in the
-                # previous class template instantiation round.
-                cpp_typename='',
-            )
+        # Check for typenames if templated.
+        # This way, we can gracefully handle bot templated and non-templated methois.
+        typenames = self.original.template.typenames if self.original.template else []
+        self.name = instantiate_name(original.name, self.instantiations)
+        self.return_type = instantiate_return_type(
+            original.return_type,
+            typenames,
+            self.instantiations,
+            # Keyword type name `This` should already be replaced in the
+            # previous class template instantiation round.
+            cpp_typename='',
+        )
 
-            instantiated_args = instantiate_args_list(
-                original.args.args_list,
-                self.original.template.typenames,
-                self.instantiations,
-                # Keyword type name `This` should already be replaced in the
-                # previous class template instantiation round.
-                cpp_typename='',
-            )
-            self.args = parser.ArgumentList(instantiated_args)
+        instantiated_args = instantiate_args_list(
+            original.args.args_list,
+            typenames,
+            self.instantiations,
+            # Keyword type name `This` should already be replaced in the
+            # previous class template instantiation round.
+            cpp_typename='',
+        )
+        self.args = parser.ArgumentList(instantiated_args)
 
         super().__init__(self.template,
                          self.name,
@@ -293,12 +290,13 @@ class InstantiatedClass(parser.Class):
         # This will allow the `This` keyword to be used in both templated and non-templated classes.
         typenames = self.original.template.typenames if self.original.template else []
 
-        # Instantiate the constructors, static methods, properties and instance methods, respectively.
+        # Instantiate the constructors, static methods, properties
+        # and instance methods, respectively.
         self.ctors = self.instantiate_ctors(typenames)
         self.static_methods = self.instantiate_static_methods(typenames)
         self.properties = self.instantiate_properties(typenames)
-        instantiated_methods = self.instantiate_class_templates_in_methods(
-            typenames)
+        instantiated_methods = \
+            self.instantiate_class_templates_in_methods(typenames)
 
         # Second instantiation round to instantiate templated methods.
         # This is done in case both the class and the method are templated.
@@ -309,8 +307,10 @@ class InstantiatedClass(parser.Class):
             else:
                 instantiations = []
                 # Get all combinations of template parameters
-                for instantiations in itertools.product(*method.template.instantiations):
-                    self.methods.append(InstantiatedMethod(method, instantiations))
+                for instantiations in itertools.product(
+                        *method.template.instantiations):
+                    self.methods.append(
+                        InstantiatedMethod(method, instantiations))
 
         super().__init__(
             self.template,
