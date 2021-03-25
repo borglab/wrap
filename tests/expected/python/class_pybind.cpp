@@ -29,6 +29,7 @@ PYBIND11_MODULE(class_py, m_) {
 
     py::class_<Fun<double>, std::shared_ptr<Fun<double>>>(m_, "FunDouble")
         .def("dhamaalString",[](Fun<double>* self, double d, string t){return self->dhamaal<string>(d, t);}, py::arg("d"), py::arg("t"))
+        .def("pretStringSize_t",[](Fun<double>* self, double d, string t, size_t u){return self->pret<string,size_t>(d, t, u);}, py::arg("d"), py::arg("t"), py::arg("u"))
         .def_static("divertido",[](){return Fun<double>::divertido();});
 
     py::class_<Test, std::shared_ptr<Test>>(m_, "Test")

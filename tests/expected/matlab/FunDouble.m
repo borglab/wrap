@@ -3,6 +3,7 @@
 %
 %-------Methods-------
 %dhamaalString(double d, string t) : returns Fun<double>
+%pretStringSize_t(double d, string t, size_t u) : returns Fun<double>
 %
 %-------Static Methods-------
 %divertido() : returns Fun<double>
@@ -44,6 +45,16 @@ classdef FunDouble < handle
       error('Arguments do not match any overload of function FunDouble.dhamaalString');
     end
 
+    function varargout = pretStringSize_t(this, varargin)
+      % PRETSTRINGSIZE_T usage: pretStringSize_t(double d, string t, size_t u) : returns Fun<double>
+      % Doxygen can be found at https://gtsam.org/doxygen/
+      if length(varargin) == 3 && isa(varargin{1},'double') && isa(varargin{2},'char') && isa(varargin{3},'numeric')
+        varargout{1} = class_wrapper(8, this, varargin{:});
+        return
+      end
+      error('Arguments do not match any overload of function FunDouble.pretStringSize_t');
+    end
+
   end
 
   methods(Static = true)
@@ -51,7 +62,7 @@ classdef FunDouble < handle
       % DIVERTIDO usage: divertido() : returns Fundouble
       % Doxygen can be found at https://gtsam.org/doxygen/
       if length(varargin) == 0
-        varargout{1} = class_wrapper(8, varargin{:});
+        varargout{1} = class_wrapper(9, varargin{:});
         return
       end
 

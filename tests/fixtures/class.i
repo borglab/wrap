@@ -12,8 +12,8 @@ class Fun {
   template<T={string}>
   This dhamaal(double d, T t);
 
-  // template<T={string}, U={size_t}>
-  // This pret(double d, T t, U u);
+  template<T={string}, U={size_t}>
+  This pret(double d, T t, U u);
 };
 
 
