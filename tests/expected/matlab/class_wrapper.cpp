@@ -200,29 +200,29 @@ void FunDouble_deconstructor_6(int nargout, mxArray *out[], int nargin, const mx
   }
 }
 
-void FunDouble_dhamaal_7(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void FunDouble_multiTemplatedMethod_7(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
-  checkArguments("dhamaalString",nargout,nargin-1,2);
-  auto obj = unwrap_shared_ptr<Fun<double>>(in[0], "ptr_FunDouble");
-  double d = unwrap< double >(in[1]);
-  string t = unwrap< string >(in[2]);
-  out[0] = wrap_shared_ptr(boost::make_shared<Fun<double>>(obj->dhamaal<string>(d,t)),"Fun<double>", false);
-}
-
-void FunDouble_pret_8(int nargout, mxArray *out[], int nargin, const mxArray *in[])
-{
-  checkArguments("pretStringSize_t",nargout,nargin-1,3);
+  checkArguments("multiTemplatedMethodStringSize_t",nargout,nargin-1,3);
   auto obj = unwrap_shared_ptr<Fun<double>>(in[0], "ptr_FunDouble");
   double d = unwrap< double >(in[1]);
   string t = unwrap< string >(in[2]);
   size_t u = unwrap< size_t >(in[3]);
-  out[0] = wrap_shared_ptr(boost::make_shared<Fun<double>>(obj->pret<string,size_t>(d,t,u)),"Fun<double>", false);
+  out[0] = wrap_shared_ptr(boost::make_shared<Fun<double>>(obj->multiTemplatedMethod<string,size_t>(d,t,u)),"Fun<double>", false);
 }
 
-void FunDouble_divertido_9(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void FunDouble_templatedMethod_8(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
-  checkArguments("FunDouble.divertido",nargout,nargin,0);
-  out[0] = wrap_shared_ptr(boost::make_shared<Fun<double>>(Fun<double>::divertido()),"Fundouble", false);
+  checkArguments("templatedMethodString",nargout,nargin-1,2);
+  auto obj = unwrap_shared_ptr<Fun<double>>(in[0], "ptr_FunDouble");
+  double d = unwrap< double >(in[1]);
+  string t = unwrap< string >(in[2]);
+  out[0] = wrap_shared_ptr(boost::make_shared<Fun<double>>(obj->templatedMethod<string>(d,t)),"Fun<double>", false);
+}
+
+void FunDouble_staticMethodWithThis_9(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+{
+  checkArguments("FunDouble.staticMethodWithThis",nargout,nargin,0);
+  out[0] = wrap_shared_ptr(boost::make_shared<Fun<double>>(Fun<double>::staticMethodWithThis()),"Fundouble", false);
 }
 
 void Test_collectorInsertAndMakeBase_10(int nargout, mxArray *out[], int nargin, const mxArray *in[])
@@ -664,13 +664,13 @@ void mexFunction(int nargout, mxArray *out[], int nargin, const mxArray *in[])
       FunDouble_deconstructor_6(nargout, out, nargin-1, in+1);
       break;
     case 7:
-      FunDouble_dhamaal_7(nargout, out, nargin-1, in+1);
+      FunDouble_multiTemplatedMethod_7(nargout, out, nargin-1, in+1);
       break;
     case 8:
-      FunDouble_pret_8(nargout, out, nargin-1, in+1);
+      FunDouble_templatedMethod_8(nargout, out, nargin-1, in+1);
       break;
     case 9:
-      FunDouble_divertido_9(nargout, out, nargin-1, in+1);
+      FunDouble_staticMethodWithThis_9(nargout, out, nargin-1, in+1);
       break;
     case 10:
       Test_collectorInsertAndMakeBase_10(nargout, out, nargin-1, in+1);
