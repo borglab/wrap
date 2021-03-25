@@ -7,6 +7,11 @@ else()
   set(GTWRAP_PACKAGE_DIR ${CMAKE_CURRENT_LIST_DIR}/..)
 endif()
 
+# Get the Python version
+include(GtwrapUtils)
+get_python_version()
+
+
 # User-friendly Pybind11 wrapping and installing function.
 # Builds a Pybind11 module from the provided interface_header.
 # For example, for the interface header gtsam.h, this will
