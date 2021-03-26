@@ -173,21 +173,21 @@ class Operator:
     };
     """
     rule = (
-        Type.rule("return_type")  #
+        ReturnType.rule("return_type")  #
         + IDENT("name")  #
-        + OPERATOR("op")  #
+        + OPERATOR("operator")  #
         + LPAREN  #
         + ArgumentList.rule("args_list")  #
         + RPAREN  #
         + CONST("is_const")  #
         + SEMI_COLON  # BR
-    ).setParseAction(lambda t: Operator(t.name, t.op, t.return_type, t.
+    ).setParseAction(lambda t: Operator(t.name, t.operator, t.return_type, t.
                                         args_list, t.is_const))
 
     def __init__(self,
                  name: str,
                  operator: str,
-                 return_type: Type,
+                 return_type: ReturnType,
                  args: ArgumentList,
                  is_const: str,
                  parent: Union[str, "Class"] = ''):
@@ -203,7 +203,7 @@ class Operator:
         assert 0 <= len(args) < 2, \
             "Operator overload should at most 1 argument, {} arguments provided".format(len(args))
         if len(args) == 1:
-            assert args.args_list[0].ctype.typename == return_type.typename, \
+            assert args.args_list[0].ctype.typename == return_type.type1.typename, \
                 "Mixed type overloading not supported. Both arg and return type must be the same."
 
     def __repr__(self) -> str:
@@ -250,13 +250,14 @@ class Class:
                           ^ Property.rule ^ Operator.rule).setParseAction(
                               lambda t: Class.Members(t.asList()))
 
-        def __init__(self, methods_props: List[Union[Constructor, Method,
-                                                     StaticMethod, Property]]):
+        def __init__(self, members: List[Union[Constructor, Method, StaticMethod, Property,
+                                                     Operator]]):
             self.ctors = []
             self.methods = []
             self.static_methods = []
             self.properties = []
-            for m in methods_props:
+            self.operators = []
+            for m in members:
                 if isinstance(m, Constructor):
                     self.ctors.append(m)
                 elif isinstance(m, Method):
@@ -265,6 +266,8 @@ class Class:
                     self.static_methods.append(m)
                 elif isinstance(m, Property):
                     self.properties.append(m)
+                elif isinstance(m, Operator):
+                    self.operators.append(m)
 
     _parent = COLON + Typename.rule("parent_class")
     rule = (
@@ -274,7 +277,7 @@ class Class:
         + IDENT("name")  #
         + Optional(_parent)  #
         + LBRACE  #
-        + Members.rule("methods_props")  #
+        + Members.rule("members")  #
         + RBRACE  #
         + SEMI_COLON  # BR
     ).setParseAction(lambda t: Class(
@@ -282,10 +285,11 @@ class Class:
         t.is_virtual,
         t.name,
         t.parent_class,
-        t.methods_props.ctors,
-        t.methods_props.methods,
-        t.methods_props.static_methods,
-        t.methods_props.properties,
+        t.members.ctors,
+        t.members.methods,
+        t.members.static_methods,
+        t.members.properties,
+        t.members.operators,
     ))
 
     def __init__(
@@ -298,6 +302,7 @@ class Class:
         methods: List[Method],
         static_methods: List[StaticMethod],
         properties: List[Property],
+        operators: List[Operator],
         parent: str = '',
     ):
         self.template = template
@@ -312,7 +317,9 @@ class Class:
         self.methods = methods
         self.static_methods = static_methods
         self.properties = properties
+        self.operators = operators
         self.parent = parent
+
         # Make sure ctors' names and class name are the same.
         for ctor in self.ctors:
             if ctor.name != self.name:

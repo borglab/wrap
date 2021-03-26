@@ -164,8 +164,9 @@ class TestInterfaceParser(unittest.TestCase):
         ret = Operator.rule.parseString(wrap_string)[0]
         self.assertEqual("operator", ret.name)
         self.assertEqual("-", ret.operator)
-        self.assertEqual("Vector2", ret.return_type.typename.name)
-        self.assertEqual("gtsam::Vector2", ret.return_type.typename.to_cpp())
+        self.assertEqual("Vector2", ret.return_type.type1.typename.name)
+        self.assertEqual("gtsam::Vector2",
+                         ret.return_type.type1.typename.to_cpp())
         self.assertTrue(len(ret.args) == 0)
         self.assertTrue(ret.is_unary)
 
@@ -174,8 +175,9 @@ class TestInterfaceParser(unittest.TestCase):
         ret = Operator.rule.parseString(wrap_string)[0]
         self.assertEqual("operator", ret.name)
         self.assertEqual("*", ret.operator)
-        self.assertEqual("Vector2", ret.return_type.typename.name)
-        self.assertEqual("gtsam::Vector2", ret.return_type.typename.to_cpp())
+        self.assertEqual("Vector2", ret.return_type.type1.typename.name)
+        self.assertEqual("gtsam::Vector2",
+                         ret.return_type.type1.typename.to_cpp())
         self.assertTrue(len(ret.args) == 1)
         self.assertEqual("const gtsam::Vector2 &",
                          repr(ret.args.args_list[0].ctype))
