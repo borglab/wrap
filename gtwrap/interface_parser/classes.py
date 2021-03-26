@@ -12,7 +12,7 @@ Author: Duy Nguyen Ta, Fan Jiang, Matthew Sklar, Varun Agrawal, and Frank Dellae
 
 from typing import List, Union
 
-from pyparsing import Optional, ZeroOrMore
+from pyparsing import Optional, ZeroOrMore, Literal
 
 from .function import ArgumentList, ReturnType
 from .template import Template
@@ -174,7 +174,7 @@ class Operator:
     """
     rule = (
         ReturnType.rule("return_type")  #
-        + IDENT("name")  #
+        + Literal("operator")("name")  #
         + OPERATOR("operator")  #
         + LPAREN  #
         + ArgumentList.rule("args_list")  #
@@ -203,7 +203,7 @@ class Operator:
         assert 0 <= len(args) < 2, \
             "Operator overload should at most 1 argument, {} arguments provided".format(len(args))
         if len(args) == 1:
-            assert args.args_list[0].ctype.typename == return_type.type1.typename, \
+            assert args.args_list[0].ctype.typename.name == return_type.type1.typename.name, \
                 "Mixed type overloading not supported. Both arg and return type must be the same."
 
     def __repr__(self) -> str:
@@ -250,8 +250,9 @@ class Class:
                           ^ Property.rule ^ Operator.rule).setParseAction(
                               lambda t: Class.Members(t.asList()))
 
-        def __init__(self, members: List[Union[Constructor, Method, StaticMethod, Property,
-                                                     Operator]]):
+        def __init__(self,
+                     members: List[Union[Constructor, Method, StaticMethod,
+                                         Property, Operator]]):
             self.ctors = []
             self.methods = []
             self.static_methods = []
