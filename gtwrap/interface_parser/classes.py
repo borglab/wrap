@@ -201,7 +201,7 @@ class Operator:
         self.parent = parent
 
         assert 0 <= len(args) < 2, \
-            "Operator overload should at most 1 argument, {} arguments provided".format(len(args))
+            "Operator overload should be at most 1 argument, {} arguments provided".format(len(args))
         if len(args) == 1:
             assert args.args_list[0].ctype.typename.name == return_type.type1.typename.name, \
                 "Mixed type overloading not supported. Both arg and return type must be the same."
