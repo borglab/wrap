@@ -17,7 +17,7 @@ from pyparsing import Optional, ZeroOrMore
 from .function import ArgumentList, ReturnType
 from .template import Template
 from .tokens import (CLASS, COLON, CONST, IDENT, LBRACE, LPAREN, RBRACE,
-                     RPAREN, SEMI_COLON, STATIC, VIRTUAL)
+                     RPAREN, SEMI_COLON, STATIC, VIRTUAL, OPERATOR)
 from .type import Type, Typename
 
 
@@ -162,6 +162,60 @@ class Property:
         return '{} {}'.format(self.ctype.__repr__(), self.name)
 
 
+class Operator:
+    """
+    Rule for parsing operator overloads.
+
+    E.g.
+    ```
+    class Overload {
+        Vector2 operator+(const Vector2 &v) const;
+    };
+    """
+    rule = (
+        Type.rule("return_type")  #
+        + IDENT("name")  #
+        + OPERATOR("op")  #
+        + LPAREN  #
+        + ArgumentList.rule("args_list")  #
+        + RPAREN  #
+        + CONST("is_const")  #
+        + SEMI_COLON  # BR
+    ).setParseAction(lambda t: Operator(t.name, t.op, t.return_type, t.
+                                        args_list, t.is_const))
+
+    def __init__(self,
+                 name: str,
+                 operator: str,
+                 return_type: Type,
+                 args: ArgumentList,
+                 is_const: str,
+                 parent: Union[str, "Class"] = ''):
+        self.name = name
+        self.operator = operator
+        self.return_type = return_type
+        self.args = args
+        self.is_const = is_const
+        self.is_unary = len(args) == 0
+
+        self.parent = parent
+
+        assert 0 <= len(args) < 2, \
+            "Operator overload should at most 1 argument, {} arguments provided".format(len(args))
+        if len(args) == 1:
+            assert args.args_list[0].ctype.typename == return_type.typename, \
+                "Mixed type overloading not supported. Both arg and return type must be the same."
+
+    def __repr__(self) -> str:
+        return "Operator: {}{}{}({}) {}".format(
+            self.return_type,
+            self.name,
+            self.operator,
+            self.args,
+            self.is_const,
+        )
+
+
 def collect_namespaces(obj):
     """
     Get the chain of namespaces from the lowest to highest for the given object.
@@ -188,13 +242,13 @@ class Class:
     };
     ```
     """
-    class MethodsAndProperties:
+    class Members:
         """
-        Rule for all the methods and properties within a class.
+        Rule for all the members within a class.
         """
         rule = ZeroOrMore(Constructor.rule ^ StaticMethod.rule ^ Method.rule
-                          ^ Property.rule).setParseAction(
-                              lambda t: Class.MethodsAndProperties(t.asList()))
+                          ^ Property.rule ^ Operator.rule).setParseAction(
+                              lambda t: Class.Members(t.asList()))
 
         def __init__(self, methods_props: List[Union[Constructor, Method,
                                                      StaticMethod, Property]]):
@@ -220,7 +274,7 @@ class Class:
         + IDENT("name")  #
         + Optional(_parent)  #
         + LBRACE  #
-        + MethodsAndProperties.rule("methods_props")  #
+        + Members.rule("methods_props")  #
         + RBRACE  #
         + SEMI_COLON  # BR
     ).setParseAction(lambda t: Class(
