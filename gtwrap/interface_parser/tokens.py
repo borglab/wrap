@@ -60,7 +60,6 @@ OPERATOR = Or(
             '&',  # __and__
             '|',  # __or__
             # '~',  # __invert__
-            # '=',  # Not supported
             '+=',  # __iadd__
             '-=',  # __isub__
             '*=',  # __imul__
@@ -79,15 +78,10 @@ OPERATOR = Or(
             '>',  # __gt__
             '<=',  # __le__
             '>=',  # __ge__
-            # '!',  # `not`
-            # '&&',  # `and`
-            # '||',  # `or`
-            '++',  # Not supported
-            '--',  # Not supported
-            ',',  # Not supported
-            '->*',  # Not supported
-            '->',  # Not supported
-            '()',  # Not supported
-            '[]',  # Not supported
+            # '!',  # Use `not` in python
+            # '&&',  # Use `and` in python
+            # '||',  # Use `or` in python
+            '()',  # __call__
+            '[]',  # __getitem__
         ],
     ))
