@@ -21,7 +21,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from gtwrap.interface_parser import (ArgumentList, Class, Constructor,
                                      ForwardDeclaration, GlobalFunction,
                                      Include, Method, Module, Namespace,
-                                     ReturnType, StaticMethod, Type,
+                                     Operator, ReturnType, StaticMethod, Type,
                                      TypedefTemplateInstantiation, Typename)
 
 
@@ -156,6 +156,32 @@ class TestInterfaceParser(unittest.TestCase):
             "f(const int x, const Class& c, Class* t);")[0]
         self.assertEqual("f", ret.name)
         self.assertEqual(3, len(ret.args))
+
+    def test_operator_overload(self):
+        """Test for operator overloading."""
+        # Unary operator
+        wrap_string = "gtsam::Vector2 operator-() const;"
+        ret = Operator.rule.parseString(wrap_string)[0]
+        self.assertEqual("operator", ret.name)
+        self.assertEqual("-", ret.operator)
+        self.assertEqual("Vector2", ret.return_type.type1.typename.name)
+        self.assertEqual("gtsam::Vector2",
+                         ret.return_type.type1.typename.to_cpp())
+        self.assertTrue(len(ret.args) == 0)
+        self.assertTrue(ret.is_unary)
+
+        # Binary operator
+        wrap_string = "gtsam::Vector2 operator*(const gtsam::Vector2 &v) const;"
+        ret = Operator.rule.parseString(wrap_string)[0]
+        self.assertEqual("operator", ret.name)
+        self.assertEqual("*", ret.operator)
+        self.assertEqual("Vector2", ret.return_type.type1.typename.name)
+        self.assertEqual("gtsam::Vector2",
+                         ret.return_type.type1.typename.to_cpp())
+        self.assertTrue(len(ret.args) == 1)
+        self.assertEqual("const gtsam::Vector2 &",
+                         repr(ret.args.args_list[0].ctype))
+        self.assertTrue(not ret.is_unary)
 
     def test_typedef_template_instantiation(self):
         """Test for typedef'd instantiation of a template."""

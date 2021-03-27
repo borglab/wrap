@@ -51,6 +51,17 @@ The python wrapper supports keyword arguments for functions/methods. Hence, the 
 
     - Class variables are read-write so they can be updated directly in Python.
 
+- Operator Overloading (Python only)
+    - You can overload operators just like in C++.
+
+    ```cpp
+    class Overload {
+        Overload operator*(const Overload& other) const;
+    };
+    ```
+    - Supported operators are the intersection of those supported in C++ and in Python.
+    - Operator overloading definitions have to be marked as `const` methods.
+
 - Pointer types
     - To declare a simple/raw pointer, simply add an `@` to the class name, e.g.`Pose3@`.
     - To declare a shared pointer (e.g. `gtsam::noiseModel::Base::shared_ptr`), use an asterisk (i.e. `*`). E.g. `gtsam::noiseModel::Base*` to define the wrapping for the `Base` noise model shared pointer.

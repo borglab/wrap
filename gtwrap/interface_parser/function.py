@@ -38,7 +38,11 @@ class Argument:
         self.parent: Union[ArgumentList, None] = None
 
     def __repr__(self) -> str:
-        return '{} {}'.format(self.ctype.__repr__(), self.name)
+        return self.to_cpp()
+
+    def to_cpp(self) -> str:
+        """Return full C++ representation of argument."""
+        return '{} {}'.format(repr(self.ctype), self.name)
 
 
 class ArgumentList:
