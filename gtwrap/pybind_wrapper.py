@@ -193,12 +193,18 @@ class PybindWrapper:
                     ))
         return res
 
-    def wrap_operators(self, operators, prefix='\n' + ' ' * 8):
+    def wrap_operators(self, operators, cpp_class, prefix='\n' + ' ' * 8):
         """Wrap all the overloaded operators in the `cpp_class`."""
         res = ""
         template = "{prefix}.def({{0}})".format(prefix=prefix)
         for op in operators:
-            if op.is_unary:
+            if op.operator == "[]":  # __getitem__
+                res += "{prefix}.def(\"__getitem__\", &{cpp_class}::operator[])".format(
+                    prefix=prefix, cpp_class=cpp_class)
+            elif op.operator == "()":  # __call__
+                res += "{prefix}.def(\"__call__\", &{cpp_class}::operator())".format(
+                    prefix=prefix, cpp_class=cpp_class)
+            elif op.is_unary:
                 res += template.format("{0}py::self".format(op.operator))
             else:
                 res += template.format("py::self {0} py::self".format(
@@ -232,8 +238,8 @@ class PybindWrapper:
                     instantiated_class.static_methods, cpp_class),
                 wrapped_properties=self.wrap_properties(
                     instantiated_class.properties, cpp_class),
-                wrapped_operators=self.wrap_operators(instantiated_class.operators)
-            ))
+                wrapped_operators=self.wrap_operators(
+                    instantiated_class.operators, cpp_class)))
 
     def wrap_stl_class(self, stl_class):
         """Wrap STL containers."""
