@@ -198,7 +198,7 @@ class PybindWrapper:
         res = ""
         template = "{prefix}.def({{0}})".format(prefix=prefix)
         for op in operators:
-            if op.operator in ('+', '-') and op.is_unary:
+            if op.is_unary:
                 res += template.format("{0}py::self".format(op.operator))
             else:
                 res += template.format("py::self {0} py::self".format(

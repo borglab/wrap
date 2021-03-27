@@ -200,8 +200,17 @@ class Operator:
 
         self.parent = parent
 
+        # Check for valid unary operators
+        if self.is_unary and self.operator not in ('+', '-'):
+            raise ValueError("Invalid unary operator {} used for {}".format(
+                self.operator, self))
+
+        # Check that number of arguments are either 0 or 1
         assert 0 <= len(args) < 2, \
-            "Operator overload should be at most 1 argument, {} arguments provided".format(len(args))
+            "Operator overload should be at most 1 argument, " \
+                "{} arguments provided".format(len(args))
+
+        # Check to ensure arg and return type are the same.
         if len(args) == 1:
             assert args.args_list[0].ctype.typename.name == return_type.type1.typename.name, \
                 "Mixed type overloading not supported. Both arg and return type must be the same."
