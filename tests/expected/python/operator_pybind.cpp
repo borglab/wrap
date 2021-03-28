@@ -29,6 +29,10 @@ PYBIND11_MODULE(operator_py, m_) {
         .def(py::init<gtsam::Rot3, gtsam::Point3>(), py::arg("R"), py::arg("t"))
         .def(py::self * py::self);
 
+    py::class_<gtsam::Container<gtsam::Matrix>, std::shared_ptr<gtsam::Container<gtsam::Matrix>>>(m_gtsam, "ContainerMatrix")
+        .def("__call__", &gtsam::Container<gtsam::Matrix>::operator())
+        .def("__getitem__", &gtsam::Container<gtsam::Matrix>::operator[]);
+
 
 #include "python/specializations.h"
 
