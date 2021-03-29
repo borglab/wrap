@@ -228,8 +228,9 @@ class PybindWrapper:
                 shared_ptr_type=('boost' if self.use_boost else 'std'),
                 cpp_class=cpp_class,
                 class_name=instantiated_class.name,
-                class_parent=str(instantiated_class.parent_class) +
-                (', ' if instantiated_class.parent_class else ''),
+                class_parent="{instantiated_class.parent_class}, ".format(
+                    instantiated_class=instantiated_class)
+                if instantiated_class.parent_class else '',
                 module_var=module_var,
                 wrapped_ctors=self.wrap_ctors(instantiated_class),
                 wrapped_methods=self.wrap_methods(instantiated_class.methods,

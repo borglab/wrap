@@ -12,7 +12,7 @@ Author: Duy Nguyen Ta, Fan Jiang, Matthew Sklar, Varun Agrawal, and Frank Dellae
 
 # pylint: disable=unnecessary-lambda, expression-not-assigned
 
-from typing import Iterable, Union
+from typing import Iterable, List, Union
 
 from pyparsing import Forward, Optional, Or, ParseResults, delimitedList
 
@@ -42,20 +42,15 @@ class Typename:
 
     namespaces_name_rule = delimitedList(IDENT, "::")
     instantiation_name_rule = delimitedList(IDENT, "::")
-    rule = Forward()
-    rule << (
+    rule = (
         namespaces_name_rule("namespaces_and_name")  #
-        + Optional(
-            (LOPBRACK + delimitedList(rule, ",")
-             ("instantiations") + ROPBRACK))).setParseAction(
-                 lambda t: Typename(t.namespaces_and_name, t.instantiations))
+    ).setParseAction(lambda t: Typename(t))
 
     def __init__(self,
-                 namespaces_and_name: ParseResults,
+                 t: ParseResults,
                  instantiations: Union[tuple, list, str, ParseResults] = ()):
-        self.name = namespaces_and_name[
-            -1]  # the name is the last element in this list
-        self.namespaces = namespaces_and_name[:-1]
+        self.name = t[-1]  # the name is the last element in this list
+        self.namespaces = t[:-1]
 
         if instantiations:
             if isinstance(instantiations, Iterable):
@@ -71,6 +66,7 @@ class Typename:
     @staticmethod
     def from_parse_result(parse_result: Union[str, list]):
         """Unpack the parsed result to get the Typename instance."""
+        print("Typename from_parse_result", parse_result, type(parse_result))
         return parse_result[0]
 
     def __repr__(self) -> str:
@@ -134,6 +130,7 @@ class BasicType:
     def __init__(self, t: ParseResults):
         self.typename = Typename(t.asList())
 
+
 class CustomType:
     """
     Custom defined types with the namespace.
@@ -150,7 +147,8 @@ class CustomType:
     rule = (Typename.rule("typename")).setParseAction(lambda t: CustomType(t))
 
     def __init__(self, t: ParseResults):
-        self.typename = Typename.from_parse_result(t)
+        self.typename = Typename(t)
+
 
 class Type:
     """
@@ -232,3 +230,38 @@ class Type:
             (self.is_const
              or self.typename.name in ["Matrix", "Vector"]) else "",
             typename=typename))
+
+
+class TemplatedType:
+    """
+    Parser rule for data types which are templated.
+    This is done so that the template parameters can be pointers/references.
+
+    E.g. std::vector<double>, BearingRange<Pose3, Point3>
+    """
+    rule = (
+        Typename.rule("typename")  #
+        + (
+            LOPBRACK  #
+            + delimitedList(Type.rule, ",")("template_params")  #
+            + ROPBRACK  #
+        )).setParseAction(lambda t: TemplatedType.from_parse_result(t))
+
+    def __init__(self, typename: Typename, template_params: List[Type]):
+        instantiations = [param.typename for param in template_params]
+        # Recreate the typename but with the template params as instantiations.
+        self.typename = Typename(typename.namespaces + [typename.name],
+                                 instantiations)
+        self.template_params = template_params
+
+    @staticmethod
+    def from_parse_result(t: ParseResults):
+        """Get the TemplatedType from the parser results."""
+        return TemplatedType(t.typename, t.template_params)
+
+    def __repr__(self):
+        return "TemplatedType({typename.namespaces}::{typename.name})".format(
+            typename=self.typename)
+
+    # def to_cpp(self):
+    #     return ""

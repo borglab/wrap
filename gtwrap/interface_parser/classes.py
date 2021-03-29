@@ -10,7 +10,7 @@ Parser classes and rules for parsing C++ classes.
 Author: Duy Nguyen Ta, Fan Jiang, Matthew Sklar, Varun Agrawal, and Frank Dellaert
 """
 
-from typing import List, Union
+from typing import Iterable, List, Union
 
 from pyparsing import Optional, ZeroOrMore, Literal
 
@@ -319,7 +319,11 @@ class Class:
         self.is_virtual = is_virtual
         self.name = name
         if parent_class:
-            self.parent_class = Typename.from_parse_result(parent_class)
+            if isinstance(parent_class, Iterable):
+                self.parent_class = parent_class[0]
+            else:
+                self.parent_class = parent_class
+
         else:
             self.parent_class = ''
 
