@@ -62,6 +62,10 @@ PYBIND11_MODULE(class_py, m_) {
                         a.print();
                         return redirect.str();
                     })
+        .def("set_container",[](Test* self, std::vector<testing::Test> container){ self->set_container(container);}, py::arg("container"))
+        .def("set_container",[](Test* self, std::vector<std::shared_ptr<testing::Test>&> container){ self->set_container(container);}, py::arg("container"))
+        .def("set_container",[](Test* self, std::vector<testing::Test&> container){ self->set_container(container);}, py::arg("container"))
+        .def("get_container",[](Test* self){return self->get_container();})
         .def_readwrite("model_ptr", &Test::model_ptr);
 
     py::class_<PrimitiveRef<double>, std::shared_ptr<PrimitiveRef<double>>>(m_, "PrimitiveRefDouble")

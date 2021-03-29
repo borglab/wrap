@@ -164,6 +164,16 @@ class TestInterfaceParser(unittest.TestCase):
         self.assertTrue(args[6].ctype.is_ref and args[6].ctype.is_const)
         self.assertTrue(args[7].ctype.is_ptr and args[7].ctype.is_const)
 
+    def test_argument_list_templated(self):
+        """Test arguments list where the arguments can be templated."""
+        arg_string = "std::pair<string, double> steps, vector<T*> vector_of_pointers"
+        args = ArgumentList.rule.parseString(arg_string)[0]
+        args_list = args.args_list
+        self.assertEqual(2, len(args_list))
+        self.assertEqual("std::pair<string, double>", args_list[0].ctype.to_cpp(False))
+        self.assertEqual("vector<std::shared_ptr<T>&>", args_list[1].ctype.to_cpp(False))
+        self.assertEqual("vector<boost::shared_ptr<T>&>", args_list[1].ctype.to_cpp(True))
+
     def test_return_type(self):
         """Test ReturnType"""
         # Test void

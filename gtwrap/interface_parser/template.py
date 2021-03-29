@@ -39,7 +39,7 @@ class Template:
             + Optional(  #
                 EQUAL  #
                 + LBRACE  #
-                + ((delimitedList(Typename.rule)("instantiations")))  #
+                + ((delimitedList(TemplatedType.rule ^ Typename.rule)("instantiations")))  #
                 + RBRACE  #
             )).setParseAction(lambda t: Template.TypenameAndInstantiations(
                 t.typename, t.instantiations))
@@ -47,10 +47,12 @@ class Template:
         def __init__(self, typename: str, instantiations: ParseResults):
             self.typename = typename
 
+            self.instantiations = []
             if instantiations:
-                self.instantiations = instantiations.asList()
-            else:
-                self.instantiations = []
+                for inst in instantiations:
+                    x = inst.typename if isinstance(inst, TemplatedType) else inst
+                    self.instantiations.append(x)
+                        
 
     rule = (  # BR
         TEMPLATE  #
