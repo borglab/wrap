@@ -67,7 +67,6 @@ class Typename:
     @staticmethod
     def from_parse_result(parse_result: Union[str, list]):
         """Unpack the parsed result to get the Typename instance."""
-        print("Typename from_parse_result", parse_result, type(parse_result))
         return parse_result[0]
 
     def __repr__(self) -> str:
@@ -111,7 +110,7 @@ class Typename:
 
 class BasicType:
     """
-    Basic types are the fundamentla built-in types in C++ such as double, int, char, etc.
+    Basic types are the fundamental built-in types in C++ such as double, int, char, etc.
 
     When using templates, the basis type will take on the same form as the template.
 
