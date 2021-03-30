@@ -208,7 +208,7 @@ class Type:
             "{self.is_shared_ptr}{self.is_ptr}{self.is_ref}".format(
             self=self)
 
-    def to_cpp(self, use_boost: bool) -> str:
+    def to_cpp(self, use_boost: bool, ref_to_shared_ptr: bool = True) -> str:
         """
         Generate the C++ code for wrapping.
 
@@ -219,8 +219,10 @@ class Type:
 
         if self.is_shared_ptr:
             # always pass by reference: https://stackoverflow.com/a/8741626/1236990
-            typename = "{ns}::shared_ptr<{typename}>&".format(
-                ns=shared_ptr_ns, typename=self.typename.to_cpp())
+            typename = "{ns}::shared_ptr<{typename}>{ref}".format(
+                ns=shared_ptr_ns,
+                typename=self.typename.to_cpp(),
+                ref="&" if ref_to_shared_ptr else "")
         elif self.is_ptr:
             typename = "{typename}*".format(typename=self.typename.to_cpp())
         elif self.is_ref or self.typename.name in ["Matrix", "Vector"]:
@@ -281,8 +283,12 @@ class TemplatedType:
         Generate the C++ code for wrapping.
         """
         # Use Type.to_cpp to do the heavy lifting.
-        template_args = ", ".join(
-            [t.to_cpp(use_boost) for t in self.template_params])
+        # We don't want to insert references (&) as template parameters,
+        # hence ref_to_shared_ptr is always false.
+        template_args = ", ".join([
+            t.to_cpp(use_boost, ref_to_shared_ptr=False)
+            for t in self.template_params
+        ])
 
         typename = "{typename}<{template_args}>".format(
             typename=self.typename.qualified_name(),
