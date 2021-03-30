@@ -49,12 +49,12 @@ PYBIND11_MODULE(class_py, m_) {
         .def("return_matrix2",[](Test* self, const gtsam::Matrix& value){return self->return_matrix2(value);}, py::arg("value"))
         .def("arg_EigenConstRef",[](Test* self, const gtsam::Matrix& value){ self->arg_EigenConstRef(value);}, py::arg("value"))
         .def("return_field",[](Test* self, const Test& t){return self->return_field(t);}, py::arg("t"))
-        .def("return_TestPtr",[](Test* self, const std::shared_ptr<Test>& value){return self->return_TestPtr(value);}, py::arg("value"))
-        .def("return_Test",[](Test* self, std::shared_ptr<Test>& value){return self->return_Test(value);}, py::arg("value"))
+        .def("return_TestPtr",[](Test* self, const std::shared_ptr<Test> value){return self->return_TestPtr(value);}, py::arg("value"))
+        .def("return_Test",[](Test* self, std::shared_ptr<Test> value){return self->return_Test(value);}, py::arg("value"))
         .def("return_Point2Ptr",[](Test* self, bool value){return self->return_Point2Ptr(value);}, py::arg("value"))
         .def("create_ptrs",[](Test* self){return self->create_ptrs();})
         .def("create_MixedPtrs",[](Test* self){return self->create_MixedPtrs();})
-        .def("return_ptrs",[](Test* self, std::shared_ptr<Test>& p1, std::shared_ptr<Test>& p2){return self->return_ptrs(p1, p2);}, py::arg("p1"), py::arg("p2"))
+        .def("return_ptrs",[](Test* self, std::shared_ptr<Test> p1, std::shared_ptr<Test> p2){return self->return_ptrs(p1, p2);}, py::arg("p1"), py::arg("p2"))
         .def("print_",[](Test* self){ self->print();})
         .def("__repr__",
                     [](const Test &a) {
@@ -83,7 +83,7 @@ PYBIND11_MODULE(class_py, m_) {
     py::class_<MultipleTemplates<int, float>, std::shared_ptr<MultipleTemplates<int, float>>>(m_, "MultipleTemplatesIntFloat");
 
     py::class_<MyFactor<gtsam::Pose2, gtsam::Matrix>, std::shared_ptr<MyFactor<gtsam::Pose2, gtsam::Matrix>>>(m_, "MyFactorPosePoint2")
-        .def(py::init<size_t, size_t, double, const std::shared_ptr<gtsam::noiseModel::Base>&>(), py::arg("key1"), py::arg("key2"), py::arg("measured"), py::arg("noiseModel"));
+        .def(py::init<size_t, size_t, double, const std::shared_ptr<gtsam::noiseModel::Base>>(), py::arg("key1"), py::arg("key2"), py::arg("measured"), py::arg("noiseModel"));
 
 
 #include "python/specializations.h"

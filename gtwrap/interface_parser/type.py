@@ -208,7 +208,7 @@ class Type:
             "{self.is_shared_ptr}{self.is_ptr}{self.is_ref}".format(
             self=self)
 
-    def to_cpp(self, use_boost: bool, shared_ptr_ref: bool = True) -> str:
+    def to_cpp(self, use_boost: bool) -> str:
         """
         Generate the C++ code for wrapping.
 
@@ -217,19 +217,12 @@ class Type:
 
         Args:
             use_boost: Flag indicating whether to use boost::shared_ptr or std::shared_ptr.
-            shared_ptr_ref: Flag indicating whether the conversion to C++ should add
-                the shared_ptr as a reference.
-                Setting this to True gives `boost::shared_ptr<T>&` while False gives
-                `boost::shared_ptr<T>`.
         """
         shared_ptr_ns = "boost" if use_boost else "std"
 
         if self.is_shared_ptr:
-            # always pass by reference: https://stackoverflow.com/a/8741626/1236990
-            typename = "{ns}::shared_ptr<{typename}>{ref}".format(
-                ns=shared_ptr_ns,
-                typename=self.typename.to_cpp(),
-                ref="&" if shared_ptr_ref else "")
+            typename = "{ns}::shared_ptr<{typename}>".format(
+                ns=shared_ptr_ns, typename=self.typename.to_cpp())
         elif self.is_ptr:
             typename = "{typename}*".format(typename=self.typename.to_cpp())
         elif self.is_ref or self.typename.name in ["Matrix", "Vector"]:
@@ -292,13 +285,9 @@ class TemplatedType:
         Args:
             use_boost: Flag indicating whether to use boost::shared_ptr or std::shared_ptr.
         """
-        # Use Type.to_cpp to do the heavy lifting.
-        # We don't want to insert references (&) as template parameters,
-        # hence shared_ptr_ref is always false.
-        template_args = ", ".join([
-            t.to_cpp(use_boost, shared_ptr_ref=False)
-            for t in self.template_params
-        ])
+        # Use Type.to_cpp to do the heavy lifting for the template parameters.
+        template_args = ", ".join(
+            [t.to_cpp(use_boost) for t in self.template_params])
 
         typename = "{typename}<{template_args}>".format(
             typename=self.typename.qualified_name(),
@@ -306,8 +295,7 @@ class TemplatedType:
 
         shared_ptr_ns = "boost" if use_boost else "std"
         if self.is_shared_ptr:
-            # always pass by reference: https://stackoverflow.com/a/8741626/1236990
-            typename = "{ns}::shared_ptr<{typename}>&".format(
+            typename = "{ns}::shared_ptr<{typename}>".format(
                 ns=shared_ptr_ns, typename=typename)
         elif self.is_ptr:
             typename = "{typename}*".format(typename=typename)
