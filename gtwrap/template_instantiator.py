@@ -48,7 +48,7 @@ def instantiate_type(ctype: parser.Type,
             is_shared_ptr=ctype.is_shared_ptr,
             is_ptr=ctype.is_ptr,
             is_ref=ctype.is_ref,
-            is_basis=ctype.is_basis,
+            is_basic=ctype.is_basic,
         )
     elif str_arg_typename == 'This':
         if instantiated_class:
@@ -68,7 +68,7 @@ def instantiate_type(ctype: parser.Type,
             is_shared_ptr=ctype.is_shared_ptr,
             is_ptr=ctype.is_ptr,
             is_ref=ctype.is_ref,
-            is_basis=ctype.is_basis,
+            is_basic=ctype.is_basic,
         )
     else:
         return ctype

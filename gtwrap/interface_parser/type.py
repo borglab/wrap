@@ -108,72 +108,74 @@ class Typename:
         return not res
 
 
-class QualifiedType:
-    """Type with qualifiers, such as `const`."""
-
-    rule = (
-        Typename.rule("typename")  #
-        + Optional(
-            SHARED_POINTER("is_shared_ptr") | RAW_POINTER("is_ptr")
-            | REF("is_ref"))).setParseAction(lambda t: QualifiedType(t))
-
-    def __init__(self, t: ParseResults):
-        self.typename = Typename.from_parse_result(t.typename)
-        self.is_shared_ptr = t.is_shared_ptr
-        self.is_ptr = t.is_ptr
-        self.is_ref = t.is_ref
-
-
-class BasisType:
+class BasicType:
     """
-    Basis types are the built-in types in C++ such as double, int, char, etc.
+    Basic types are the fundamentla built-in types in C++ such as double, int, char, etc.
 
     When using templates, the basis type will take on the same form as the template.
 
     E.g.
-        ```
-        template<T = {double}>
-        void func(const T& x);
-        ```
+    ```
+    template<T = {double}>
+    void func(const T& x);
+    ```
 
-        will give
+    will give
 
-        ```
-        m_.def("CoolFunctionDoubleDouble",[](const double& s) {
-            return wrap_example::CoolFunction<double,double>(s);
-        }, py::arg("s"));
-        ```
+    ```
+    m_.def("CoolFunctionDoubleDouble",[](const double& s) {
+        return wrap_example::CoolFunction<double,double>(s);
+    }, py::arg("s"));
+    ```
     """
 
+    rule = (Or(BASIS_TYPES)("typename")).setParseAction(lambda t: BasicType(t))
+
+    def __init__(self, t: ParseResults):
+        self.typename = Typename(t.asList())
+
+class CustomType:
+    """
+    Custom defined types with the namespace.
+    Essentially any C++ data type that is not a BasicType.
+
+    E.g.
+    ```
+    gtsam::Matrix wTc;
+    ```
+
+    Here `gtsam::Matrix` is a custom type.
+    """
+
+    rule = (Typename.rule("typename")).setParseAction(lambda t: CustomType(t))
+
+    def __init__(self, t: ParseResults):
+        self.typename = Typename.from_parse_result(t)
+
+class Type:
+    """
+    Parsed datatype, can be either a fundamental type or a custom datatype.
+    E.g. void, double, size_t, Matrix.
+
+    The type can optionally be a raw pointer, shared pointer or reference.
+    Can also be optionally qualified with a `const`, e.g. `const int`.
+    """
     rule = (
-        Or(BASIS_TYPES)("typename")  #
+        Optional(CONST("is_const"))  #
+        + (BasicType.rule("basis") | CustomType.rule("qualified"))  # BR
         + Optional(
             SHARED_POINTER("is_shared_ptr") | RAW_POINTER("is_ptr")
             | REF("is_ref"))  #
-    ).setParseAction(lambda t: BasisType(t))
-
-    def __init__(self, t: ParseResults):
-        self.typename = Typename([t.typename])
-        self.is_ptr = t.is_ptr
-        self.is_shared_ptr = t.is_shared_ptr
-        self.is_ref = t.is_ref
-
-
-class Type:
-    """The type value that is parsed, e.g. void, string, size_t."""
-    rule = (
-        Optional(CONST("is_const"))  #
-        + (BasisType.rule("basis") | QualifiedType.rule("qualified"))  # BR
     ).setParseAction(lambda t: Type.from_parse_result(t))
 
     def __init__(self, typename: Typename, is_const: str, is_shared_ptr: str,
-                 is_ptr: str, is_ref: str, is_basis: bool):
+                 is_ptr: str, is_ref: str, is_basic: bool):
         self.typename = typename
         self.is_const = is_const
         self.is_shared_ptr = is_shared_ptr
         self.is_ptr = is_ptr
         self.is_ref = is_ref
-        self.is_basis = is_basis
+        self.is_basic = is_basic
 
     @staticmethod
     def from_parse_result(t: ParseResults):
@@ -182,19 +184,19 @@ class Type:
             return Type(
                 typename=t.basis.typename,
                 is_const=t.is_const,
-                is_shared_ptr=t.basis.is_shared_ptr,
-                is_ptr=t.basis.is_ptr,
-                is_ref=t.basis.is_ref,
-                is_basis=True,
+                is_shared_ptr=t.is_shared_ptr,
+                is_ptr=t.is_ptr,
+                is_ref=t.is_ref,
+                is_basic=True,
             )
         elif t.qualified:
             return Type(
                 typename=t.qualified.typename,
                 is_const=t.is_const,
-                is_shared_ptr=t.qualified.is_shared_ptr,
-                is_ptr=t.qualified.is_ptr,
-                is_ref=t.qualified.is_ref,
-                is_basis=False,
+                is_shared_ptr=t.is_shared_ptr,
+                is_ptr=t.is_ptr,
+                is_ref=t.is_ref,
+                is_basic=False,
             )
         else:
             raise ValueError("Parse result is not a Type")

@@ -39,20 +39,78 @@ class TestInterfaceParser(unittest.TestCase):
         self.assertEqual("Cal3S2", typename.instantiations[0].name)
         self.assertEqual(["gtsam"], typename.instantiations[0].namespaces)
 
-    def test_type(self):
-        """Test for Type."""
+    def test_basic_type(self):
+        """Tests for BasicType."""
+        # Check basis type
         t = Type.rule.parseString("int x")[0]
         self.assertEqual("int", t.typename.name)
-        self.assertTrue(t.is_basis)
+        self.assertTrue(t.is_basic)
 
-        t = Type.rule.parseString("T x")[0]
-        self.assertEqual("T", t.typename.name)
-        self.assertTrue(not t.is_basis)
-
+        # Check const
         t = Type.rule.parseString("const int x")[0]
         self.assertEqual("int", t.typename.name)
-        self.assertTrue(t.is_basis)
+        self.assertTrue(t.is_basic)
         self.assertTrue(t.is_const)
+
+        # Check shared pointer
+        t = Type.rule.parseString("int* x")[0]
+        self.assertEqual("int", t.typename.name)
+        self.assertTrue(t.is_shared_ptr)
+
+        # Check raw pointer
+        t = Type.rule.parseString("int@ x")[0]
+        self.assertEqual("int", t.typename.name)
+        self.assertTrue(t.is_ptr)
+
+        # Check reference
+        t = Type.rule.parseString("int& x")[0]
+        self.assertEqual("int", t.typename.name)
+        self.assertTrue(t.is_ref)
+
+        # Check const reference
+        t = Type.rule.parseString("const int& x")[0]
+        self.assertEqual("int", t.typename.name)
+        self.assertTrue(t.is_const)
+        self.assertTrue(t.is_ref)
+
+    def test_custom_type(self):
+        """Tests for CustomType."""
+        # Check qualified type
+        t = Type.rule.parseString("gtsam::Pose3 x")[0]
+        self.assertEqual("Pose3", t.typename.name)
+        self.assertEqual(["gtsam"], t.typename.namespaces)
+        self.assertTrue(not t.is_basic)
+
+        # Check const
+        t = Type.rule.parseString("const gtsam::Pose3 x")[0]
+        self.assertEqual("Pose3", t.typename.name)
+        self.assertEqual(["gtsam"], t.typename.namespaces)
+        self.assertTrue(t.is_const)
+
+        # Check shared pointer
+        t = Type.rule.parseString("gtsam::Pose3* x")[0]
+        self.assertEqual("Pose3", t.typename.name)
+        self.assertEqual(["gtsam"], t.typename.namespaces)
+        self.assertTrue(t.is_shared_ptr)
+
+        # Check raw pointer
+        t = Type.rule.parseString("gtsam::Pose3@ x")[0]
+        self.assertEqual("Pose3", t.typename.name)
+        self.assertEqual(["gtsam"], t.typename.namespaces)
+        self.assertTrue(t.is_ptr)
+
+        # Check reference
+        t = Type.rule.parseString("gtsam::Pose3& x")[0]
+        self.assertEqual("Pose3", t.typename.name)
+        self.assertEqual(["gtsam"], t.typename.namespaces)
+        self.assertTrue(t.is_ref)
+
+        # Check const reference
+        t = Type.rule.parseString("const gtsam::Pose3& x")[0]
+        self.assertEqual("Pose3", t.typename.name)
+        self.assertEqual(["gtsam"], t.typename.namespaces)
+        self.assertTrue(t.is_const)
+        self.assertTrue(t.is_ref)
 
     def test_empty_arguments(self):
         """Test no arguments."""
@@ -94,23 +152,23 @@ class TestInterfaceParser(unittest.TestCase):
         # Test void
         return_type = ReturnType.rule.parseString("void")[0]
         self.assertEqual("void", return_type.type1.typename.name)
-        self.assertTrue(return_type.type1.is_basis)
+        self.assertTrue(return_type.type1.is_basic)
 
         # Test basis type
         return_type = ReturnType.rule.parseString("size_t")[0]
         self.assertEqual("size_t", return_type.type1.typename.name)
         self.assertTrue(not return_type.type2)
-        self.assertTrue(return_type.type1.is_basis)
+        self.assertTrue(return_type.type1.is_basic)
 
         # Test with qualifiers
         return_type = ReturnType.rule.parseString("int&")[0]
         self.assertEqual("int", return_type.type1.typename.name)
-        self.assertTrue(return_type.type1.is_basis
+        self.assertTrue(return_type.type1.is_basic
                         and return_type.type1.is_ref)
 
         return_type = ReturnType.rule.parseString("const int")[0]
         self.assertEqual("int", return_type.type1.typename.name)
-        self.assertTrue(return_type.type1.is_basis
+        self.assertTrue(return_type.type1.is_basic
                         and return_type.type1.is_const)
 
         # Test pair return
