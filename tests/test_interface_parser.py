@@ -86,6 +86,10 @@ class TestInterfaceParser(unittest.TestCase):
         self.assertEqual("Pose3", t.typename.name)
         self.assertEqual(["gtsam"], t.typename.namespaces)
         self.assertTrue(t.is_shared_ptr)
+        self.assertEqual("std::shared_ptr<gtsam::Pose3>",
+                         t.to_cpp(use_boost=False))
+        self.assertEqual("boost::shared_ptr<gtsam::Pose3>",
+                         t.to_cpp(use_boost=True))
 
         # Check raw pointer
         t = Type.rule.parseString("gtsam::Pose3@ x")[0]
@@ -122,12 +126,10 @@ class TestInterfaceParser(unittest.TestCase):
         self.assertEqual("Cal3S2", t.typename.instantiations[0].name)
         self.assertEqual(["gtsam"], t.typename.instantiations[0].namespaces)
 
-        t = TemplatedType.rule.parseString(
-            "PinholeCamera<Cal3S2*>")[0]
+        t = TemplatedType.rule.parseString("PinholeCamera<Cal3S2*>")[0]
         self.assertEqual("PinholeCamera", t.typename.name)
         self.assertEqual("Cal3S2", t.typename.instantiations[0].name)
         self.assertTrue(t.template_params[0].is_shared_ptr)
-
 
     def test_empty_arguments(self):
         """Test no arguments."""
@@ -170,9 +172,12 @@ class TestInterfaceParser(unittest.TestCase):
         args = ArgumentList.rule.parseString(arg_string)[0]
         args_list = args.args_list
         self.assertEqual(2, len(args_list))
-        self.assertEqual("std::pair<string, double>", args_list[0].ctype.to_cpp(False))
-        self.assertEqual("vector<std::shared_ptr<T>&>", args_list[1].ctype.to_cpp(False))
-        self.assertEqual("vector<boost::shared_ptr<T>&>", args_list[1].ctype.to_cpp(True))
+        self.assertEqual("std::pair<string, double>",
+                         args_list[0].ctype.to_cpp(False))
+        self.assertEqual("vector<std::shared_ptr<T>>",
+                         args_list[1].ctype.to_cpp(False))
+        self.assertEqual("vector<boost::shared_ptr<T>>",
+                         args_list[1].ctype.to_cpp(True))
 
     def test_return_type(self):
         """Test ReturnType"""

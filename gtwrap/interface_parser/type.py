@@ -214,12 +214,14 @@ class Type:
 
         Treat all pointers as "const shared_ptr<T>&"
         Treat Matrix and Vector as "const Matrix&" and "const Vector&" resp.
+
+        Args:
+            use_boost: Flag indicating whether to use boost::shared_ptr or std::shared_ptr.
         """
         shared_ptr_ns = "boost" if use_boost else "std"
 
         if self.is_shared_ptr:
-            # always pass by reference: https://stackoverflow.com/a/8741626/1236990
-            typename = "{ns}::shared_ptr<{typename}>&".format(
+            typename = "{ns}::shared_ptr<{typename}>".format(
                 ns=shared_ptr_ns, typename=self.typename.to_cpp())
         elif self.is_ptr:
             typename = "{typename}*".format(typename=self.typename.to_cpp())
@@ -279,8 +281,11 @@ class TemplatedType:
     def to_cpp(self, use_boost: bool):
         """
         Generate the C++ code for wrapping.
+
+        Args:
+            use_boost: Flag indicating whether to use boost::shared_ptr or std::shared_ptr.
         """
-        # Use Type.to_cpp to do the heavy lifting.
+        # Use Type.to_cpp to do the heavy lifting for the template parameters.
         template_args = ", ".join(
             [t.to_cpp(use_boost) for t in self.template_params])
 
@@ -290,8 +295,7 @@ class TemplatedType:
 
         shared_ptr_ns = "boost" if use_boost else "std"
         if self.is_shared_ptr:
-            # always pass by reference: https://stackoverflow.com/a/8741626/1236990
-            typename = "{ns}::shared_ptr<{typename}>&".format(
+            typename = "{ns}::shared_ptr<{typename}>".format(
                 ns=shared_ptr_ns, typename=typename)
         elif self.is_ptr:
             typename = "{typename}*".format(typename=typename)
