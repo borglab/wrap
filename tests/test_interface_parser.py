@@ -21,7 +21,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from gtwrap.interface_parser import (ArgumentList, Class, Constructor,
                                      ForwardDeclaration, GlobalFunction,
                                      Include, Method, Module, Namespace,
-                                     Operator, ReturnType, StaticMethod, Type,
+                                     Operator, ReturnType, StaticMethod,
+                                     TemplatedType, Type,
                                      TypedefTemplateInstantiation, Typename)
 
 
@@ -31,13 +32,6 @@ class TestInterfaceParser(unittest.TestCase):
         """Test parsing of Typename."""
         typename = Typename.rule.parseString("size_t")[0]
         self.assertEqual("size_t", typename.name)
-
-        typename = Typename.rule.parseString(
-            "gtsam::PinholeCamera<gtsam::Cal3S2>")[0]
-        self.assertEqual("PinholeCamera", typename.name)
-        self.assertEqual(["gtsam"], typename.namespaces)
-        self.assertEqual("Cal3S2", typename.instantiations[0].name)
-        self.assertEqual(["gtsam"], typename.instantiations[0].namespaces)
 
     def test_basic_type(self):
         """Tests for BasicType."""
@@ -112,6 +106,29 @@ class TestInterfaceParser(unittest.TestCase):
         self.assertTrue(t.is_const)
         self.assertTrue(t.is_ref)
 
+    def test_templated_type(self):
+        """Test a templated type."""
+        t = TemplatedType.rule.parseString("Eigen::Matrix<double, 3, 4>")[0]
+        self.assertEqual("Matrix", t.typename.name)
+        self.assertEqual(["Eigen"], t.typename.namespaces)
+        self.assertEqual("double", t.typename.instantiations[0].name)
+        self.assertEqual("3", t.typename.instantiations[1].name)
+        self.assertEqual("4", t.typename.instantiations[2].name)
+
+        t = TemplatedType.rule.parseString(
+            "gtsam::PinholeCamera<gtsam::Cal3S2>")[0]
+        self.assertEqual("PinholeCamera", t.typename.name)
+        self.assertEqual(["gtsam"], t.typename.namespaces)
+        self.assertEqual("Cal3S2", t.typename.instantiations[0].name)
+        self.assertEqual(["gtsam"], t.typename.instantiations[0].namespaces)
+
+        t = TemplatedType.rule.parseString(
+            "PinholeCamera<Cal3S2*>")[0]
+        self.assertEqual("PinholeCamera", t.typename.name)
+        self.assertEqual("Cal3S2", t.typename.instantiations[0].name)
+        self.assertTrue(t.template_params[0].is_shared_ptr)
+
+
     def test_empty_arguments(self):
         """Test no arguments."""
         empty_args = ArgumentList.rule.parseString("")[0]
@@ -146,6 +163,16 @@ class TestInterfaceParser(unittest.TestCase):
         self.assertTrue(args[5].ctype.is_shared_ptr and args[5].ctype.is_const)
         self.assertTrue(args[6].ctype.is_ref and args[6].ctype.is_const)
         self.assertTrue(args[7].ctype.is_ptr and args[7].ctype.is_const)
+
+    def test_argument_list_templated(self):
+        """Test arguments list where the arguments can be templated."""
+        arg_string = "std::pair<string, double> steps, vector<T*> vector_of_pointers"
+        args = ArgumentList.rule.parseString(arg_string)[0]
+        args_list = args.args_list
+        self.assertEqual(2, len(args_list))
+        self.assertEqual("std::pair<string, double>", args_list[0].ctype.to_cpp(False))
+        self.assertEqual("vector<std::shared_ptr<T>&>", args_list[1].ctype.to_cpp(False))
+        self.assertEqual("vector<boost::shared_ptr<T>&>", args_list[1].ctype.to_cpp(True))
 
     def test_return_type(self):
         """Test ReturnType"""
@@ -367,7 +394,7 @@ class TestInterfaceParser(unittest.TestCase):
         fwd = ForwardDeclaration.rule.parseString(
             "virtual class Test:gtsam::Point3;")[0]
 
-        fwd_name = fwd.name.asList()[0]
+        fwd_name = fwd.name
         self.assertEqual("Test", fwd_name.name)
         self.assertTrue(fwd.is_virtual)
 

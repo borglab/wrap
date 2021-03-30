@@ -10,13 +10,14 @@ Classes and rules for parsing C++ templates and typedefs for template instantiat
 Author: Duy Nguyen Ta, Fan Jiang, Matthew Sklar, Varun Agrawal, and Frank Dellaert
 """
 
+from re import template
 from typing import List
 
 from pyparsing import Optional, ParseResults, delimitedList
 
 from .tokens import (EQUAL, IDENT, LBRACE, LOPBRACK, RBRACE, ROPBRACK,
                      SEMI_COLON, TEMPLATE, TYPEDEF)
-from .type import Typename
+from .type import Typename, TemplatedType
 
 
 class Template:
@@ -38,7 +39,7 @@ class Template:
             + Optional(  #
                 EQUAL  #
                 + LBRACE  #
-                + ((delimitedList(Typename.rule)("instantiations")))  #
+                + ((delimitedList(TemplatedType.rule ^ Typename.rule)("instantiations")))  #
                 + RBRACE  #
             )).setParseAction(lambda t: Template.TypenameAndInstantiations(
                 t.typename, t.instantiations))
@@ -46,10 +47,12 @@ class Template:
         def __init__(self, typename: str, instantiations: ParseResults):
             self.typename = typename
 
+            self.instantiations = []
             if instantiations:
-                self.instantiations = instantiations.asList()
-            else:
-                self.instantiations = []
+                for inst in instantiations:
+                    x = inst.typename if isinstance(inst, TemplatedType) else inst
+                    self.instantiations.append(x)
+                        
 
     rule = (  # BR
         TEMPLATE  #
@@ -80,11 +83,11 @@ class TypedefTemplateInstantiation:
     typedef SuperComplexName<Arg1, Arg2, Arg3> EasierName;
     ```
     """
-    rule = (TYPEDEF + Typename.rule("typename") + IDENT("new_name") +
+    rule = (TYPEDEF + TemplatedType.rule("templated_type") + IDENT("new_name") +
             SEMI_COLON).setParseAction(lambda t: TypedefTemplateInstantiation(
-                Typename.from_parse_result(t.typename), t.new_name))
+                t.templated_type, t.new_name))
 
-    def __init__(self, typename: Typename, new_name: str, parent: str = ''):
-        self.typename = typename
+    def __init__(self, templated_type: TemplatedType, new_name: str, parent: str = ''):
+        self.typename = templated_type.typename
         self.new_name = new_name
         self.parent = parent
