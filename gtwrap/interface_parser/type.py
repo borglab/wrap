@@ -208,12 +208,19 @@ class Type:
             "{self.is_shared_ptr}{self.is_ptr}{self.is_ref}".format(
             self=self)
 
-    def to_cpp(self, use_boost: bool, ref_to_shared_ptr: bool = True) -> str:
+    def to_cpp(self, use_boost: bool, shared_ptr_ref: bool = True) -> str:
         """
         Generate the C++ code for wrapping.
 
         Treat all pointers as "const shared_ptr<T>&"
         Treat Matrix and Vector as "const Matrix&" and "const Vector&" resp.
+
+        Args:
+            use_boost: Flag indicating whether to use boost::shared_ptr or std::shared_ptr.
+            shared_ptr_ref: Flag indicating whether the conversion to C++ should add
+                the shared_ptr as a reference.
+                Setting this to True gives `boost::shared_ptr<T>&` while False gives
+                `boost::shared_ptr<T>`.
         """
         shared_ptr_ns = "boost" if use_boost else "std"
 
@@ -222,7 +229,7 @@ class Type:
             typename = "{ns}::shared_ptr<{typename}>{ref}".format(
                 ns=shared_ptr_ns,
                 typename=self.typename.to_cpp(),
-                ref="&" if ref_to_shared_ptr else "")
+                ref="&" if shared_ptr_ref else "")
         elif self.is_ptr:
             typename = "{typename}*".format(typename=self.typename.to_cpp())
         elif self.is_ref or self.typename.name in ["Matrix", "Vector"]:
@@ -281,12 +288,15 @@ class TemplatedType:
     def to_cpp(self, use_boost: bool):
         """
         Generate the C++ code for wrapping.
+
+        Args:
+            use_boost: Flag indicating whether to use boost::shared_ptr or std::shared_ptr.
         """
         # Use Type.to_cpp to do the heavy lifting.
         # We don't want to insert references (&) as template parameters,
-        # hence ref_to_shared_ptr is always false.
+        # hence shared_ptr_ref is always false.
         template_args = ", ".join([
-            t.to_cpp(use_boost, ref_to_shared_ptr=False)
+            t.to_cpp(use_boost, shared_ptr_ref=False)
             for t in self.template_params
         ])
 
