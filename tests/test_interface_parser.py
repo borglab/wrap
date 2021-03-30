@@ -171,8 +171,8 @@ class TestInterfaceParser(unittest.TestCase):
         args_list = args.args_list
         self.assertEqual(2, len(args_list))
         self.assertEqual("std::pair<string, double>", args_list[0].ctype.to_cpp(False))
-        self.assertEqual("vector<std::shared_ptr<T>&>", args_list[1].ctype.to_cpp(False))
-        self.assertEqual("vector<boost::shared_ptr<T>&>", args_list[1].ctype.to_cpp(True))
+        self.assertEqual("vector<std::shared_ptr<T>>", args_list[1].ctype.to_cpp(False))
+        self.assertEqual("vector<boost::shared_ptr<T>>", args_list[1].ctype.to_cpp(True))
 
     def test_return_type(self):
         """Test ReturnType"""
