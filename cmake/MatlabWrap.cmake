@@ -1,3 +1,10 @@
+if(GTWRAP_PYTHON_PACKAGE_DIR)
+  # packaged
+  set(GTWRAP_PACKAGE_DIR "${GTWRAP_PYTHON_PACKAGE_DIR}")
+else()
+  set(GTWRAP_PACKAGE_DIR ${CMAKE_CURRENT_LIST_DIR}/..)
+endif()
+
 find_package(
   Matlab
   COMPONENTS MEX_COMPILER
