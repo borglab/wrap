@@ -47,9 +47,6 @@ install(
         cmake/MatlabWrap.cmake cmake/PybindWrap.cmake cmake/GtwrapUtils.cmake
   DESTINATION "${CMAKE_INSTALL_PREFIX}/${INSTALL_CMAKE_DIR}")
 
-configure_file(${PROJECT_SOURCE_DIR}/templates/matlab_wrapper.tpl.in
-               ${PROJECT_SOURCE_DIR}/gtwrap/matlab_wrapper.tpl)
-
 # Configure the include directory for matlab.h This allows the #include to be
 # either gtwrap/matlab.h, wrap/matlab.h or something custom.
 if(NOT DEFINED GTWRAP_INCLUDE_NAME)
@@ -57,6 +54,9 @@ if(NOT DEFINED GTWRAP_INCLUDE_NAME)
       "gtwrap"
       CACHE INTERNAL "Directory name for Matlab includes")
 endif()
+
+configure_file(${PROJECT_SOURCE_DIR}/templates/matlab_wrapper.tpl.in
+               ${PROJECT_SOURCE_DIR}/gtwrap/matlab_wrapper.tpl)
 
 # Install the gtwrap python package as a directory so it can be found  by CMake
 # for wrapping.
@@ -77,6 +77,7 @@ install(PROGRAMS scripts/pybind_wrap.py scripts/matlab_wrap.py
         DESTINATION "${CMAKE_INSTALL_PREFIX}/${INSTALL_BIN_DIR}")
 
 # Install the matlab.h file to `CMAKE_INSTALL_PREFIX/lib/gtwrap/matlab.h`.
-message(STATUS "Header path     : ${CMAKE_INSTALL_PREFIX}/${INSTALL_INCLUDE_DIR}")
+message(
+  STATUS "Header path     : ${CMAKE_INSTALL_PREFIX}/${INSTALL_INCLUDE_DIR}")
 install(FILES matlab.h
         DESTINATION "${CMAKE_INSTALL_PREFIX}/${INSTALL_INCLUDE_DIR}")
