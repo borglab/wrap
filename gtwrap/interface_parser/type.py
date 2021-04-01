@@ -12,7 +12,6 @@ Author: Duy Nguyen Ta, Fan Jiang, Matthew Sklar, Varun Agrawal, and Frank Dellae
 
 # pylint: disable=unnecessary-lambda, expression-not-assigned
 
-from re import template
 from typing import Iterable, List, Union
 
 from pyparsing import Forward, Optional, Or, ParseResults, delimitedList
@@ -245,11 +244,15 @@ class TemplatedType:
 
     E.g. std::vector<double>, BearingRange<Pose3, Point3>
     """
-    rule = (
+
+    rule = Forward()
+    rule << (
         Optional(CONST("is_const"))  #
         + Typename.rule("typename")  #
-        + (LOPBRACK + delimitedList(Type.rule, ",")("template_params") +
-           ROPBRACK)  #
+        + (
+            LOPBRACK  #
+            + delimitedList(Type.rule ^ rule, ",")("template_params")  #
+            + ROPBRACK)  #
         + Optional(
             SHARED_POINTER("is_shared_ptr") | RAW_POINTER("is_ptr")
             | REF("is_ref"))  #
@@ -261,6 +264,7 @@ class TemplatedType:
         # Recreate the typename but with the template params as instantiations.
         self.typename = Typename(typename.namespaces + [typename.name],
                                  instantiations)
+
         self.template_params = template_params
 
         self.is_const = is_const
@@ -295,8 +299,8 @@ class TemplatedType:
 
         shared_ptr_ns = "boost" if use_boost else "std"
         if self.is_shared_ptr:
-            typename = "{ns}::shared_ptr<{typename}>".format(
-                ns=shared_ptr_ns, typename=typename)
+            typename = "{ns}::shared_ptr<{typename}>".format(ns=shared_ptr_ns,
+                                                             typename=typename)
         elif self.is_ptr:
             typename = "{typename}*".format(typename=typename)
         elif self.is_ref or self.typename.name in ["Matrix", "Vector"]:

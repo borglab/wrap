@@ -100,12 +100,13 @@ class ReturnType:
         + Type.rule("type2")  #
         + ROPBRACK  #
     )
-    rule = (_pair ^ Type.rule("type1")
-            ^ TemplatedType.rule("type1")).setParseAction(  # BR
+    rule = (_pair ^
+            (Type.rule ^ TemplatedType.rule)("type1")).setParseAction(  # BR
                 lambda t: ReturnType(t.type1, t.type2))
 
-    def __init__(self, type1: Type, type2: Type):
-        self.type1 = type1
+    def __init__(self, type1: Union[Type, TemplatedType], type2: Type):
+        # If a TemplatedType, the return is a ParseResults, so we extract out the type.
+        self.type1 = type1[0] if isinstance(type1, ParseResults) else type1
         self.type2 = type2
         # The parent object which contains the return type
         # E.g. Method, StaticMethod, Template, Constructor, GlobalFunction

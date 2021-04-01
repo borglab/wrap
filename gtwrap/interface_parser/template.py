@@ -10,7 +10,6 @@ Classes and rules for parsing C++ templates and typedefs for template instantiat
 Author: Duy Nguyen Ta, Fan Jiang, Matthew Sklar, Varun Agrawal, and Frank Dellaert
 """
 
-from re import template
 from typing import List
 
 from pyparsing import Optional, ParseResults, delimitedList
@@ -39,7 +38,8 @@ class Template:
             + Optional(  #
                 EQUAL  #
                 + LBRACE  #
-                + ((delimitedList(TemplatedType.rule ^ Typename.rule)("instantiations")))  #
+                + ((delimitedList(TemplatedType.rule ^ Typename.rule)
+                    ("instantiations")))  #
                 + RBRACE  #
             )).setParseAction(lambda t: Template.TypenameAndInstantiations(
                 t.typename, t.instantiations))
@@ -50,9 +50,9 @@ class Template:
             self.instantiations = []
             if instantiations:
                 for inst in instantiations:
-                    x = inst.typename if isinstance(inst, TemplatedType) else inst
+                    x = inst.typename if isinstance(inst,
+                                                    TemplatedType) else inst
                     self.instantiations.append(x)
-                        
 
     rule = (  # BR
         TEMPLATE  #
@@ -83,11 +83,19 @@ class TypedefTemplateInstantiation:
     typedef SuperComplexName<Arg1, Arg2, Arg3> EasierName;
     ```
     """
-    rule = (TYPEDEF + TemplatedType.rule("templated_type") + IDENT("new_name") +
+    rule = (TYPEDEF + TemplatedType.rule("templated_type") +
+            IDENT("new_name") +
             SEMI_COLON).setParseAction(lambda t: TypedefTemplateInstantiation(
-                t.templated_type, t.new_name))
+                t.templated_type[0], t.new_name))
 
-    def __init__(self, templated_type: TemplatedType, new_name: str, parent: str = ''):
+    def __init__(self,
+                 templated_type: TemplatedType,
+                 new_name: str,
+                 parent: str = ''):
         self.typename = templated_type.typename
         self.new_name = new_name
         self.parent = parent
+
+    def __repr__(self):
+        return "Typedef: {new_name} = {typename}".format(
+            new_name=self.new_name, typename=self.typename)
