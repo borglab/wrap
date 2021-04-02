@@ -18,7 +18,7 @@ from .function import ArgumentList, ReturnType
 from .template import Template
 from .tokens import (CLASS, COLON, CONST, IDENT, LBRACE, LPAREN, RBRACE,
                      RPAREN, SEMI_COLON, STATIC, VIRTUAL, OPERATOR)
-from .type import Type, Typename
+from .type import TemplatedType, Type, Typename
 
 
 class Method:
@@ -148,13 +148,13 @@ class Property:
     ````
     """
     rule = (
-        Type.rule("ctype")  #
+        (Type.rule ^ TemplatedType.rule)("ctype")  #
         + IDENT("name")  #
         + SEMI_COLON  #
     ).setParseAction(lambda t: Property(t.ctype, t.name))
 
     def __init__(self, ctype: Type, name: str, parent=''):
-        self.ctype = ctype
+        self.ctype = ctype[0]  # ParseResult is a list
         self.name = name
         self.parent = parent
 
