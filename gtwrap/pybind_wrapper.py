@@ -143,28 +143,17 @@ class PybindWrapper:
                     py_args_names=py_args_names,
                     suffix=suffix
                 )
-            if len(type_list) > 0 and type_list[0].strip() == 'string':
-                ret += '''{prefix}.def("__repr__",
+            ret += ('''{prefix}.def("__repr__",
                     [](const {cpp_class} &a) {{
                         gtsam::RedirectCout redirect;
-                        a.print("");
+                        a.print({print_args});
                         return redirect.str();
-                    }}){suffix}'''.format(
-                    prefix=prefix,
-                    cpp_class=cpp_class,
-                    suffix=suffix,
-                )
-            else:
-                ret += '''{prefix}.def("__repr__",
-                    [](const {cpp_class} &a) {{
-                        gtsam::RedirectCout redirect;
-                        a.print();
-                        return redirect.str();
-                    }}){suffix}'''.format(
-                    prefix=prefix,
-                    cpp_class=cpp_class,
-                    suffix=suffix,
-                )
+                    }}){suffix}''').format(
+                prefix=prefix,
+                cpp_class=cpp_class,
+                print_args='""' if len(type_list) > 0 and type_list[0].strip() == 'string' else '',
+                suffix=suffix,
+            )
         return ret
 
     def wrap_methods(self, methods, cpp_class, prefix='\n' + ' ' * 8, suffix=''):
