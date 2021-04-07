@@ -25,9 +25,4 @@ class SfmTrack {
   std::vector<std::pair<size_t, gtsam::Point2>> measurements;
 };
 
-class ClassWithPrint {
-  void print(const string &s,
-             const gtsam::KeyFormatter &keyFormatter);
-};
-
 }  // namespace gtsam
