@@ -53,9 +53,12 @@ PYBIND11_MODULE(namespaces_py, m_) {
     m_ns2.def("aGlobalFunction",[](){return ns2::aGlobalFunction();});
     m_ns2.def("overloadedGlobalFunction",[](const ns1::ClassA& a){return ns2::overloadedGlobalFunction(a);}, py::arg("a"));
     m_ns2.def("overloadedGlobalFunction",[](const ns1::ClassA& a, double b){return ns2::overloadedGlobalFunction(a, b);}, py::arg("a"), py::arg("b"));
+    m_ns2.attr("aNs2Var") = aNs2Var;
+
     py::class_<ClassD, std::shared_ptr<ClassD>>(m_, "ClassD")
         .def(py::init<>());
 
+    m_.attr("aGlobalVar") = aGlobalVar;
 
 #include "python/specializations.h"
 
