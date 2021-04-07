@@ -126,24 +126,6 @@ class PybindWrapper:
 
         if method.name == 'print':
             type_list = method.args.to_cpp(self.use_boost)
-            print(type_list)
-            if len(type_list) == 2 \
-                    and 'string' in type_list[0] \
-                    and 'gtsam::KeyFormatter' in type_list[1]:
-                ret = '''{prefix}.def("print_",
-                    []({cpp_class}* self, {stype} {sname}, {kftype} {kfname}) {{
-                        py::scoped_ostream_redirect stream;
-                        self->print({sname}, [&{kfname}](gtsam::Key key){{return {kfname}(key);}});
-                    }}{py_args_names}){suffix}'''.format(
-                    prefix=prefix,
-                    cpp_class=cpp_class,
-                    sname=args_names[0],
-                    kfname=args_names[1],
-                    stype=type_list[0],
-                    kftype='const std::function<std::string(gtsam::Key)>&',
-                    py_args_names=py_args_names,
-                    suffix=suffix
-                )
             if len(type_list) > 0 and type_list[0].strip() == 'string':
                 ret += '''{prefix}.def("__repr__",
                     [](const {cpp_class} &a) {{
