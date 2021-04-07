@@ -4,6 +4,8 @@
 #include <pybind11/stl_bind.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
+#include <pybind11/functional.h>
+#include <pybind11/iostream.h>
 #include "gtsam/nonlinear/utilities.h"  // for RedirectCout.
 
 #include "gtsam/geometry/Point2.h"
