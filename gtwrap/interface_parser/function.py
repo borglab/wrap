@@ -137,6 +137,31 @@ class ReturnType:
             return self.type1.to_cpp(use_boost)
 
 
+class GlobalVariable:
+    """
+    Rule to parse the variable members of a class.
+
+    E.g.
+    ```
+    class Hello {
+        string name;  // This is a property.
+    };
+    ````
+    """
+    rule = (
+        (Type.rule ^ TemplatedType.rule)("ctype")  #
+        + IDENT("name")  #
+        + SEMI_COLON  #
+    ).setParseAction(lambda t: Property(t.ctype, t.name))
+
+    def __init__(self, ctype: Type, name: str, parent=''):
+        self.ctype = ctype[0]  # ParseResult is a list
+        self.name = name
+        self.parent = parent
+
+    def __repr__(self) -> str:
+        return '{} {}'.format(self.ctype.__repr__(), self.name)
+
 class GlobalFunction:
     """
     Rule to parse functions defined in the global scope.
