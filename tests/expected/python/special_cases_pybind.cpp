@@ -32,10 +32,10 @@ PYBIND11_MODULE(special_cases_py, m_) {
 
     py::class_<gtsam::ClassWithPrint, std::shared_ptr<gtsam::ClassWithPrint>>(m_gtsam, "ClassWithPrint")
         .def("print_",
-                    [](gtsam::ClassWithPrint* self, const string& s, const std::function<std::string(gtsam::Key)>& keyFormatter){
-                        py::scoped_stream_redirect stream;
+                    [](gtsam::ClassWithPrint* self, const string& s, const std::function<std::string(gtsam::Key)>& keyFormatter) {
+                        py::scoped_ostream_redirect stream;
                         self->print(s, [&keyFormatter](gtsam::Key key){return keyFormatter(key);});
-                    }, py::arg("s", py::arg("keyFormatter")))
+                    }, py::arg("s"), py::arg("keyFormatter"))
         .def("__repr__",
                     [](const gtsam::ClassWithPrint &a) {
                         gtsam::RedirectCout redirect;
