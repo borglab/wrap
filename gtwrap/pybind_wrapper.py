@@ -126,7 +126,6 @@ class PybindWrapper:
 
         if method.name == 'print':
             type_list = method.args.to_cpp(self.use_boost)
-            print(type_list)
             if len(type_list) == 2 \
                     and 'string' in type_list[0] \
                     and 'gtsam::KeyFormatter' in type_list[1]:
