@@ -61,7 +61,7 @@ class Test {
   pair<Test ,Test*> create_MixedPtrs () const;
   pair<Test*,Test*> return_ptrs (Test* p1, Test* p2) const;
 
-  void print(const string& s, gtsam::KeyFormatter keyFormatter) const;
+  void print(const string& s, const gtsam::KeyFormatter& keyFormatter) const;
 
   void set_container(std::vector<testing::Test> container);
   void set_container(std::vector<testing::Test*> container);

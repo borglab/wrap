@@ -57,7 +57,7 @@ PYBIND11_MODULE(class_py, m_) {
         .def("return_ptrs",[](Test* self, std::shared_ptr<Test> p1, std::shared_ptr<Test> p2){return self->return_ptrs(p1, p2);}, py::arg("p1"), py::arg("p2"))
         .def("print_",[](Test* self, const string& s, const gtsam::KeyFormatter& keyFormatter){ self->print(s, keyFormatter);}, py::arg("s"), py::arg("keyFormatter"))
         .def("__repr__",
-                    [](const Test &a, const string& s, const gtsam::KeyFormatter& keyFormatter) {
+                    [](const Test& a, const string& s, const gtsam::KeyFormatter& keyFormatter) {
                         gtsam::RedirectCout redirect;
                         a.print(s, keyFormatter);
                         return redirect.str();

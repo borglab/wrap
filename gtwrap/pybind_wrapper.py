@@ -126,26 +126,40 @@ class PybindWrapper:
 
         if method.name == 'print':
             type_list = method.args.to_cpp(self.use_boost)
-            if len(type_list) > 0 and type_list[0].strip() == 'string':
+            # first check if this has the standard `print(string s, KeyFormatter keyformatter)` form
+            if len(type_list) == 2 \
+                    and 'string' in type_list[0] \
+                    and 'gtsam::KeyFormatter' in type_list[1]:
+                # default arguments of empty string and gtsam::DefaultKeyFormatter
+                # TODO(gerry): default arguments e.g. different default key formatter?
+                py_args_names = 'py::arg("{sname}") = "", ' \
+                                'py::arg("{kfname}") = gtsam::DefaultKeyFormatter'.format(
+                                    sname=args_names[0],
+                                    kfname=args_names[1])
                 ret += '''{prefix}.def("__repr__",
-                    [](const {cpp_class} &a) {{
+                    [](const {cpp_class}& a, {args_signature_with_names}) {{
                         gtsam::RedirectCout redirect;
-                        a.print("");
+                        a.print({args_names});
                         return redirect.str();
-                    }}){suffix}'''.format(
+                    }}, {py_args_names}){suffix}'''.format(
                     prefix=prefix,
                     cpp_class=cpp_class,
+                    args_signature_with_names=self._method_args_signature_with_names(method.args),
+                    args_names=', '.join(args_names),
+                    py_args_names=py_args_names,
                     suffix=suffix,
                 )
+            # if not standard form, then hope that `print()` or `print(string s)` are valid calls.
             else:
                 ret += '''{prefix}.def("__repr__",
                     [](const {cpp_class} &a) {{
                         gtsam::RedirectCout redirect;
-                        a.print();
+                        a.print({arg});
                         return redirect.str();
                     }}){suffix}'''.format(
                     prefix=prefix,
                     cpp_class=cpp_class,
+                    arg='""' if len(type_list) > 0 and 'string' in type_list[0] else '',
                     suffix=suffix,
                 )
         return ret
