@@ -179,6 +179,25 @@ class TestInterfaceParser(unittest.TestCase):
         self.assertEqual("vector<boost::shared_ptr<T>>",
                          args_list[1].ctype.to_cpp(True))
 
+    def test_default_arguments(self):
+        """Tests any expression that is a valid default argument"""
+        args = ArgumentList.rule.parseString(
+            "string s=\"hello\", int a=3, "
+            "int b, double pi = 3.1415, "
+            "gtsam::KeyFormatter kf = gtsam::DefaultKeyFormatter, "
+            "std::vector<size_t> p = std::vector<size_t>(), "
+            "std::vector<size_t> l = (1, 2, 'name', \"random\", 3.1415)"
+        )[0].args_list
+        print(args)
+        self.assertEqual(args[0].default, "hello")
+        self.assertEqual(args[1].default, 3)
+        # '' is falsy so we can check against it
+        self.assertEqual(args[2].default, '')
+        self.assertEqual(args[3].default, 3.1415)
+        self.assertEqual(repr(args[4].default.typename), 'gtsam::DefaultKeyFormatter')
+        self.assertEqual(repr(args[5].default.typename), 'std::vector<size_t>')
+        self.assertEqual(args[6].default, (1, 2, 'name', "random", 3.1415))
+
     def test_return_type(self):
         """Test ReturnType"""
         # Test void
@@ -480,18 +499,6 @@ class TestInterfaceParser(unittest.TestCase):
         self.assertEqual(["one", "Global"], [x.name for x in module.content])
         self.assertEqual(["two", "two_dummy", "two"],
                          [x.name for x in module.content[0].content])
-
-    def test_exppression(self):
-        """Tests any expression that is a valid default argument"""
-        args = ArgumentList.rule.parseString(
-            'string s="hello", '
-            'int a= 3, '
-            'int b, '
-            'gtsam::KeyFormatter kf = gtsam::DefaultKeyFormatter')[0].args_list
-        self.assertEqual(args[0].default, '"hello"')
-        self.assertEqual(args[1].default, '3')
-        self.assertEqual(args[2].default, None)
-        self.assertEqual(args[3].default, 'gtsam::DefaultKeyFormatter')
 
 if __name__ == '__main__':
     unittest.main()

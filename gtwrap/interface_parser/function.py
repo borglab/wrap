@@ -15,8 +15,8 @@ from typing import Iterable, List, Union
 from pyparsing import Optional, ParseResults, delimitedList
 
 from .template import Template
-from .tokens import (COMMA, IDENT, LOPBRACK, LPAREN, PAIR, ROPBRACK, RPAREN,
-                     SEMI_COLON, EQUAL, EXPRESSION)
+from .tokens import (COMMA, DEFAULT_ARG, EQUAL, IDENT, LOPBRACK, LPAREN, PAIR,
+                     ROPBRACK, RPAREN, SEMI_COLON)
 from .type import TemplatedType, Type
 
 
@@ -30,19 +30,28 @@ class Argument:
     ```
     """
     rule = ((Type.rule ^ TemplatedType.rule)("ctype") + IDENT("name") +
-            Optional(EQUAL + EXPRESSION)("default")
+            Optional(EQUAL + (DEFAULT_ARG ^ Type.rule ^ TemplatedType.rule) +
+                     Optional(LPAREN + RPAREN))("default")
             ).setParseAction(lambda t: Argument(t.ctype, t.name, t.default))
 
-    def __init__(self, ctype: Union[Type, TemplatedType], name: str, default: str):
+    def __init__(self,
+                 ctype: Union[Type, TemplatedType],
+                 name: str,
+                 default: ParseResults = None):
         if isinstance(ctype, Iterable):
             self.ctype = ctype[0]
         else:
             self.ctype = ctype
         self.name = name
-        if len(default) > 0:
+        # If the length is 1, it's a regular type,
+        if len(default) == 1:
             self.default = default[0]
+        # This means a tuple has been passed so we convert accordingly
+        elif len(default) > 1:
+            self.default = tuple(default.asList())
         else:
-            self.default = None
+            # An empty string
+            self.default = default
         self.parent: Union[ArgumentList, None] = None
 
     def __repr__(self) -> str:
