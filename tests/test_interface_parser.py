@@ -481,6 +481,17 @@ class TestInterfaceParser(unittest.TestCase):
         self.assertEqual(["two", "two_dummy", "two"],
                          [x.name for x in module.content[0].content])
 
+    def test_exppression(self):
+        """Tests any expression that is a valid default argument"""
+        args = ArgumentList.rule.parseString(
+            'string s="hello", '
+            'int a= 3, '
+            'int b, '
+            'gtsam::KeyFormatter kf = gtsam::DefaultKeyFormatter')[0].args_list
+        self.assertEqual(args[0].default, '"hello"')
+        self.assertEqual(args[1].default, '3')
+        self.assertEqual(args[2].default, None)
+        self.assertEqual(args[3].default, 'gtsam::DefaultKeyFormatter')
 
 if __name__ == '__main__':
     unittest.main()
