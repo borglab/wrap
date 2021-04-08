@@ -134,6 +134,11 @@ class PybindWrapper:
         # Create __repr__ override
         # We allow all arguments to .print() and let the compiler handle type mismatches.
         if method.name == 'print':
+            # Redirect stdout - see pybind docs for why this is a good idea:
+            # https://pybind11.readthedocs.io/en/stable/advanced/pycpp/utilities.html#capturing-standard-output-from-ostream
+            ret = ret.replace('self->print', 'py::scoped_ostream_redirect output; self->print')
+
+            # Make __repr__() call print() internally
             ret += '''{prefix}.def("__repr__",
                     [](const {cpp_class}& self{opt_comma}{args_signature_with_names}){{
                         gtsam::RedirectCout redirect;
