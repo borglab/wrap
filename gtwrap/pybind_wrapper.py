@@ -141,7 +141,7 @@ class PybindWrapper:
                     cpp_class=cpp_class,
                     opt_comma=', ' if args_names else '',
                     args_signature_with_names=args_signature_with_names,
-                    function_call=function_call,
+                    function_call=function_call.replace('->', '.'),
                     py_args_names=py_args_names,
                     suffix=suffix
                 )
