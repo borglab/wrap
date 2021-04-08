@@ -31,7 +31,7 @@ _type = (pyparsing_common.number ^ QuotedString('"') ^ QuotedString("'"))
 TUPLE = (LPAREN + delimitedList(_type) + RPAREN)
 
 # Default argument passed to functions/methods.
-DEFAULT_ARG = (_type ^ TUPLE)
+DEFAULT_ARG = (_type ^ pyparsing_common.identifier ^ TUPLE)
 
 CONST, VIRTUAL, CLASS, STATIC, PAIR, TEMPLATE, TYPEDEF, INCLUDE = map(
     Keyword,
