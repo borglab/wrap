@@ -43,9 +43,13 @@ class PybindWrapper:
 
     def _py_args_names(self, args_list):
         """Set the argument names in Pybind11 format."""
+        def format_arg(arg: parser.Argument):
+            return 'py::arg("{pyname}"){pydefault}'.format(
+                pyname=arg.name,
+                pydefault='' if arg.default is None else ' = ' + arg.default)
         names = args_list.args_names()
         if names:
-            py_args = ['py::arg("{}")'.format(name) for name in names]
+            py_args = [format_arg(arg) for arg in args_list.args_list]
             return ", " + ", ".join(py_args)
         else:
             return ''
