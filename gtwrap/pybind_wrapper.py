@@ -126,6 +126,7 @@ class PybindWrapper:
 
         if method.name == 'print':
             type_list = method.args.to_cpp(self.use_boost)
+            ret = ret.replace('self->', 'py::scoped_ostream_redirect output; self->')
             if len(type_list) > 0 and type_list[0].strip() == 'string':
                 ret += '''{prefix}.def("__repr__",
                     [](const {cpp_class} &a) {{
