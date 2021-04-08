@@ -55,13 +55,13 @@ PYBIND11_MODULE(class_py, m_) {
         .def("create_ptrs",[](Test* self){return self->create_ptrs();})
         .def("create_MixedPtrs",[](Test* self){return self->create_MixedPtrs();})
         .def("return_ptrs",[](Test* self, std::shared_ptr<Test> p1, std::shared_ptr<Test> p2){return self->return_ptrs(p1, p2);}, py::arg("p1"), py::arg("p2"))
-        .def("print_",[](Test* self){ self->print();})
+        .def("print_",[](Test* self, const string& s, const gtsam::KeyFormatter& keyFormatter){ self->print(s, keyFormatter);}, py::arg("s"), py::arg("keyFormatter"))
         .def("__repr__",
-                    [](const Test &a) {
+                    [](const Test &a, const string& s, const gtsam::KeyFormatter& keyFormatter) {
                         gtsam::RedirectCout redirect;
-                        a.print();
+                        a.print(s, keyFormatter);
                         return redirect.str();
-                    })
+                    }, py::arg("s") = "", py::arg("keyFormatter") = gtsam::DefaultKeyFormatter)
         .def("set_container",[](Test* self, std::vector<testing::Test> container){ self->set_container(container);}, py::arg("container"))
         .def("set_container",[](Test* self, std::vector<std::shared_ptr<testing::Test>> container){ self->set_container(container);}, py::arg("container"))
         .def("set_container",[](Test* self, std::vector<testing::Test&> container){ self->set_container(container);}, py::arg("container"))
