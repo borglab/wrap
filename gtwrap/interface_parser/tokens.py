@@ -10,25 +10,29 @@ All the token definitions.
 Author: Duy Nguyen Ta, Fan Jiang, Matthew Sklar, Varun Agrawal, and Frank Dellaert
 """
 
-from pyparsing import Keyword, Literal, Suppress, Word, alphanums, alphas, nums, Or, removeQuotes, \
-                      quotedString, originalTextFor, OneOrMore, Word, printables, nestedExpr
-
-# punctuation and basic elements
-LPAR,RPAR = map(Suppress, "()")
+from pyparsing import (Keyword, Literal, Or, QuotedString, Suppress, Word,
+                       alphanums, alphas, delimitedList, nums,
+                       pyparsing_common)
 
 # rule for identifiers (e.g. variable names)
 IDENT = Word(alphas + '_', alphanums + '_') ^ Word(nums)
-# rule for expressions (e.g. default arguments).
-# This can't really be truly syntax checked so instead just allow almost everything until delimiters
-# see https://stackoverflow.com/a/40688583/9151520
-EXPRESSION = (quotedString
-              | originalTextFor(OneOrMore(Word(printables, excludeChars="(),")
-                                          | nestedExpr())))
 
 RAW_POINTER, SHARED_POINTER, REF = map(Literal, "@*&")
 
 LPAREN, RPAREN, LBRACE, RBRACE, COLON, SEMI_COLON = map(Suppress, "(){}:;")
 LOPBRACK, ROPBRACK, COMMA, EQUAL = map(Suppress, "<>,=")
+
+# Encapsulating type for numbers, and single and double quoted strings.
+# The pyparsing_common utilities ensure correct coversion to the corresponding type.
+# E.g. pyparsing_common.number will convert 3.1415 to a float type.
+_type = (pyparsing_common.number ^ QuotedString('"') ^ QuotedString("'"))
+
+# A python tuple, e.g. (1, 9, "random", 3.1415)
+TUPLE = (LPAREN + delimitedList(_type) + RPAREN)
+
+# Default argument passed to functions/methods.
+DEFAULT_ARG = (_type ^ TUPLE)
+
 CONST, VIRTUAL, CLASS, STATIC, PAIR, TEMPLATE, TYPEDEF, INCLUDE = map(
     Keyword,
     [
