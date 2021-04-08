@@ -180,12 +180,13 @@ class PybindWrapper:
 
         return res
 
-    def wrap_variable(self, module, variable, prefix='\n' + ' ' * 8):
+    def wrap_variable(self, module, module_var, variable, prefix='\n' + ' ' * 8):
         """Wrap a variable that's not part of a class (i.e. global)
         """
-        return '{prefix}{module}.attr("{variable_name}") = {variable_name};'.format(
+        return '{prefix}{module_var}.attr("{variable_name}") = {module}{variable_name};'.format(
             prefix=prefix,
             module=module,
+            module_var=module_var,
             variable_name=variable.name
         )
 
@@ -346,7 +347,8 @@ class PybindWrapper:
                     wrapped += self.wrap_instantiated_class(element)
                 elif isinstance(element, parser.Variable):
                     wrapped += self.wrap_variable(
-                        module=module_var,
+                        module=self._add_namespaces('', namespaces),
+                        module_var=module_var,
                         variable=element,
                         prefix='\n' + ' ' * 4
                     )
