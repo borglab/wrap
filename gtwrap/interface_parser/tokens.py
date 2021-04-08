@@ -10,10 +10,20 @@ All the token definitions.
 Author: Duy Nguyen Ta, Fan Jiang, Matthew Sklar, Varun Agrawal, and Frank Dellaert
 """
 
-from pyparsing import Keyword, Literal, Suppress, Word, alphanums, alphas, nums, Or
+from pyparsing import Keyword, Literal, Suppress, Word, alphanums, alphas, nums, Or, removeQuotes, \
+                      quotedString, originalTextFor, OneOrMore, Word, printables, nestedExpr
+
+# punctuation and basic elements
+LPAR,RPAR = map(Suppress, "()")
 
 # rule for identifiers (e.g. variable names)
 IDENT = Word(alphas + '_', alphanums + '_') ^ Word(nums)
+# rule for expressions (e.g. default arguments).
+# This can't really be truly syntax checked so instead just allow almost everything until delimiters
+# see https://stackoverflow.com/a/40688583/9151520
+EXPRESSION = (quotedString
+              | originalTextFor(OneOrMore(Word(printables, excludeChars="(),")
+                                          | nestedExpr())))
 
 RAW_POINTER, SHARED_POINTER, REF = map(Literal, "@*&")
 

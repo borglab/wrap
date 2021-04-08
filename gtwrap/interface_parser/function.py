@@ -16,7 +16,7 @@ from pyparsing import Optional, ParseResults, delimitedList
 
 from .template import Template
 from .tokens import (COMMA, IDENT, LOPBRACK, LPAREN, PAIR, ROPBRACK, RPAREN,
-                     SEMI_COLON)
+                     SEMI_COLON, EQUAL, EXPRESSION)
 from .type import TemplatedType, Type
 
 
@@ -29,15 +29,20 @@ class Argument:
     void sayHello(/*`s` is the method argument with type `const string&`*/ const string& s);
     ```
     """
-    rule = ((Type.rule ^ TemplatedType.rule)("ctype") +
-            IDENT("name")).setParseAction(lambda t: Argument(t.ctype, t.name))
+    rule = ((Type.rule ^ TemplatedType.rule)("ctype") + IDENT("name") +
+            Optional(EQUAL + EXPRESSION)("default")
+            ).setParseAction(lambda t: Argument(t.ctype, t.name, t.default))
 
-    def __init__(self, ctype: Union[Type, TemplatedType], name: str):
+    def __init__(self, ctype: Union[Type, TemplatedType], name: str, default: str):
         if isinstance(ctype, Iterable):
             self.ctype = ctype[0]
         else:
             self.ctype = ctype
         self.name = name
+        if len(default) > 0:
+            self.default = default[0]
+        else:
+            self.default = None
         self.parent: Union[ArgumentList, None] = None
 
     def __repr__(self) -> str:
