@@ -59,7 +59,7 @@ PYBIND11_MODULE(class_py, m_) {
         .def("__repr__",
                     [](const Test& self){
                         gtsam::RedirectCout redirect;
-                        self->print();
+                        self.print();
                         return redirect.str();
                     })
         .def("set_container",[](Test* self, std::vector<testing::Test> container){ self->set_container(container);}, py::arg("container"))
@@ -88,7 +88,7 @@ PYBIND11_MODULE(class_py, m_) {
         .def("__repr__",
                     [](const MyFactor<gtsam::Pose2, gtsam::Matrix>& self, const string& s, const gtsam::KeyFormatter& keyFormatter){
                         gtsam::RedirectCout redirect;
-                        self->print(s, keyFormatter);
+                        self.print(s, keyFormatter);
                         return redirect.str();
                     }, py::arg("s") = "factor: ", py::arg("keyFormatter") = gtsam::DefaultKeyFormatter);
 
