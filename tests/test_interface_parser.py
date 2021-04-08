@@ -188,11 +188,13 @@ class TestInterfaceParser(unittest.TestCase):
             "std::vector<size_t> p = std::vector<size_t>(), "
             "std::vector<size_t> l = (1, 2, 'name', \"random\", 3.1415)"
         )[0].args_list
-        print(args)
+
         self.assertEqual(args[0].default, "hello")
         self.assertEqual(args[1].default, 3)
         # '' is falsy so we can check against it
         self.assertEqual(args[2].default, '')
+        self.assertFalse(args[2].default)
+
         self.assertEqual(args[3].default, 3.1415)
         self.assertEqual(repr(args[4].default.typename), 'gtsam::DefaultKeyFormatter')
         self.assertEqual(repr(args[5].default.typename), 'std::vector<size_t>')
