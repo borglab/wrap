@@ -128,30 +128,47 @@ class PybindWrapper:
                    suffix=suffix,
                ))
 
+        # create __repr__ override
         if method.name == 'print':
-            type_list = method.args.to_cpp(self.use_boost)
-            if len(type_list) > 0 and type_list[0].strip() == 'string':
-                ret += '''{prefix}.def("__repr__",
+            if all(arg.default is not None for arg in method.args.args_list):
+                ret += ('''{prefix}.def("__repr__",
+                    [](const {cpp_class}& self{opt_comma}{args_signature_with_names}){{
+                        gtsam::RedirectCout redirect;
+                       {function_call}
+                        return redirect.str();
+                    }}{py_args_names}){suffix}''').format(
+                    prefix=prefix,
+                    cpp_class=cpp_class,
+                    opt_comma=', ' if args_names else '',
+                    args_signature_with_names=args_signature_with_names,
+                    function_call=function_call,
+                    py_args_names=py_args_names,
+                    suffix=suffix
+                )
+            else:
+                type_list = method.args.to_cpp(self.use_boost)
+                if len(type_list) > 0 and type_list[0].strip() == 'string':
+                    ret += '''{prefix}.def("__repr__",
                     [](const {cpp_class} &a) {{
                         gtsam::RedirectCout redirect;
                         a.print("");
                         return redirect.str();
                     }}){suffix}'''.format(
-                    prefix=prefix,
-                    cpp_class=cpp_class,
-                    suffix=suffix,
-                )
-            else:
-                ret += '''{prefix}.def("__repr__",
+                        prefix=prefix,
+                        cpp_class=cpp_class,
+                        suffix=suffix,
+                    )
+                else:
+                    ret += '''{prefix}.def("__repr__",
                     [](const {cpp_class} &a) {{
                         gtsam::RedirectCout redirect;
                         a.print();
                         return redirect.str();
                     }}){suffix}'''.format(
-                    prefix=prefix,
-                    cpp_class=cpp_class,
-                    suffix=suffix,
-                )
+                        prefix=prefix,
+                        cpp_class=cpp_class,
+                        suffix=suffix,
+                    )
         return ret
 
     def wrap_methods(self, methods, cpp_class, prefix='\n' + ' ' * 8, suffix=''):
