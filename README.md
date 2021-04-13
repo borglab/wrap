@@ -114,10 +114,8 @@ Arguments:
 
 The [wrap library](https://github.com/borglab/wrap) is included in GTSAM as a git subtree.  This means that sometimes the wrap library can have new features or changes that are not yet reflected in GTSAM.  There are two options to get the most up-to-date versions of wrap:
   1. Clone and install the [wrap repository](https://github.com/borglab/wrap).  For external projects, make sure cmake is using the external `wrap` rather than the one pre-packaged with GTSAM.
-  2. run `./update_wrap.sh` from the root of GTSAM's repository to pull in the newest version of wrap to your local GTSAM installation.
+  2. run `./update_wrap.sh` from the root of GTSAM's repository to pull in the newest version of wrap to your local GTSAM installation.  *Warning*: this creates 2 new commits in GTSAM.  Be sure to _not_ push these to master/develop.  Preferably, open up a new PR with these updates (see below).
 
-For any code contributions to the wrap project, please make them on the [wrap repository](https://github.com/borglab/wrap).  To make a PR on GTSAM with the most recent wrap updates, navigate to the root GTSAM directory, pull in the most recent wrap changes using `./update_wrap.sh`, then run
-```bash
-git merge -s subtree --squash wrap
-```
-You should find that two new commits have been made: a squash and a merge from master.  Then you can push these (to a new branch) and open a PR.
+To make a PR on GTSAM with the most recent wrap updates, create a new branch/fork then pull in the most recent wrap changes using `./update_wrap.sh`.  You should find that two new commits have been made: a squash and a merge from master.  You can push these and open a PR.
+
+For any code contributions to the wrap project, please make them on the [wrap repository](https://github.com/borglab/wrap).
