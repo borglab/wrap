@@ -112,9 +112,9 @@ Arguments:
 
 ## Git subtree and Contributing
 
-The [wrap library](https://github.com/borglab/wrap) is included in GTSAM as a git subtree.  This means that sometimes the wrap library can have new features or changes that are not yet reflected in gtsam.  There are two options to get the most up-to-date versions of wrap:
+The [wrap library](https://github.com/borglab/wrap) is included in GTSAM as a git subtree.  This means that sometimes the wrap library can have new features or changes that are not yet reflected in GTSAM.  There are two options to get the most up-to-date versions of wrap:
   1. Clone and install the [wrap repository](https://github.com/borglab/wrap).  For external projects, make sure cmake is using the external `wrap` rather than the one pre-packaged with GTSAM.
-  2. run `./update_wrap.sh` from the root of gtsam's repository to pull in the newest version of wrap to your local GTSAM installation.
+  2. run `./update_wrap.sh` from the root of GTSAM's repository to pull in the newest version of wrap to your local GTSAM installation.
 
 For any code contributions to the wrap project, please make them on the [wrap repository](https://github.com/borglab/wrap).  To make a PR on GTSAM with the most recent wrap updates, navigate to the root GTSAM directory, pull in the most recent wrap changes using `./update_wrap.sh`, then run
 ```bash
