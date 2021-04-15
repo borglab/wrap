@@ -189,6 +189,7 @@ class TestInterfaceParser(unittest.TestCase):
             "std::vector<size_t> l = (1, 2, 'name', \"random\", 3.1415)"
         )[0].args_list
 
+        # Test for basic types
         self.assertEqual(args[0].default, "hello")
         self.assertEqual(args[1].default, 3)
         # '' is falsy so we can check against it
@@ -196,8 +197,13 @@ class TestInterfaceParser(unittest.TestCase):
         self.assertFalse(args[2].default)
 
         self.assertEqual(args[3].default, 3.1415)
+
+        # Test non-basic type
         self.assertEqual(repr(args[4].default.typename), 'gtsam::DefaultKeyFormatter')
+        # Test templated type
         self.assertEqual(repr(args[5].default.typename), 'std::vector<size_t>')
+        # Test for allowing list as default argument
+        print(args)
         self.assertEqual(args[6].default, (1, 2, 'name', "random", 3.1415))
 
     def test_return_type(self):

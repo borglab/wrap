@@ -48,7 +48,7 @@ class PybindWrapper:
             py_args = []
             for arg in args_list.args_list:
                 if arg.default and isinstance(arg.default, str):
-                    arg.default = f"\"{arg.default}\""
+                    arg.default = "\"{arg.default}\"".format(arg=arg)
                 argument = 'py::arg("{name}"){default}'.format(
                     name=arg.name,
                     default=' = {0}'.format(arg.default) if arg.default else '')

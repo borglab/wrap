@@ -29,9 +29,10 @@ class Argument:
     void sayHello(/*`s` is the method argument with type `const string&`*/ const string& s);
     ```
     """
-    rule = ((Type.rule ^ TemplatedType.rule)("ctype") + IDENT("name") +
-            Optional(EQUAL + (DEFAULT_ARG ^ Type.rule ^ TemplatedType.rule) +
-                     Optional(LPAREN + RPAREN))("default")
+    rule = ((Type.rule ^ TemplatedType.rule)("ctype") + IDENT("name") + \
+            Optional(EQUAL + (DEFAULT_ARG ^ Type.rule ^ TemplatedType.rule) + \
+                Optional(LPAREN + RPAREN)  # Needed to parse the parens for default constructors
+                )("default")
             ).setParseAction(lambda t: Argument(t.ctype, t.name, t.default))
 
     def __init__(self,
@@ -45,13 +46,12 @@ class Argument:
         self.name = name
         # If the length is 1, it's a regular type,
         if len(default) == 1:
-            self.default = default[0]
+            default = default[0]
         # This means a tuple has been passed so we convert accordingly
         elif len(default) > 1:
-            self.default = tuple(default.asList())
-        else:
-            # An empty string
-            self.default = default
+            default = tuple(default.asList())
+        self.default = default
+
         self.parent: Union[ArgumentList, None] = None
 
     def __repr__(self) -> str:
