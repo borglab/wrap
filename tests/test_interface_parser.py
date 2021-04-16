@@ -18,11 +18,11 @@ import unittest
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from gtwrap.interface_parser import (ArgumentList, Class, Constructor,
-                                     ForwardDeclaration, GlobalFunction,
-                                     Include, Method, Module, Namespace,
-                                     Operator, ReturnType, StaticMethod,
-                                     TemplatedType, Type,
+from gtwrap.interface_parser import (ArgumentList, Class, Constructor, Enum,
+                                     Enumerator, ForwardDeclaration,
+                                     GlobalFunction, Include, Method, Module,
+                                     Namespace, Operator, ReturnType,
+                                     StaticMethod, TemplatedType, Type,
                                      TypedefTemplateInstantiation, Typename)
 
 
@@ -422,7 +422,8 @@ class TestInterfaceParser(unittest.TestCase):
         self.assertEqual("BetweenFactor", ret.parent_class.name)
         self.assertEqual(["gtsam"], ret.parent_class.namespaces)
         self.assertEqual("Pose3", ret.parent_class.instantiations[0].name)
-        self.assertEqual(["gtsam"], ret.parent_class.instantiations[0].namespaces)
+        self.assertEqual(["gtsam"],
+                         ret.parent_class.instantiations[0].namespaces)
 
     def test_include(self):
         """Test for include statements."""
@@ -448,6 +449,26 @@ class TestInterfaceParser(unittest.TestCase):
         self.assertEqual("localToWorld", func.name)
         self.assertEqual("Values", func.return_type.type1.typename.name)
         self.assertEqual(3, len(func.args))
+
+    def test_enumerator(self):
+        """Test for enumerator."""
+        enumerator = Enumerator.rule.parseString("Dog = 0")[0]
+        self.assertEqual(enumerator.name, "Dog")
+
+        enumerator = Enumerator.rule.parseString("Cat")[0]
+        self.assertEqual(enumerator.name, "Cat")
+
+    def test_enum(self):
+        """Test for enums."""
+        enum = Enum.rule.parseString("""
+        enum Kind {
+            Dog = 0,
+            Cat
+        };
+        """)[0]
+        self.assertEqual(enum.name, "Kind")
+        self.assertEqual(enum.enumerators[0].name, "Dog")
+        self.assertEqual(enum.enumerators[1].name, "Cat")
 
     def test_namespace(self):
         """Test for namespace parsing."""
