@@ -12,13 +12,14 @@ Author: Duy Nguyen Ta, Fan Jiang, Matthew Sklar, Varun Agrawal, and Frank Dellae
 
 from typing import Iterable, List, Union
 
-from pyparsing import Optional, ZeroOrMore, Literal
+from pyparsing import Literal, Optional, ZeroOrMore
 
 from .function import ArgumentList, ReturnType
 from .template import Template
-from .tokens import (CLASS, COLON, CONST, IDENT, LBRACE, LPAREN, RBRACE,
-                     RPAREN, SEMI_COLON, STATIC, VIRTUAL, OPERATOR)
+from .tokens import (CLASS, COLON, CONST, IDENT, LBRACE, LPAREN, OPERATOR,
+                     RBRACE, RPAREN, SEMI_COLON, STATIC, VIRTUAL)
 from .type import TemplatedType, Type, Typename
+from .utils import collect_namespaces
 
 
 class Method:
@@ -147,11 +148,10 @@ class Property:
     };
     ````
     """
-    rule = (
-        (Type.rule ^ TemplatedType.rule)("ctype")  #
-        + IDENT("name")  #
-        + SEMI_COLON  #
-    ).setParseAction(lambda t: Property(t.ctype, t.name))
+    rule = ((Type.rule ^ TemplatedType.rule)("ctype")  #
+            + IDENT("name")  #
+            + SEMI_COLON  #
+            ).setParseAction(lambda t: Property(t.ctype, t.name))
 
     def __init__(self, ctype: Type, name: str, parent=''):
         self.ctype = ctype[0]  # ParseResult is a list
@@ -223,21 +223,6 @@ class Operator:
             self.args,
             self.is_const,
         )
-
-
-def collect_namespaces(obj):
-    """
-    Get the chain of namespaces from the lowest to highest for the given object.
-
-    Args:
-        obj: Object of type Namespace, Class or InstantiatedClass.
-    """
-    namespaces = []
-    ancestor = obj.parent
-    while ancestor and ancestor.name:
-        namespaces = [ancestor.name] + namespaces
-        ancestor = ancestor.parent
-    return [''] + namespaces
 
 
 class Class:

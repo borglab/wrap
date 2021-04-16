@@ -20,6 +20,7 @@ from pyparsing import (ParserElement, ParseResults, ZeroOrMore,
 
 from .classes import Class
 from .declaration import ForwardDeclaration, Include
+from .enum import Enum
 from .function import GlobalFunction
 from .namespace import Namespace
 from .template import TypedefTemplateInstantiation
@@ -43,6 +44,7 @@ class Module:
                    ^ Class.rule  #
                    ^ TypedefTemplateInstantiation.rule  #
                    ^ GlobalFunction.rule  #
+                   ^ Enum.rule  #
                    ^ Namespace.rule  #
                    ).setParseAction(lambda t: Namespace('', t.asList())) +
         stringEnd)
