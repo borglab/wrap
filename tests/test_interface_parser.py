@@ -23,7 +23,8 @@ from gtwrap.interface_parser import (ArgumentList, Class, Constructor, Enum,
                                      GlobalFunction, Include, Method, Module,
                                      Namespace, Operator, ReturnType,
                                      StaticMethod, TemplatedType, Type,
-                                     TypedefTemplateInstantiation, Typename)
+                                     TypedefTemplateInstantiation, Typename,
+                                     Variable)
 
 
 class TestInterfaceParser(unittest.TestCase):
@@ -199,7 +200,8 @@ class TestInterfaceParser(unittest.TestCase):
         self.assertEqual(args[3].default, 3.1415)
 
         # Test non-basic type
-        self.assertEqual(repr(args[4].default.typename), 'gtsam::DefaultKeyFormatter')
+        self.assertEqual(repr(args[4].default.typename),
+                         'gtsam::DefaultKeyFormatter')
         # Test templated type
         self.assertEqual(repr(args[5].default.typename), 'std::vector<size_t>')
         # Test for allowing list as default argument
@@ -450,6 +452,24 @@ class TestInterfaceParser(unittest.TestCase):
         self.assertEqual("Values", func.return_type.type1.typename.name)
         self.assertEqual(3, len(func.args))
 
+    def test_global_variable(self):
+        """Test for global variable."""
+        variable = Variable.rule.parseString("string kGravity;")[0]
+        self.assertEqual(variable.name, "kGravity")
+        self.assertEqual(variable.ctype.typename.name, "string")
+
+        variable = Variable.rule.parseString("string kGravity = 9.81;")[0]
+        self.assertEqual(variable.name, "kGravity")
+        self.assertEqual(variable.ctype.typename.name, "string")
+        self.assertEqual(variable.default, 9.81)
+
+        variable = Variable.rule.parseString(
+            "const string kGravity = 9.81;")[0]
+        self.assertEqual(variable.name, "kGravity")
+        self.assertEqual(variable.ctype.typename.name, "string")
+        self.assertTrue(variable.ctype.is_const)
+        self.assertEqual(variable.default, 9.81)
+
     def test_enumerator(self):
         """Test for enumerator."""
         enumerator = Enumerator.rule.parseString("Dog = 0")[0]
@@ -526,17 +546,21 @@ class TestInterfaceParser(unittest.TestCase):
 
                 };
             }
+            int oneVar;
         }
 
         class Global{
         };
+        int globalVar;
         """)
 
         # print("module: ", module)
         # print(dir(module.content[0].name))
-        self.assertEqual(["one", "Global"], [x.name for x in module.content])
-        self.assertEqual(["two", "two_dummy", "two"],
+        self.assertEqual(["one", "Global", "globalVar"],
+                         [x.name for x in module.content])
+        self.assertEqual(["two", "two_dummy", "two", "oneVar"],
                          [x.name for x in module.content[0].content])
+
 
 if __name__ == '__main__':
     unittest.main()
