@@ -10,8 +10,11 @@ Parser classes and rules for parsing C++ variables.
 Author: Varun Agrawal, Gerry Chen
 """
 
-from .tokens import IDENT, SEMI_COLON
+from pyparsing import Optional, ParseResults
+
+from .tokens import DEFAULT_ARG, EQUAL, IDENT, SEMI_COLON, STATIC
 from .type import TemplatedType, Type
+
 
 class Variable:
     """
@@ -27,15 +30,23 @@ class Variable:
     Vector3 kGravity;  // This is a global variable.
     ````
     """
-    rule = (
-        (Type.rule ^ TemplatedType.rule)("ctype")  #
-        + IDENT("name")  #
-        + SEMI_COLON  #
-    ).setParseAction(lambda t: Variable(t.ctype, t.name))
+    rule = ((Type.rule ^ TemplatedType.rule)("ctype")  #
+            + IDENT("name")  #
+            #TODO(Varun) Add support for non-basic types
+            + Optional(EQUAL + (DEFAULT_ARG))("default")  #
+            + SEMI_COLON  #
+            ).setParseAction(lambda t: Variable(t.ctype, t.name, t.default))
 
-    def __init__(self, ctype: Type, name: str, parent=''):
+    def __init__(self,
+                 ctype: Type,
+                 name: str,
+                 default: ParseResults = None,
+                 parent=''):
         self.ctype = ctype[0]  # ParseResult is a list
         self.name = name
+        if default:
+            self.default = default[0]
+
         self.parent = parent
 
     def __repr__(self) -> str:
