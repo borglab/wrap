@@ -51,7 +51,8 @@ class PybindWrapper:
                     arg.default = "\"{arg.default}\"".format(arg=arg)
                 argument = 'py::arg("{name}"){default}'.format(
                     name=arg.name,
-                    default=' = {0}'.format(arg.default) if arg.default else '')
+                    default=' = {0}'.format(arg.default)
+                    if arg.default else '')
                 py_args.append(argument)
             return ", " + ", ".join(py_args)
         else:
@@ -148,7 +149,9 @@ class PybindWrapper:
         if method.name == 'print':
             # Redirect stdout - see pybind docs for why this is a good idea:
             # https://pybind11.readthedocs.io/en/stable/advanced/pycpp/utilities.html#capturing-standard-output-from-ostream
-            ret = ret.replace('self->print', 'py::scoped_ostream_redirect output; self->print')
+            ret = ret.replace(
+                'self->print',
+                'py::scoped_ostream_redirect output; self->print')
 
             # Make __repr__() call print() internally
             ret += '''{prefix}.def("__repr__",
@@ -185,8 +188,8 @@ class PybindWrapper:
             if method.name == 'insert' and cpp_class == 'gtsam::Values':
                 name_list = method.args.args_names()
                 type_list = method.args.to_cpp(self.use_boost)
-                if type_list[0].strip(
-                ) == 'size_t':  # inserting non-wrapped value types
+                # inserting non-wrapped value types
+                if type_list[0].strip() == 'size_t':
                     method_suffix = '_' + name_list[1].strip()
                     res += self._wrap_method(method=method,
                                              cpp_class=cpp_class,
@@ -203,15 +206,18 @@ class PybindWrapper:
 
         return res
 
-    def wrap_variable(self, module, module_var, variable, prefix='\n' + ' ' * 8):
+    def wrap_variable(self,
+                      module,
+                      module_var,
+                      variable,
+                      prefix='\n' + ' ' * 8):
         """Wrap a variable that's not part of a class (i.e. global)
         """
         return '{prefix}{module_var}.attr("{variable_name}") = {module}{variable_name};'.format(
             prefix=prefix,
             module=module,
             module_var=module_var,
-            variable_name=variable.name
-        )
+            variable_name=variable.name)
 
     def wrap_properties(self, properties, cpp_class, prefix='\n' + ' ' * 8):
         """Wrap all the properties in the `cpp_class`."""
@@ -313,8 +319,8 @@ class PybindWrapper:
         res = "    py::enum_<{name}>(m_, \"{enum.name}\", py::arithmetic())".format(
             enum=enum, name=name)
         for enumerator in enum.enumerators:
-            res += "{prefix}.value(\"{enumerator.name}\", {name}::{enumerator.name})".format(
-                prefix=prefix, enumerator=enumerator, name=name, enum=enum)
+            res += '{prefix}.value("{enumerator.name}", {name}::{enumerator.name})'.format(
+                prefix=prefix, enumerator=enumerator, name=name)
         res += "{prefix}.export_values();\n".format(prefix=prefix)
         return res
 
@@ -392,12 +398,11 @@ class PybindWrapper:
                 elif isinstance(element, instantiator.InstantiatedClass):
                     wrapped += self.wrap_instantiated_class(element)
                 elif isinstance(element, parser.Variable):
-                    wrapped += self.wrap_variable(
-                        module=self._add_namespaces('', namespaces),
-                        module_var=module_var,
-                        variable=element,
-                        prefix='\n' + ' ' * 4
-                    )
+                    module = self._add_namespaces('', namespaces)
+                    wrapped += self.wrap_variable(module=module,
+                                                  module_var=module_var,
+                                                  variable=element,
+                                                  prefix='\n' + ' ' * 4)
 
                 elif isinstance(element, parser.Enum):
                     wrapped += self.wrap_enum(element)
