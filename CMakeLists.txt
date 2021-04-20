@@ -62,11 +62,11 @@ configure_file(${PROJECT_SOURCE_DIR}/templates/matlab_wrapper.tpl.in
 
 # Install the gtwrap python package as a directory so it can be found  by CMake
 # for wrapping.
-install(DIRECTORY gtwrap DESTINATION "${GTWRAP_INSTALL_LIB_DIR}")
+install(DIRECTORY gtwrap DESTINATION "${GTWRAP_LIB_INSTALL_DIR}")
 
 # Install pybind11 directory to `CMAKE_INSTALL_PREFIX/lib/gtwrap/pybind11` This
 # will allow the gtwrapConfig.cmake file to load it later.
-install(DIRECTORY pybind11 DESTINATION "${GTWRAP_INSTALL_LIB_DIR}")
+install(DIRECTORY pybind11 DESTINATION "${GTWRAP_LIB_INSTALL_DIR}")
 
 # Install wrapping scripts as binaries to `CMAKE_INSTALL_PREFIX/bin` so they can
 # be invoked for wrapping. We use DESTINATION (instead of TYPE) so we can
