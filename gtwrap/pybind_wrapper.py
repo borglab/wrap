@@ -314,14 +314,13 @@ class PybindWrapper:
 
     def wrap_enum(self, enum, prefix='\n' + ' ' * 8):
         """Wrap an enum."""
-        namespaces = enum.namespaces()
-        # leverage Typename to get the fully-qualified name easily.
-        name = parser.Typename(namespaces + [enum.name]).to_cpp()
-        res = "\n    py::enum_<{name}>(m_, \"{enum.name}\", py::arithmetic())".format(
-            enum=enum, name=name)
+        module_var = self._gen_module_var(enum.namespaces())
+        cpp_class = enum.cpp_typename().to_cpp()
+        res = '\n    py::enum_<{cpp_class}>({module_var}, "{enum.name}", py::arithmetic())'.format(
+            module_var=module_var, enum=enum, cpp_class=cpp_class)
         for enumerator in enum.enumerators:
-            res += '{prefix}.value("{enumerator.name}", {name}::{enumerator.name})'.format(
-                prefix=prefix, enumerator=enumerator, name=name)
+            res += '{prefix}.value("{enumerator.name}", {cpp_class}::{enumerator.name})'.format(
+                prefix=prefix, enumerator=enumerator, cpp_class=cpp_class)
         res += "{prefix}.export_values();\n\n".format(prefix=prefix)
         return res
 
@@ -332,6 +331,8 @@ class PybindWrapper:
         return True
 
     def _gen_module_var(self, namespaces):
+        """Get the Pybind11 module name from the namespaces."""
+        # We skip the first value in namespaces since it is empty
         sub_module_namespaces = namespaces[len(self.top_module_namespaces):]
         return "m_{}".format('_'.join(sub_module_namespaces))
 

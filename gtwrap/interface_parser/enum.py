@@ -10,9 +10,10 @@ Parser class and rules for parsing C++ enums.
 Author: Varun Agrawal
 """
 
-from pyparsing import Optional, alphas, delimitedList, pyparsing_common
+from pyparsing import delimitedList
 
-from .tokens import ENUM, EQUAL, IDENT, LBRACE, RBRACE, SEMI_COLON
+from .tokens import ENUM, IDENT, LBRACE, RBRACE, SEMI_COLON
+from .type import Typename
 from .utils import collect_namespaces
 
 
@@ -55,6 +56,15 @@ class Enum:
     def namespaces(self) -> list:
         """Get the namespaces which this class is nested under as a list."""
         return collect_namespaces(self)
+
+    def cpp_typename(self):
+        """
+        Return a Typename with the namespaces and cpp name of this
+        class.
+        """
+        namespaces_name = self.namespaces()
+        namespaces_name.append(self.name)
+        return Typename(namespaces_name)
 
     def __repr__(self):
         return "Enum: {0}".format(self.name)

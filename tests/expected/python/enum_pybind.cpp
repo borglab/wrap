@@ -29,7 +29,7 @@ PYBIND11_MODULE(enum_py, m_) {
 
     pybind11::module m_gtsam = m_.def_submodule("gtsam", "gtsam submodule");
 
-    py::enum_<gtsam::VerbosityLM>(m_, "VerbosityLM", py::arithmetic())
+    py::enum_<gtsam::VerbosityLM>(m_gtsam, "VerbosityLM", py::arithmetic())
         .value("SILENT", gtsam::VerbosityLM::SILENT)
         .value("SUMMARY", gtsam::VerbosityLM::SUMMARY)
         .value("TERMINATION", gtsam::VerbosityLM::TERMINATION)
