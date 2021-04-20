@@ -354,9 +354,10 @@ class PybindWrapper:
         if len(namespaces) < len(self.top_module_namespaces):
             for element in namespace.content:
                 if isinstance(element, parser.Include):
-                    includes += ("{}\n".format(element).replace('<',
-                                                                '"').replace(
-                                                                    '>', '"'))
+                    include = "{}\n".format(element)
+                    # replace the angle brackets with quotes
+                    include = include.replace('<', '"').replace('>', '"')
+                    includes += include
                 if isinstance(element, parser.Namespace):
                     (
                         wrapped_namespace,
@@ -382,16 +383,12 @@ class PybindWrapper:
             # Wrap an include statement, namespace, class or enum
             for element in namespace.content:
                 if isinstance(element, parser.Include):
-
-                    includes += ("{}\n".format(element).replace('<',
-                                                                '"').replace(
-                                                                    '>', '"'))
+                    include = "{}\n".format(element)
+                    # replace the angle brackets with quotes
+                    include = include.replace('<','"').replace('>', '"')
+                    includes += include
                 elif isinstance(element, parser.Namespace):
-                    (
-                        wrapped_namespace,
-                        includes_namespace,
-                    ) = self.wrap_namespace(  # noqa
-                        element)
+                    wrapped_namespace, includes_namespace = self.wrap_namespace(element)
                     wrapped += wrapped_namespace
                     includes += includes_namespace
 
