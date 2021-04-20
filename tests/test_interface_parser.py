@@ -19,9 +19,10 @@ import unittest
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from gtwrap.interface_parser import (
-    ArgumentList, Class, Constructor, ForwardDeclaration, GlobalFunction,
-    Include, Method, Module, Namespace, Operator, ReturnType, StaticMethod,
-    TemplatedType, Type, TypedefTemplateInstantiation, Typename, Variable)
+    ArgumentList, Class, Constructor, Enum, Enumerator, ForwardDeclaration,
+    GlobalFunction, Include, Method, Module, Namespace, Operator, ReturnType,
+    StaticMethod, TemplatedType, Type, TypedefTemplateInstantiation, Typename,
+    Variable)
 
 
 class TestInterfaceParser(unittest.TestCase):
@@ -202,7 +203,6 @@ class TestInterfaceParser(unittest.TestCase):
         # Test templated type
         self.assertEqual(repr(args[5].default.typename), 'std::vector<size_t>')
         # Test for allowing list as default argument
-        print(args)
         self.assertEqual(args[6].default, (1, 2, 'name', "random", 3.1415))
 
     def test_return_type(self):
@@ -424,6 +424,17 @@ class TestInterfaceParser(unittest.TestCase):
         self.assertEqual(["gtsam"],
                          ret.parent_class.instantiations[0].namespaces)
 
+    def test_class_with_enum(self):
+        """Test for class with nested enum."""
+        ret = Class.rule.parseString("""
+        class Pet {
+            Pet(const string &name, Kind type);
+            enum Kind { Dog, Cat };
+        };
+        """)[0]
+        self.assertEqual(ret.name, "Pet")
+        self.assertEqual(ret.enums[0].name, "Kind")
+
     def test_include(self):
         """Test for include statements."""
         include = Include.rule.parseString(
@@ -460,11 +471,32 @@ class TestInterfaceParser(unittest.TestCase):
         self.assertEqual(variable.ctype.typename.name, "string")
         self.assertEqual(variable.default, 9.81)
 
-        variable = Variable.rule.parseString("const string kGravity = 9.81;")[0]
+        variable = Variable.rule.parseString(
+            "const string kGravity = 9.81;")[0]
         self.assertEqual(variable.name, "kGravity")
         self.assertEqual(variable.ctype.typename.name, "string")
         self.assertTrue(variable.ctype.is_const)
         self.assertEqual(variable.default, 9.81)
+
+    def test_enumerator(self):
+        """Test for enumerator."""
+        enumerator = Enumerator.rule.parseString("Dog")[0]
+        self.assertEqual(enumerator.name, "Dog")
+
+        enumerator = Enumerator.rule.parseString("Cat")[0]
+        self.assertEqual(enumerator.name, "Cat")
+
+    def test_enum(self):
+        """Test for enums."""
+        enum = Enum.rule.parseString("""
+        enum Kind {
+            Dog,
+            Cat
+        };
+        """)[0]
+        self.assertEqual(enum.name, "Kind")
+        self.assertEqual(enum.enumerators[0].name, "Dog")
+        self.assertEqual(enum.enumerators[1].name, "Cat")
 
     def test_namespace(self):
         """Test for namespace parsing."""
