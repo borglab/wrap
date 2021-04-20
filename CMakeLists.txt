@@ -35,12 +35,11 @@ configure_package_config_file(
             INSTALL_INCLUDE_DIR
   INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
 
-message(STATUS "Package config  : ${CMAKE_INSTALL_PREFIX}/${INSTALL_CMAKE_DIR}")
+message(STATUS "Package config : ${CMAKE_INSTALL_PREFIX}/${INSTALL_CMAKE_DIR}")
 
 # ##############################################################################
 # Install the package
 
-message(STATUS "CMake           : ${CMAKE_INSTALL_PREFIX}/${INSTALL_CMAKE_DIR}")
 # Install CMake scripts to the standard CMake script directory.
 install(
   FILES ${CMAKE_CURRENT_BINARY_DIR}/cmake/gtwrapConfig.cmake
@@ -60,7 +59,6 @@ configure_file(${PROJECT_SOURCE_DIR}/templates/matlab_wrapper.tpl.in
 
 # Install the gtwrap python package as a directory so it can be found  by CMake
 # for wrapping.
-message(STATUS "Lib path        : ${CMAKE_INSTALL_PREFIX}/${INSTALL_LIB_DIR}")
 install(DIRECTORY gtwrap
         DESTINATION "${CMAKE_INSTALL_PREFIX}/${INSTALL_LIB_DIR}")
 
@@ -72,12 +70,17 @@ install(DIRECTORY pybind11
 # Install wrapping scripts as binaries to `CMAKE_INSTALL_PREFIX/bin` so they can
 # be invoked for wrapping. We use DESTINATION (instead of TYPE) so we can
 # support older CMake versions.
-message(STATUS "Bin path        : ${CMAKE_INSTALL_PREFIX}/${INSTALL_BIN_DIR}")
 install(PROGRAMS scripts/pybind_wrap.py scripts/matlab_wrap.py
         DESTINATION "${CMAKE_INSTALL_PREFIX}/${INSTALL_BIN_DIR}")
 
 # Install the matlab.h file to `CMAKE_INSTALL_PREFIX/lib/gtwrap/matlab.h`.
-message(
-  STATUS "Header path     : ${CMAKE_INSTALL_PREFIX}/${INSTALL_INCLUDE_DIR}")
 install(FILES matlab.h
         DESTINATION "${CMAKE_INSTALL_PREFIX}/${INSTALL_INCLUDE_DIR}")
+
+string(ASCII 27 Esc)
+set(gtwrap "${Esc}[1;36mgtwrap${Esc}[m")
+message(STATUS "${gtwrap} version : ${PROJECT_VERSION}")
+message(STATUS "${gtwrap} CMake   : ${CMAKE_INSTALL_PREFIX}/${INSTALL_CMAKE_DIR}")
+message(STATUS "${gtwrap} library : ${CMAKE_INSTALL_PREFIX}/${INSTALL_LIB_DIR}")
+message(STATUS "${gtwrap} binary  : ${CMAKE_INSTALL_PREFIX}/${INSTALL_BIN_DIR}")
+message(STATUS "${gtwrap} header  : ${CMAKE_INSTALL_PREFIX}/${INSTALL_INCLUDE_DIR}")
