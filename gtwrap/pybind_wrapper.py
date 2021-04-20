@@ -251,7 +251,8 @@ class PybindWrapper:
                     op.operator))
         return res
 
-    def wrap_instantiated_class(self, instantiated_class):
+    def wrap_instantiated_class(
+            self, instantiated_class: instantiator.InstantiatedClass):
         """Wrap the class."""
         module_var = self._gen_module_var(instantiated_class.namespaces())
         cpp_class = instantiated_class.cpp_class()
@@ -316,12 +317,12 @@ class PybindWrapper:
         namespaces = enum.namespaces()
         # leverage Typename to get the fully-qualified name easily.
         name = parser.Typename(namespaces + [enum.name]).to_cpp()
-        res = "    py::enum_<{name}>(m_, \"{enum.name}\", py::arithmetic())".format(
+        res = "\n    py::enum_<{name}>(m_, \"{enum.name}\", py::arithmetic())".format(
             enum=enum, name=name)
         for enumerator in enum.enumerators:
             res += '{prefix}.value("{enumerator.name}", {name}::{enumerator.name})'.format(
                 prefix=prefix, enumerator=enumerator, name=name)
-        res += "{prefix}.export_values();\n".format(prefix=prefix)
+        res += "{prefix}.export_values();\n\n".format(prefix=prefix)
         return res
 
     def _partial_match(self, namespaces1, namespaces2):
@@ -385,10 +386,11 @@ class PybindWrapper:
                 if isinstance(element, parser.Include):
                     include = "{}\n".format(element)
                     # replace the angle brackets with quotes
-                    include = include.replace('<','"').replace('>', '"')
+                    include = include.replace('<', '"').replace('>', '"')
                     includes += include
                 elif isinstance(element, parser.Namespace):
-                    wrapped_namespace, includes_namespace = self.wrap_namespace(element)
+                    wrapped_namespace, includes_namespace = self.wrap_namespace(
+                        element)
                     wrapped += wrapped_namespace
                     includes += includes_namespace
 

@@ -205,7 +205,6 @@ class TestInterfaceParser(unittest.TestCase):
         # Test templated type
         self.assertEqual(repr(args[5].default.typename), 'std::vector<size_t>')
         # Test for allowing list as default argument
-        print(args)
         self.assertEqual(args[6].default, (1, 2, 'name', "random", 3.1415))
 
     def test_return_type(self):
