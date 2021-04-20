@@ -18,13 +18,11 @@ import unittest
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from gtwrap.interface_parser import (ArgumentList, Class, Constructor, Enum,
-                                     Enumerator, ForwardDeclaration,
-                                     GlobalFunction, Include, Method, Module,
-                                     Namespace, Operator, ReturnType,
-                                     StaticMethod, TemplatedType, Type,
-                                     TypedefTemplateInstantiation, Typename,
-                                     Variable)
+from gtwrap.interface_parser import (
+    ArgumentList, Class, Constructor, Enum, Enumerator, ForwardDeclaration,
+    GlobalFunction, Include, Method, Module, Namespace, Operator, ReturnType,
+    StaticMethod, TemplatedType, Type, TypedefTemplateInstantiation, Typename,
+    Variable)
 
 
 class TestInterfaceParser(unittest.TestCase):
@@ -425,6 +423,17 @@ class TestInterfaceParser(unittest.TestCase):
         self.assertEqual("Pose3", ret.parent_class.instantiations[0].name)
         self.assertEqual(["gtsam"],
                          ret.parent_class.instantiations[0].namespaces)
+
+    def test_class_with_enum(self):
+        """Test for class with nested enum."""
+        ret = Class.rule.parseString("""
+        class Pet {
+            Pet(const string &name, Kind type);
+            enum Kind { Dog, Cat };
+        };
+        """)[0]
+        self.assertEqual(ret.name, "Pet")
+        self.assertEqual(ret.enums[0].name, "Kind")
 
     def test_include(self):
         """Test for include statements."""

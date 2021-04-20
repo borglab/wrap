@@ -11,4 +11,13 @@ enum VerbosityLM {
   DAMPED,
   TRYDELTA
 };
-}
+
+class Pet {
+  enum Kind { Dog = 0, Cat };
+
+  Pet(const string &name, Kind type);
+
+  string name;
+  Kind type;
+};
+}  // namespace gtsam

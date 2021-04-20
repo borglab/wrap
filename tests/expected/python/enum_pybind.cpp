@@ -41,6 +41,11 @@ PYBIND11_MODULE(enum_py, m_) {
         .export_values();
 
 
+    py::class_<gtsam::Pet, std::shared_ptr<gtsam::Pet>>(m_gtsam, "Pet")
+        .def(py::init<const string&, Kind>(), py::arg("name"), py::arg("type"))
+        .def_readwrite("name", &gtsam::Pet::name)
+        .def_readwrite("type", &gtsam::Pet::type);
+
 
 #include "python/specializations.h"
 

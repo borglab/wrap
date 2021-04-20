@@ -38,7 +38,7 @@ class Enum:
     E.g.
     ```
     enum Kind {
-        Dog = 0,
+        Dog,
         Cat
     };
     ```
