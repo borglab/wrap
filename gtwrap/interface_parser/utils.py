@@ -5,7 +5,7 @@ All Rights Reserved
 
 See LICENSE for the license information
 
-Parser classes and rules for parsing C++ classes.
+Various common utilities.
 
 Author: Varun Agrawal
 """
