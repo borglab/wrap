@@ -321,7 +321,7 @@ class PybindWrapper:
         for enumerator in enum.enumerators:
             res += '{prefix}.value("{enumerator.name}", {cpp_class}::{enumerator.name})'.format(
                 prefix=prefix, enumerator=enumerator, cpp_class=cpp_class)
-        res += "{prefix};\n\n".format(prefix=prefix)
+        res += ";\n\n"
         return res
 
     def _partial_match(self, namespaces1, namespaces2):

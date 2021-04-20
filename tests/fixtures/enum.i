@@ -13,7 +13,7 @@ enum VerbosityLM {
 };
 
 class Pet {
-  enum Kind { Dog = 0, Cat };
+  enum Kind { Dog, Cat };
 
   Pet(const string &name, Kind type);
 

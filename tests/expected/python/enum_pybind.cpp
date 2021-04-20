@@ -24,8 +24,7 @@ PYBIND11_MODULE(enum_py, m_) {
 
     py::enum_<Kind>(m_, "Kind", py::arithmetic())
         .value("Dog", Kind::Dog)
-        .value("Cat", Kind::Cat)
-        .export_values();
+        .value("Cat", Kind::Cat);
 
     pybind11::module m_gtsam = m_.def_submodule("gtsam", "gtsam submodule");
 
@@ -37,8 +36,7 @@ PYBIND11_MODULE(enum_py, m_) {
         .value("TRYLAMBDA", gtsam::VerbosityLM::TRYLAMBDA)
         .value("TRYCONFIG", gtsam::VerbosityLM::TRYCONFIG)
         .value("DAMPED", gtsam::VerbosityLM::DAMPED)
-        .value("TRYDELTA", gtsam::VerbosityLM::TRYDELTA)
-        .export_values();
+        .value("TRYDELTA", gtsam::VerbosityLM::TRYDELTA);
 
 
     py::class_<gtsam::Pet, std::shared_ptr<gtsam::Pet>>(m_gtsam, "Pet")
