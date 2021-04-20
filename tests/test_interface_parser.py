@@ -472,7 +472,7 @@ class TestInterfaceParser(unittest.TestCase):
 
     def test_enumerator(self):
         """Test for enumerator."""
-        enumerator = Enumerator.rule.parseString("Dog = 0")[0]
+        enumerator = Enumerator.rule.parseString("Dog")[0]
         self.assertEqual(enumerator.name, "Dog")
 
         enumerator = Enumerator.rule.parseString("Cat")[0]
@@ -482,7 +482,7 @@ class TestInterfaceParser(unittest.TestCase):
         """Test for enums."""
         enum = Enum.rule.parseString("""
         enum Kind {
-            Dog = 0,
+            Dog,
             Cat
         };
         """)[0]

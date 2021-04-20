@@ -1,8 +1,8 @@
-enum Kind { Dog = 0, Cat };
+enum Kind { Dog, Cat };
 
 namespace gtsam {
 enum VerbosityLM {
-  SILENT = 0,
+  SILENT,
   SUMMARY,
   TERMINATION,
   LAMBDA,

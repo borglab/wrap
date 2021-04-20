@@ -20,9 +20,8 @@ class Enumerator:
     """
     Rule to parse an enumerator inside an enum.
     """
-    rule = (IDENT("name") +
-            Optional(EQUAL + (pyparsing_common.signed_integer ^ alphas))
-            ).setParseAction(lambda t: Enumerator(t.name))
+    rule = (
+        IDENT("enumerator")).setParseAction(lambda t: Enumerator(t.enumerator))
 
     def __init__(self, name):
         self.name = name
@@ -56,3 +55,6 @@ class Enum:
     def namespaces(self) -> list:
         """Get the namespaces which this class is nested under as a list."""
         return collect_namespaces(self)
+
+    def __repr__(self):
+        return "Enum: {0}".format(self.name)
