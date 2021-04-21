@@ -27,12 +27,13 @@ PYBIND11_MODULE(enum_py, m_) {
         .value("Blue", Color::Blue);
 
 
-    py::class_<Pet, std::shared_ptr<Pet>>(m_, "Pet")
+    py::class_<Pet, std::shared_ptr<Pet>> pet(m_, "Pet");
+    pet
         .def(py::init<const string&, Kind>(), py::arg("name"), py::arg("type"))
         .def_readwrite("name", &Pet::name)
         .def_readwrite("type", &Pet::type);
 
-    py::enum_<Pet::Kind>(m_, "Kind", py::arithmetic())
+    py::enum_<Pet::Kind>(pet, "Kind", py::arithmetic())
         .value("Dog", Pet::Kind::Dog)
         .value("Cat", Pet::Kind::Cat);
 
@@ -48,10 +49,11 @@ PYBIND11_MODULE(enum_py, m_) {
         .value("TRYDELTA", gtsam::VerbosityLM::TRYDELTA);
 
 
-    py::class_<gtsam::MCU, std::shared_ptr<gtsam::MCU>>(m_gtsam, "MCU")
+    py::class_<gtsam::MCU, std::shared_ptr<gtsam::MCU>> mcu(m_gtsam, "MCU");
+    mcu
         .def(py::init<>());
 
-    py::enum_<gtsam::MCU::Avengers>(m_, "Avengers", py::arithmetic())
+    py::enum_<gtsam::MCU::Avengers>(mcu, "Avengers", py::arithmetic())
         .value("CaptainAmerica", gtsam::MCU::Avengers::CaptainAmerica)
         .value("IronMan", gtsam::MCU::Avengers::IronMan)
         .value("Hulk", gtsam::MCU::Avengers::Hulk)
@@ -59,7 +61,7 @@ PYBIND11_MODULE(enum_py, m_) {
         .value("Thor", gtsam::MCU::Avengers::Thor);
 
 
-    py::enum_<gtsam::MCU::GotG>(m_, "GotG", py::arithmetic())
+    py::enum_<gtsam::MCU::GotG>(mcu, "GotG", py::arithmetic())
         .value("Starlord", gtsam::MCU::GotG::Starlord)
         .value("Gamorra", gtsam::MCU::GotG::Gamorra)
         .value("Rocket", gtsam::MCU::GotG::Rocket)
