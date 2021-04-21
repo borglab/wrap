@@ -254,6 +254,39 @@ class PybindWrapper:
                     op.operator))
         return res
 
+    def wrap_enum(self, enum, class_name='', prefix=' ' * 4):
+        """
+        Wrap an enum.
+
+        Args:
+            enum: The parsed enum to wrap.
+            class_name: The class under which the enum is defined.
+            prefix: The amount of indentation.
+        """
+        module_var = self._gen_module_var(enum.namespaces())
+        cpp_class = enum.cpp_typename().to_cpp()
+        if class_name:
+            # If class_name is provided, add that as the namespace
+            cpp_class = class_name + "::" + cpp_class
+
+        res = '{prefix}py::enum_<{cpp_class}>({module_var}, "{enum.name}", py::arithmetic())'.format(
+            prefix=prefix,
+            module_var=module_var,
+            enum=enum,
+            cpp_class=cpp_class)
+        for enumerator in enum.enumerators:
+            res += '\n{prefix}    .value("{enumerator.name}", {cpp_class}::{enumerator.name})'.format(
+                prefix=prefix, enumerator=enumerator, cpp_class=cpp_class)
+        res += ";\n\n"
+        return res
+
+    def wrap_enums(self, enums, class_name, prefix=' ' * 4):
+        """Wrap multiple enums."""
+        res = ""
+        for enum in enums:
+            res += "\n" + self.wrap_enum(enum, class_name, prefix)
+        return res
+
     def wrap_instantiated_class(
             self, instantiated_class: instantiator.InstantiatedClass):
         """Wrap the class."""
@@ -314,18 +347,6 @@ class PybindWrapper:
                 wrapped_properties=self.wrap_properties(
                     stl_class.properties, cpp_class),
             ))
-
-    def wrap_enum(self, enum, prefix='\n' + ' ' * 8):
-        """Wrap an enum."""
-        module_var = self._gen_module_var(enum.namespaces())
-        cpp_class = enum.cpp_typename().to_cpp()
-        res = '\n    py::enum_<{cpp_class}>({module_var}, "{enum.name}", py::arithmetic())'.format(
-            module_var=module_var, enum=enum, cpp_class=cpp_class)
-        for enumerator in enum.enumerators:
-            res += '{prefix}.value("{enumerator.name}", {cpp_class}::{enumerator.name})'.format(
-                prefix=prefix, enumerator=enumerator, cpp_class=cpp_class)
-        res += ";\n\n"
-        return res
 
     def _partial_match(self, namespaces1, namespaces2):
         for i in range(min(len(namespaces1), len(namespaces2))):
@@ -400,6 +421,8 @@ class PybindWrapper:
 
                 elif isinstance(element, instantiator.InstantiatedClass):
                     wrapped += self.wrap_instantiated_class(element)
+                    wrapped += self.wrap_enums(element.enums, element.name)
+
                 elif isinstance(element, parser.Variable):
                     module = self._add_namespaces('', namespaces)
                     wrapped += self.wrap_variable(module=module,
