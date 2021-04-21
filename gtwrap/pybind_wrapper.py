@@ -210,21 +210,24 @@ class PybindWrapper:
         return res
 
     def wrap_variable(self,
-                      module,
+                      namespace,
                       module_var,
                       variable,
                       prefix='\n' + ' ' * 8):
         """Wrap a variable that's not part of a class (i.e. global)
         """
+        variable_value = ""
         if variable.default is None:
-            variable.default = ''
+            variable_value = variable.name
+        else:
+            variable_value = variable.default
 
-        return '{prefix}{module_var}.attr("{variable_name}") = {module}{variable_value};'.format(
+        return '{prefix}{module_var}.attr("{variable_name}") = {namespace}{variable_value};'.format(
             prefix=prefix,
-            module=module,
             module_var=module_var,
             variable_name=variable.name,
-            variable_value=variable.default)
+            namespace=namespace,
+            variable_value=variable_value)
 
     def wrap_properties(self, properties, cpp_class, prefix='\n' + ' ' * 8):
         """Wrap all the properties in the `cpp_class`."""
@@ -405,8 +408,8 @@ class PybindWrapper:
                 elif isinstance(element, instantiator.InstantiatedClass):
                     wrapped += self.wrap_instantiated_class(element)
                 elif isinstance(element, parser.Variable):
-                    module = self._add_namespaces('', namespaces)
-                    wrapped += self.wrap_variable(module=module,
+                    variable_namespace = self._add_namespaces('', namespaces)
+                    wrapped += self.wrap_variable(namespace=variable_namespace,
                                                   module_var=module_var,
                                                   variable=element,
                                                   prefix='\n' + ' ' * 4)
