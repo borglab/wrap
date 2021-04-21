@@ -216,11 +216,15 @@ class PybindWrapper:
                       prefix='\n' + ' ' * 8):
         """Wrap a variable that's not part of a class (i.e. global)
         """
-        return '{prefix}{module_var}.attr("{variable_name}") = {module}{variable_name};'.format(
+        if variable.default is None:
+            variable.default = ''
+
+        return '{prefix}{module_var}.attr("{variable_name}") = {module}{variable_value};'.format(
             prefix=prefix,
             module=module,
             module_var=module_var,
-            variable_name=variable.name)
+            variable_name=variable.name,
+            variable_value=variable.default)
 
     def wrap_properties(self, properties, cpp_class, prefix='\n' + ' ' * 8):
         """Wrap all the properties in the `cpp_class`."""
