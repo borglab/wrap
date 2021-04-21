@@ -421,7 +421,7 @@ class PybindWrapper:
 
                 elif isinstance(element, instantiator.InstantiatedClass):
                     wrapped += self.wrap_instantiated_class(element)
-                    wrapped += self.wrap_enums(element.enums, element.name)
+                    wrapped += self.wrap_enums(element.enums, element.cpp_class())
 
                 elif isinstance(element, parser.Variable):
                     module = self._add_namespaces('', namespaces)

@@ -51,20 +51,20 @@ PYBIND11_MODULE(enum_py, m_) {
     py::class_<gtsam::MCU, std::shared_ptr<gtsam::MCU>>(m_gtsam, "MCU")
         .def(py::init<>());
 
-    py::enum_<MCU::Avengers>(m_, "Avengers", py::arithmetic())
-        .value("CaptainAmerica", MCU::Avengers::CaptainAmerica)
-        .value("IronMan", MCU::Avengers::IronMan)
-        .value("Hulk", MCU::Avengers::Hulk)
-        .value("Hawkeye", MCU::Avengers::Hawkeye)
-        .value("Thor", MCU::Avengers::Thor);
+    py::enum_<gtsam::MCU::Avengers>(m_, "Avengers", py::arithmetic())
+        .value("CaptainAmerica", gtsam::MCU::Avengers::CaptainAmerica)
+        .value("IronMan", gtsam::MCU::Avengers::IronMan)
+        .value("Hulk", gtsam::MCU::Avengers::Hulk)
+        .value("Hawkeye", gtsam::MCU::Avengers::Hawkeye)
+        .value("Thor", gtsam::MCU::Avengers::Thor);
 
 
-    py::enum_<MCU::GotG>(m_, "GotG", py::arithmetic())
-        .value("Starlord", MCU::GotG::Starlord)
-        .value("Gamorra", MCU::GotG::Gamorra)
-        .value("Rocket", MCU::GotG::Rocket)
-        .value("Drax", MCU::GotG::Drax)
-        .value("Groot", MCU::GotG::Groot);
+    py::enum_<gtsam::MCU::GotG>(m_, "GotG", py::arithmetic())
+        .value("Starlord", gtsam::MCU::GotG::Starlord)
+        .value("Gamorra", gtsam::MCU::GotG::Gamorra)
+        .value("Rocket", gtsam::MCU::GotG::Rocket)
+        .value("Drax", gtsam::MCU::GotG::Drax)
+        .value("Groot", gtsam::MCU::GotG::Groot);
 
 
 
