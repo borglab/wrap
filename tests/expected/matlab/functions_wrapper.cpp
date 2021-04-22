@@ -216,7 +216,17 @@ void DefaultFuncObj_10(int nargout, mxArray *out[], int nargin, const mxArray *i
   gtsam::KeyFormatter& keyFormatter = *unwrap_shared_ptr< gtsam::KeyFormatter >(in[0], "ptr_gtsamKeyFormatter");
   DefaultFuncObj(keyFormatter);
 }
-void TemplatedFunctionRot3_11(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void DefaultFuncZero_11(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+{
+  checkArguments("DefaultFuncZero",nargout,nargin,5);
+  int a = unwrap< int >(in[0]);
+  int b = unwrap< int >(in[1]);
+  double c = unwrap< double >(in[2]);
+  bool d = unwrap< bool >(in[3]);
+  bool e = unwrap< bool >(in[4]);
+  DefaultFuncZero(a,b,c,d,e);
+}
+void TemplatedFunctionRot3_12(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   checkArguments("TemplatedFunctionRot3",nargout,nargin,1);
   gtsam::Rot3& t = *unwrap_shared_ptr< gtsam::Rot3 >(in[0], "ptr_gtsamRot3");
@@ -268,7 +278,10 @@ void mexFunction(int nargout, mxArray *out[], int nargin, const mxArray *in[])
       DefaultFuncObj_10(nargout, out, nargin-1, in+1);
       break;
     case 11:
-      TemplatedFunctionRot3_11(nargout, out, nargin-1, in+1);
+      DefaultFuncZero_11(nargout, out, nargin-1, in+1);
+      break;
+    case 12:
+      TemplatedFunctionRot3_12(nargout, out, nargin-1, in+1);
       break;
     }
   } catch(const std::exception& e) {
