@@ -198,9 +198,10 @@ void MultiTemplatedFunctionDoubleSize_tDouble_7(int nargout, mxArray *out[], int
 }
 void DefaultFuncInt_8(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
-  checkArguments("DefaultFuncInt",nargout,nargin,1);
+  checkArguments("DefaultFuncInt",nargout,nargin,2);
   int a = unwrap< int >(in[0]);
-  DefaultFuncInt(a);
+  int b = unwrap< int >(in[1]);
+  DefaultFuncInt(a,b);
 }
 void DefaultFuncString_9(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
