@@ -25,7 +25,8 @@ LOPBRACK, ROPBRACK, COMMA, EQUAL = map(Suppress, "<>,=")
 # Encapsulating type for numbers, and single and double quoted strings.
 # The pyparsing_common utilities ensure correct coversion to the corresponding type.
 # E.g. pyparsing_common.number will convert 3.1415 to a float type.
-NUMBER_OR_STRING = (pyparsing_common.number ^ QuotedString('"') ^ QuotedString("'"))
+NUMBER_OR_STRING = (pyparsing_common.number ^ QuotedString('"', unquoteResults=False) ^
+                    QuotedString("'", unquoteResults=False))
 
 # A python tuple, e.g. (1, 9, "random", 3.1415)
 TUPLE = (LPAREN + delimitedList(NUMBER_OR_STRING) + RPAREN)
