@@ -28,6 +28,7 @@ void TemplatedFunction(const T& t);
 typedef TemplatedFunction<gtsam::Rot3> TemplatedFunctionRot3;
 
 // Check default arguments
-void DefaultFuncInt(int a = 123);
+void DefaultFuncInt(int a = 123, int b = 0);
 void DefaultFuncString(const string& s = "hello", const string& name = "");
 void DefaultFuncObj(const gtsam::KeyFormatter& keyFormatter = gtsam::DefaultKeyFormatter);
+void DefaultFuncZero(int a = 0, int b, double c = 0.0, bool d = false, bool e);

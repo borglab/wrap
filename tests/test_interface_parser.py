@@ -180,30 +180,35 @@ class TestInterfaceParser(unittest.TestCase):
 
     def test_default_arguments(self):
         """Tests any expression that is a valid default argument"""
-        args = ArgumentList.rule.parseString(
-            "string c = \"\", string s=\"hello\", int a=3, "
-            "int b, double pi = 3.1415, "
-            "gtsam::KeyFormatter kf = gtsam::DefaultKeyFormatter, "
-            "std::vector<size_t> p = std::vector<size_t>(), "
-            "std::vector<size_t> l = (1, 2, 'name', \"random\", 3.1415)"
+        args = ArgumentList.rule.parseString("""\
+            string c = "", int z = 0, double z2 = 0.0, bool f = false, 
+            string s="hello", char c='a', int a=3, 
+            int b, double pi = 3.1415, 
+            gtsam::KeyFormatter kf = gtsam::DefaultKeyFormatter, 
+            std::vector<size_t> p = std::vector<size_t>(), 
+            std::vector<size_t> l = (1, 2, 'a', "name", "random", 3.1415)"""
         )[0].args_list
 
         # Test for basic types
-        self.assertEqual(args[0].default, "")
-        self.assertEqual(args[1].default, "hello")
-        self.assertEqual(args[2].default, 3)
+        self.assertEqual(args[0].default, '""')
+        self.assertEqual(args[1].default, 0)
+        self.assertEqual(args[2].default, 0)
+        self.assertEqual(args[3].default, "false")
+        self.assertEqual(args[4].default, '"hello"')
+        self.assertEqual(args[5].default, "'a'")
+        self.assertEqual(args[6].default, 3)
         # No default argument should set `default` to None
-        self.assertIsNone(args[3].default)
+        self.assertIsNone(args[7].default)
 
-        self.assertEqual(args[4].default, 3.1415)
+        self.assertEqual(args[8].default, 3.1415)
 
         # Test non-basic type
-        self.assertEqual(repr(args[5].default.typename),
+        self.assertEqual(repr(args[9].default.typename),
                          'gtsam::DefaultKeyFormatter')
         # Test templated type
-        self.assertEqual(repr(args[6].default.typename), 'std::vector<size_t>')
+        self.assertEqual(repr(args[10].default.typename), 'std::vector<size_t>')
         # Test for allowing list as default argument
-        self.assertEqual(args[7].default, (1, 2, 'name', "random", 3.1415))
+        self.assertEqual(args[11].default, (1, 2, "'a'", '"name"', '"random"', 3.1415))
 
     def test_return_type(self):
         """Test ReturnType"""

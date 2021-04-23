@@ -47,10 +47,7 @@ class PybindWrapper:
         if names:
             py_args = []
             for arg in args_list.args_list:
-                if isinstance(arg.default, str) and arg.default is not None:
-                    # string default arg
-                    arg.default = ' = "{arg.default}"'.format(arg=arg)
-                elif arg.default:  # Other types
+                if arg.default is not None:
                     arg.default = ' = {arg.default}'.format(arg=arg)
                 else:
                     arg.default = ''
