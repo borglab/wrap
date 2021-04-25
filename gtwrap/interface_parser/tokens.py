@@ -32,7 +32,7 @@ NUMBER_OR_STRING = (pyparsing_common.number ^ QuotedString('"', unquoteResults=F
 TUPLE = (LPAREN + delimitedList(NUMBER_OR_STRING) + RPAREN)
 
 # Default argument passed to functions/methods.
-DEFAULT_ARG = (NUMBER_OR_STRING ^ pyparsing_common.identifier ^ TUPLE)
+BASIC_DEFAULT_ARG = (NUMBER_OR_STRING ^ pyparsing_common.identifier ^ TUPLE)
 
 CONST, VIRTUAL, CLASS, STATIC, PAIR, TEMPLATE, TYPEDEF, INCLUDE = map(
     Keyword,

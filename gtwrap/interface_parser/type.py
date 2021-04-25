@@ -16,8 +16,8 @@ from typing import Iterable, List, Union
 
 from pyparsing import Forward, Optional, Or, ParseResults, delimitedList
 
-from .tokens import (BASIS_TYPES, CONST, IDENT, LOPBRACK, RAW_POINTER, REF,
-                     ROPBRACK, SHARED_POINTER)
+from .tokens import (BASIS_TYPES, CONST, IDENT, LOPBRACK, LPAREN, RAW_POINTER,
+                     REF, ROPBRACK, RPAREN, SHARED_POINTER)
 
 
 class Typename:
@@ -316,3 +316,8 @@ class TemplatedType:
             (self.is_const
              or self.typename.name in ["Matrix", "Vector"]) else "",
             typename=typename))
+
+
+# Helper rule for object based default args.
+CUSTOM_DEFAULT_ARG = ((Type.rule ^ TemplatedType.rule) +
+                      Optional(LPAREN + RPAREN)("default_has_parens"))

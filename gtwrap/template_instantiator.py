@@ -96,9 +96,11 @@ def instantiate_args_list(args_list, template_typenames, instantiations,
         new_type = instantiate_type(arg.ctype, template_typenames,
                                     instantiations, cpp_typename)
         default = [arg.default] if isinstance(arg, parser.Argument) else ''
-        instantiated_args.append(parser.Argument(name=arg.name,
-                                                 ctype=new_type,
-                                                 default=default))
+        instantiated_args.append(
+            parser.Argument(name=arg.name,
+                            ctype=new_type,
+                            default=default,
+                            default_has_parens=arg.default_has_parens))
     return instantiated_args
 
 

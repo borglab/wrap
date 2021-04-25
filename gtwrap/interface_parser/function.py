@@ -15,9 +15,9 @@ from typing import Iterable, List, Union
 from pyparsing import Optional, ParseResults, delimitedList
 
 from .template import Template
-from .tokens import (COMMA, DEFAULT_ARG, EQUAL, IDENT, LOPBRACK, LPAREN, PAIR,
-                     ROPBRACK, RPAREN, SEMI_COLON)
-from .type import TemplatedType, Type
+from .tokens import (BASIC_DEFAULT_ARG, COMMA, EQUAL, IDENT, LOPBRACK, LPAREN,
+                     PAIR, ROPBRACK, RPAREN, SEMI_COLON)
+from .type import CUSTOM_DEFAULT_ARG, TemplatedType, Type
 
 
 class Argument:
@@ -29,16 +29,18 @@ class Argument:
     void sayHello(/*`s` is the method argument with type `const string&`*/ const string& s);
     ```
     """
-    rule = ((Type.rule ^ TemplatedType.rule)("ctype") + IDENT("name") + \
-            Optional(EQUAL + (DEFAULT_ARG ^ Type.rule ^ TemplatedType.rule) + \
-                Optional(LPAREN + RPAREN)  # Needed to parse the parens for default constructors
-                )("default")
-            ).setParseAction(lambda t: Argument(t.ctype, t.name, t.default))
+    rule = ((Type.rule ^ TemplatedType.rule)("ctype")  #
+            + IDENT("name")  #
+            + Optional(EQUAL +
+                       (BASIC_DEFAULT_ARG ^ CUSTOM_DEFAULT_ARG))("default")
+            ).setParseAction(lambda t: Argument(t.ctype, t.name, t.default, t.
+                                                default_has_parens != ''))
 
     def __init__(self,
                  ctype: Union[Type, TemplatedType],
                  name: str,
-                 default: ParseResults = None):
+                 default: ParseResults = None,
+                 default_has_parens: bool = None):
         if isinstance(ctype, Iterable):
             self.ctype = ctype[0]
         else:
@@ -54,6 +56,9 @@ class Argument:
             # set to None explicitly so we can support empty strings
             default = None
         self.default = default
+
+        # If parsed type is not empty str, then parentheses exist
+        self.default_has_parens = default_has_parens
 
         self.parent: Union[ArgumentList, None] = None
 

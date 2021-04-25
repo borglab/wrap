@@ -48,7 +48,8 @@ class PybindWrapper:
             py_args = []
             for arg in args_list.args_list:
                 if arg.default is not None:
-                    arg.default = ' = {arg.default}'.format(arg=arg)
+                    arg.default = ' = {arg.default}{parens}'.format(
+                        arg=arg, parens="()" if arg.default_has_parens else '')
                 else:
                     arg.default = ''
                 argument = 'py::arg("{name}"){default}'.format(
@@ -291,10 +292,7 @@ class PybindWrapper:
 
         for enum in enums:
             res += "\n" + self.wrap_enum(
-                enum,
-                class_name=cpp_class,
-                module=module_var,
-                prefix=prefix)
+                enum, class_name=cpp_class, module=module_var, prefix=prefix)
         return res
 
     def wrap_instantiated_class(

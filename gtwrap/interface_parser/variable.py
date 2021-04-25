@@ -12,8 +12,8 @@ Author: Varun Agrawal, Gerry Chen
 
 from pyparsing import Optional, ParseResults
 
-from .tokens import DEFAULT_ARG, EQUAL, IDENT, SEMI_COLON, STATIC
-from .type import TemplatedType, Type
+from .tokens import BASIC_DEFAULT_ARG, EQUAL, IDENT, SEMI_COLON
+from .type import CUSTOM_DEFAULT_ARG, TemplatedType, Type
 
 
 class Variable:
@@ -32,15 +32,17 @@ class Variable:
     """
     rule = ((Type.rule ^ TemplatedType.rule)("ctype")  #
             + IDENT("name")  #
-            #TODO(Varun) Add support for non-basic types
-            + Optional(EQUAL + (DEFAULT_ARG))("default")  #
+            + Optional(EQUAL +
+                       (BASIC_DEFAULT_ARG ^ CUSTOM_DEFAULT_ARG))("default")  #
             + SEMI_COLON  #
-            ).setParseAction(lambda t: Variable(t.ctype, t.name, t.default))
+            ).setParseAction(lambda t: Variable(t.ctype, t.name, t.default, t.
+                                                default_has_parens != ''))
 
     def __init__(self,
                  ctype: Type,
                  name: str,
                  default: ParseResults = None,
+                 default_has_parens: bool = None,
                  parent=''):
         self.ctype = ctype[0]  # ParseResult is a list
         self.name = name
@@ -48,6 +50,9 @@ class Variable:
             self.default = default[0]
         else:
             self.default = None
+
+        # If parsed type is not empty str, then parentheses exist
+        self.default_has_parens = default_has_parens
 
         self.parent = parent
 
