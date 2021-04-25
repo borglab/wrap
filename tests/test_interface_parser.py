@@ -188,7 +188,7 @@ class TestInterfaceParser(unittest.TestCase):
             std::vector<size_t> v = std::vector<size_t>(),
             gtsam::Pose3 p = gtsam::Pose3(),
             std::vector<size_t> l = (1, 2, 'a', "name", "random", 3.1415)"""
-        )[0].args_list
+                                             )[0].args_list
 
         # Test for basic types
         self.assertEqual(args[0].default, '""')
@@ -207,12 +207,14 @@ class TestInterfaceParser(unittest.TestCase):
         self.assertEqual(repr(args[9].default.typename),
                          'gtsam::DefaultKeyFormatter')
         # Test templated type
-        self.assertEqual(repr(args[10].default.typename), 'std::vector<size_t>')
+        self.assertEqual(repr(args[10].default.typename),
+                         'std::vector<size_t>')
         self.assertTrue(args[10].default_has_parens)
         self.assertEqual(repr(args[11].default.typename), 'gtsam::Pose3')
         self.assertTrue(args[11].default_has_parens)
         # Test for allowing list as default argument
-        self.assertEqual(args[12].default, (1, 2, "'a'", '"name"', '"random"', 3.1415))
+        self.assertEqual(args[12].default,
+                         (1, 2, "'a'", '"name"', '"random"', 3.1415))
 
     def test_return_type(self):
         """Test ReturnType"""
@@ -486,6 +488,13 @@ class TestInterfaceParser(unittest.TestCase):
         self.assertEqual(variable.ctype.typename.name, "string")
         self.assertTrue(variable.ctype.is_const)
         self.assertEqual(variable.default, 9.81)
+
+        variable = Variable.rule.parseString(
+            "gtsam::Pose3 wTc = gtsam::Pose3();")[0]
+        self.assertEqual(variable.name, "wTc")
+        self.assertEqual(variable.ctype.typename.name, "Pose3")
+        self.assertEqual(repr(variable.default), "gtsam::Pose3")
+        self.assertTrue(variable.default_has_parens)
 
     def test_enumerator(self):
         """Test for enumerator."""

@@ -33,6 +33,8 @@ typedef std::set<boost::shared_ptr<MultipleTemplatesIntDouble>*> Collector_Multi
 static Collector_MultipleTemplatesIntDouble collector_MultipleTemplatesIntDouble;
 typedef std::set<boost::shared_ptr<MultipleTemplatesIntFloat>*> Collector_MultipleTemplatesIntFloat;
 static Collector_MultipleTemplatesIntFloat collector_MultipleTemplatesIntFloat;
+typedef std::set<boost::shared_ptr<ForwardKinematics>*> Collector_ForwardKinematics;
+static Collector_ForwardKinematics collector_ForwardKinematics;
 typedef std::set<boost::shared_ptr<MyFactorPosePoint2>*> Collector_MyFactorPosePoint2;
 static Collector_MyFactorPosePoint2 collector_MyFactorPosePoint2;
 
@@ -88,6 +90,12 @@ void _deleteAllObjects()
       iter != collector_MultipleTemplatesIntFloat.end(); ) {
     delete *iter;
     collector_MultipleTemplatesIntFloat.erase(iter++);
+    anyDeleted = true;
+  } }
+  { for(Collector_ForwardKinematics::iterator iter = collector_ForwardKinematics.begin();
+      iter != collector_ForwardKinematics.end(); ) {
+    delete *iter;
+    collector_ForwardKinematics.erase(iter++);
     anyDeleted = true;
   } }
   { for(Collector_MyFactorPosePoint2::iterator iter = collector_MyFactorPosePoint2.begin();
@@ -226,7 +234,13 @@ void DefaultFuncZero_11(int nargout, mxArray *out[], int nargin, const mxArray *
   bool e = unwrap< bool >(in[4]);
   DefaultFuncZero(a,b,c,d,e);
 }
-void TemplatedFunctionRot3_12(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void setPose_12(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+{
+  checkArguments("setPose",nargout,nargin,1);
+  gtsam::Pose3& pose = *unwrap_shared_ptr< gtsam::Pose3 >(in[0], "ptr_gtsamPose3");
+  setPose(pose);
+}
+void TemplatedFunctionRot3_13(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   checkArguments("TemplatedFunctionRot3",nargout,nargin,1);
   gtsam::Rot3& t = *unwrap_shared_ptr< gtsam::Rot3 >(in[0], "ptr_gtsamRot3");
@@ -281,7 +295,10 @@ void mexFunction(int nargout, mxArray *out[], int nargin, const mxArray *in[])
       DefaultFuncZero_11(nargout, out, nargin-1, in+1);
       break;
     case 12:
-      TemplatedFunctionRot3_12(nargout, out, nargin-1, in+1);
+      setPose_12(nargout, out, nargin-1, in+1);
+      break;
+    case 13:
+      TemplatedFunctionRot3_13(nargout, out, nargin-1, in+1);
       break;
     }
   } catch(const std::exception& e) {
