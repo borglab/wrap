@@ -15,9 +15,9 @@ from typing import Iterable, List, Union
 from pyparsing import Optional, ParseResults, delimitedList
 
 from .template import Template
-from .tokens import (BASIC_DEFAULT_ARG, COMMA, EQUAL, IDENT, LOPBRACK, LPAREN,
-                     PAIR, ROPBRACK, RPAREN, SEMI_COLON)
-from .type import CUSTOM_DEFAULT_ARG, TemplatedType, Type
+from .tokens import (COMMA, DEFAULT_ARG, EQUAL, IDENT, LOPBRACK, LPAREN, PAIR,
+                     ROPBRACK, RPAREN, SEMI_COLON)
+from .type import TemplatedType, Type
 
 
 class Argument:
@@ -31,35 +31,22 @@ class Argument:
     """
     rule = ((Type.rule ^ TemplatedType.rule)("ctype")  #
             + IDENT("name")  #
-            + Optional(EQUAL +
-                       (BASIC_DEFAULT_ARG ^ CUSTOM_DEFAULT_ARG))("default")
-            ).setParseAction(lambda t: Argument(t.ctype, t.name, t.default, t.
-                                                default_has_parens != ''))
+            + Optional(EQUAL + DEFAULT_ARG)("default")
+            ).setParseAction(lambda t: Argument(
+                t.ctype,  #
+                t.name,  #
+                t.default[0] if isinstance(t.default, ParseResults) else None))
 
     def __init__(self,
                  ctype: Union[Type, TemplatedType],
                  name: str,
-                 default: ParseResults = None,
-                 default_has_parens: bool = None):
+                 default: ParseResults = None):
         if isinstance(ctype, Iterable):
             self.ctype = ctype[0]
         else:
             self.ctype = ctype
         self.name = name
-        # If the length is 1, it's a regular type,
-        if len(default) == 1:
-            default = default[0]
-        # This means a tuple has been passed so we convert accordingly
-        elif len(default) > 1:
-            default = tuple(default.asList())
-        else:
-            # set to None explicitly so we can support empty strings
-            default = None
         self.default = default
-
-        # If parsed type is not empty str, then parentheses exist
-        self.default_has_parens = default_has_parens
-
         self.parent: Union[ArgumentList, None] = None
 
     def __repr__(self) -> str:

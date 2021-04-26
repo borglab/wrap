@@ -11,8 +11,8 @@ Author: Duy Nguyen Ta, Fan Jiang, Matthew Sklar, Varun Agrawal, and Frank Dellae
 """
 
 from pyparsing import (Keyword, Literal, Or, QuotedString, Suppress, Word,
-                       alphanums, alphas, delimitedList, nums,
-                       pyparsing_common)
+                       ZeroOrMore, alphanums, alphas, nestedExpr, nums,
+                       originalTextFor, printables, pyparsing_common)
 
 # rule for identifiers (e.g. variable names)
 IDENT = Word(alphas + '_', alphanums + '_') ^ Word(nums)
@@ -25,14 +25,20 @@ LOPBRACK, ROPBRACK, COMMA, EQUAL = map(Suppress, "<>,=")
 # Encapsulating type for numbers, and single and double quoted strings.
 # The pyparsing_common utilities ensure correct coversion to the corresponding type.
 # E.g. pyparsing_common.number will convert 3.1415 to a float type.
-NUMBER_OR_STRING = (pyparsing_common.number ^ QuotedString('"', unquoteResults=False) ^
-                    QuotedString("'", unquoteResults=False))
+NUMBER_OR_STRING = (pyparsing_common.number
+                    ^ QuotedString('"', unquoteResults=False)
+                    ^ QuotedString("'", unquoteResults=False))
 
-# A python tuple, e.g. (1, 9, "random", 3.1415)
-TUPLE = (LPAREN + delimitedList(NUMBER_OR_STRING) + RPAREN)
-
+# Different types of high-level args
+BASIC_ARG = Word(alphas + "{}:")
+PARAMETERIZED_ARG = originalTextFor(Word(alphanums + ":") + nestedExpr())
+TEMPLATED_ARG = originalTextFor(
+    Word(printables, excludeChars='<') + Literal('<') +
+    ZeroOrMore(Word(printables, excludeChars='>')) + Literal('>') +
+    nestedExpr())
 # Default argument passed to functions/methods.
-BASIC_DEFAULT_ARG = (NUMBER_OR_STRING ^ pyparsing_common.identifier ^ TUPLE)
+DEFAULT_ARG = (NUMBER_OR_STRING | TEMPLATED_ARG | PARAMETERIZED_ARG
+               | BASIC_ARG)
 
 CONST, VIRTUAL, CLASS, STATIC, PAIR, TEMPLATE, TYPEDEF, INCLUDE = map(
     Keyword,

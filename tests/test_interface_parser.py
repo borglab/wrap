@@ -180,15 +180,10 @@ class TestInterfaceParser(unittest.TestCase):
 
     def test_default_arguments(self):
         """Tests any expression that is a valid default argument"""
-        args = ArgumentList.rule.parseString("""\
+        args = ArgumentList.rule.parseString("""
             string c = "", int z = 0, double z2 = 0.0, bool f = false,
             string s="hello", char c='a', int a=3,
-            int b, double pi = 3.1415,
-            gtsam::KeyFormatter kf = gtsam::DefaultKeyFormatter,
-            std::vector<size_t> v = std::vector<size_t>(),
-            gtsam::Pose3 p = gtsam::Pose3(),
-            std::vector<size_t> l = (1, 2, 'a', "name", "random", 3.1415)"""
-                                             )[0].args_list
+            int b, double pi = 3.1415""")[0].args_list
 
         # Test for basic types
         self.assertEqual(args[0].default, '""')
@@ -200,21 +195,28 @@ class TestInterfaceParser(unittest.TestCase):
         self.assertEqual(args[6].default, 3)
         # No default argument should set `default` to None
         self.assertIsNone(args[7].default)
-
         self.assertEqual(args[8].default, 3.1415)
 
+        args = ArgumentList.rule.parseString("""
+            gtsam::KeyFormatter kf = gtsam::DefaultKeyFormatter,
+            std::vector<size_t> v = std::vector<size_t>(),
+            std::vector<size_t> l = {},
+            gtsam::Pose3 p = gtsam::Pose3(),
+            Factor<gtsam::Pose3, gtsam::Point3> x = Factor<gtsam::Pose3, gtsam::Point3>(),
+            gtsam::Point3 x = gtsam::Point3(1, 2)
+            """)[0].args_list
+
         # Test non-basic type
-        self.assertEqual(repr(args[9].default.typename),
-                         'gtsam::DefaultKeyFormatter')
+        self.assertEqual(args[0].default, 'gtsam::DefaultKeyFormatter')
         # Test templated type
-        self.assertEqual(repr(args[10].default.typename),
-                         'std::vector<size_t>')
-        self.assertTrue(args[10].default_has_parens)
-        self.assertEqual(repr(args[11].default.typename), 'gtsam::Pose3')
-        self.assertTrue(args[11].default_has_parens)
-        # Test for allowing list as default argument
-        self.assertEqual(args[12].default,
-                         (1, 2, "'a'", '"name"', '"random"', 3.1415))
+        self.assertEqual(args[1].default, 'std::vector<size_t>()')
+        self.assertEqual(args[2].default, '{}')
+        self.assertEqual(args[3].default, 'gtsam::Pose3()')
+        # Test for allowing multiple templates in default argument
+        self.assertEqual(args[4].default,
+                         'Factor<gtsam::Pose3, gtsam::Point3>()')
+        # Test for default argument with params
+        self.assertEqual(args[5].default, 'gtsam::Point3(1, 2)')
 
     def test_return_type(self):
         """Test ReturnType"""
@@ -283,6 +285,15 @@ class TestInterfaceParser(unittest.TestCase):
             "f(const int x, const Class& c, Class* t);")[0]
         self.assertEqual("f", ret.name)
         self.assertEqual(3, len(ret.args))
+
+        ret = Constructor.rule.parseString(
+            """ForwardKinematics(const gtdynamics::Robot& robot,
+                    const string& start_link_name, const string& end_link_name,
+                    const gtsam::Values& joint_angles,
+                    const gtsam::Pose3& l2Tp = gtsam::Pose3());""")[0]
+        self.assertEqual("ForwardKinematics", ret.name)
+        self.assertEqual(5, len(ret.args))
+        self.assertEqual("gtsam::Pose3()", ret.args.args_list[4].default)
 
     def test_operator_overload(self):
         """Test for operator overloading."""
@@ -403,6 +414,16 @@ class TestInterfaceParser(unittest.TestCase):
         self.assertEqual(0, len(ret.properties))
         self.assertTrue(not ret.is_virtual)
 
+    def test_templated_class(self):
+        """Test a templated class."""
+        ret = Class.rule.parseString("""
+        template<POSE, POINT>
+        class MyFactor {};
+        """)[0]
+
+        self.assertEqual("MyFactor", ret.name)
+        self.assertEqual("<POSE, POINT>", repr(ret.template))
+
     def test_class_inheritance(self):
         """Test for class inheritance."""
         ret = Class.rule.parseString("""
@@ -493,8 +514,13 @@ class TestInterfaceParser(unittest.TestCase):
             "gtsam::Pose3 wTc = gtsam::Pose3();")[0]
         self.assertEqual(variable.name, "wTc")
         self.assertEqual(variable.ctype.typename.name, "Pose3")
-        self.assertEqual(repr(variable.default), "gtsam::Pose3")
-        self.assertTrue(variable.default_has_parens)
+        self.assertEqual(variable.default, "gtsam::Pose3()")
+
+        variable = Variable.rule.parseString(
+            "gtsam::Pose3 wTc = gtsam::Pose3(1, 2, 0);")[0]
+        self.assertEqual(variable.name, "wTc")
+        self.assertEqual(variable.ctype.typename.name, "Pose3")
+        self.assertEqual(variable.default, "gtsam::Pose3(1, 2, 0)")
 
     def test_enumerator(self):
         """Test for enumerator."""
