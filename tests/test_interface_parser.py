@@ -203,7 +203,8 @@ class TestInterfaceParser(unittest.TestCase):
             std::vector<size_t> l = {},
             gtsam::Pose3 p = gtsam::Pose3(),
             Factor<gtsam::Pose3, gtsam::Point3> x = Factor<gtsam::Pose3, gtsam::Point3>(),
-            gtsam::Point3 x = gtsam::Point3(1, 2)
+            gtsam::Point3 x = gtsam::Point3(1, 2, 3),
+            ns::Class<T, U> obj = ns::Class<T, U>(3, 2, 1, "name")
             """)[0].args_list
 
         # Test non-basic type
@@ -216,7 +217,9 @@ class TestInterfaceParser(unittest.TestCase):
         self.assertEqual(args[4].default,
                          'Factor<gtsam::Pose3, gtsam::Point3>()')
         # Test for default argument with params
-        self.assertEqual(args[5].default, 'gtsam::Point3(1, 2)')
+        self.assertEqual(args[5].default, 'gtsam::Point3(1, 2, 3)')
+        # Test for default argument with multiple templates and params
+        self.assertEqual(args[6].default, 'ns::Class<T, U>(3, 2, 1, "name")')
 
     def test_return_type(self):
         """Test ReturnType"""
