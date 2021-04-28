@@ -11,8 +11,9 @@ Author: Duy Nguyen Ta, Fan Jiang, Matthew Sklar, Varun Agrawal, and Frank Dellae
 """
 
 from pyparsing import (Keyword, Literal, Or, QuotedString, Suppress, Word,
-                       ZeroOrMore, alphanums, alphas, nestedExpr, nums,
-                       originalTextFor, printables, pyparsing_common)
+                       ZeroOrMore, alphanums, alphas, delimitedList,
+                       nestedExpr, nums, originalTextFor, printables,
+                       pyparsing_common)
 
 # rule for identifiers (e.g. variable names)
 IDENT = Word(alphas + '_', alphanums + '_') ^ Word(nums)
@@ -36,8 +37,11 @@ TEMPLATED_ARG = originalTextFor(
     Word(printables, excludeChars='<') + Literal('<') +
     ZeroOrMore(Word(printables, excludeChars='>')) + Literal('>') +
     nestedExpr())
+VECTOR_ARG = originalTextFor(LBRACE + delimitedList(NUMBER_OR_STRING) + RBRACE)
+
 # Default argument passed to functions/methods.
-DEFAULT_ARG = (NUMBER_OR_STRING | TEMPLATED_ARG | PARAMETERIZED_ARG
+DEFAULT_ARG = (NUMBER_OR_STRING | VECTOR_ARG | TEMPLATED_ARG
+               | PARAMETERIZED_ARG
                | BASIC_ARG)
 
 CONST, VIRTUAL, CLASS, STATIC, PAIR, TEMPLATE, TYPEDEF, INCLUDE = map(
