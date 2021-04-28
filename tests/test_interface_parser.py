@@ -215,10 +215,6 @@ class TestInterfaceParser(unittest.TestCase):
         self.assertEqual(args[2].default, '{1, 2}')
         self.assertEqual(args[3].default, '[&c1, &c2](string s=5, int a){return s+"hello"+a+c1+c2;}')
         self.assertEqual(args[4].default, 'gtsam::Pose3()')
-        # Test for allowing multiple templates in default argument
-        self.assertEqual(args[5].default,
-                         'Factor<gtsam::Pose3, gtsam::Point3>()')
-        # Test for default argument with params
         self.assertEqual(args[6].default, 'gtsam::Point3(1, 2, 3)')
         # Test for default argument with multiple templates and params
         self.assertEqual(args[7].default, 'ns::Class<T, U>(3, 2, 1, "name")')

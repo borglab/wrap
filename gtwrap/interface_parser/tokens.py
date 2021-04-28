@@ -22,30 +22,19 @@ RAW_POINTER, SHARED_POINTER, REF = map(Literal, "@*&")
 LPAREN, RPAREN, LBRACE, RBRACE, COLON, SEMI_COLON = map(Suppress, "(){}:;")
 LOPBRACK, ROPBRACK, COMMA, EQUAL = map(Suppress, "<>,=")
 
-# Encapsulating type for numbers, and single and double quoted strings.
-# The pyparsing_common utilities ensure correct coversion to the corresponding type.
-# E.g. pyparsing_common.number will convert 3.1415 to a float type.
-NUMBER_OR_STRING = (pyparsing_common.number
-                    ^ QuotedString('"', unquoteResults=False)
-                    ^ QuotedString("'", unquoteResults=False))
-
-# Different types of high-level args
-BASIC_ARG = Word(alphas + "{}:")
-PARAMETERIZED_ARG = originalTextFor(Word(alphanums + ":") + nestedExpr())
-TEMPLATED_ARG = originalTextFor(
-    Word(printables, excludeChars='<') + Literal('<') +
-    ZeroOrMore(Word(printables, excludeChars='>')) + Literal('>') +
-    nestedExpr())
-# Default argument passed to functions/methods.
+# Default argument passed to functions/methods.  Allow anything up to ',' or ';'
+# except when they appear inside matched expressions such as
+# (a, b) {c, b} "hello, how are you?"
 DEFAULT_ARG = originalTextFor(
     OneOrMore(
-        QuotedString('"') ^  #
-        QuotedString("'") ^  #
-        nestedExpr(opener='(', closer=')') ^  #
-        nestedExpr(opener='[', closer=']') ^  #
-        nestedExpr(opener='{', closer='}') ^  #
-        nestedExpr(opener='<', closer='>') ^  #
-        Word(printables, excludeChars="(){}[]<>,;")))
+        Word(printables, excludeChars="(){}[]<>,;") ^ # stop at , or ; unless they:
+        QuotedString('"') ^                   # appear in "quoted strings"
+        QuotedString("'") ^                   # appear in 'quoted strings'
+        nestedExpr(opener='(', closer=')') ^  # appear in matched (...) expressions
+        nestedExpr(opener='[', closer=']') ^  # appear in matched [...] expressions
+        nestedExpr(opener='{', closer='}') ^  # appear in matched {...} expressions
+        nestedExpr(opener='<', closer='>')    # appear in matched <...> expressions
+    ))
 
 CONST, VIRTUAL, CLASS, STATIC, PAIR, TEMPLATE, TYPEDEF, INCLUDE = map(
     Keyword,
