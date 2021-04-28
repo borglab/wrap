@@ -33,6 +33,8 @@ typedef std::set<boost::shared_ptr<MultipleTemplatesIntDouble>*> Collector_Multi
 static Collector_MultipleTemplatesIntDouble collector_MultipleTemplatesIntDouble;
 typedef std::set<boost::shared_ptr<MultipleTemplatesIntFloat>*> Collector_MultipleTemplatesIntFloat;
 static Collector_MultipleTemplatesIntFloat collector_MultipleTemplatesIntFloat;
+typedef std::set<boost::shared_ptr<ForwardKinematics>*> Collector_ForwardKinematics;
+static Collector_ForwardKinematics collector_ForwardKinematics;
 typedef std::set<boost::shared_ptr<MyFactorPosePoint2>*> Collector_MyFactorPosePoint2;
 static Collector_MyFactorPosePoint2 collector_MyFactorPosePoint2;
 
@@ -88,6 +90,12 @@ void _deleteAllObjects()
       iter != collector_MultipleTemplatesIntFloat.end(); ) {
     delete *iter;
     collector_MultipleTemplatesIntFloat.erase(iter++);
+    anyDeleted = true;
+  } }
+  { for(Collector_ForwardKinematics::iterator iter = collector_ForwardKinematics.begin();
+      iter != collector_ForwardKinematics.end(); ) {
+    delete *iter;
+    collector_ForwardKinematics.erase(iter++);
     anyDeleted = true;
   } }
   { for(Collector_MyFactorPosePoint2::iterator iter = collector_MyFactorPosePoint2.begin();
@@ -624,7 +632,45 @@ void MultipleTemplatesIntFloat_deconstructor_51(int nargout, mxArray *out[], int
   }
 }
 
-void MyFactorPosePoint2_collectorInsertAndMakeBase_52(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void ForwardKinematics_collectorInsertAndMakeBase_52(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+{
+  mexAtExit(&_deleteAllObjects);
+  typedef boost::shared_ptr<ForwardKinematics> Shared;
+
+  Shared *self = *reinterpret_cast<Shared**> (mxGetData(in[0]));
+  collector_ForwardKinematics.insert(self);
+}
+
+void ForwardKinematics_constructor_53(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+{
+  mexAtExit(&_deleteAllObjects);
+  typedef boost::shared_ptr<ForwardKinematics> Shared;
+
+  gtdynamics::Robot& robot = *unwrap_shared_ptr< gtdynamics::Robot >(in[0], "ptr_gtdynamicsRobot");
+  string& start_link_name = *unwrap_shared_ptr< string >(in[1], "ptr_string");
+  string& end_link_name = *unwrap_shared_ptr< string >(in[2], "ptr_string");
+  gtsam::Values& joint_angles = *unwrap_shared_ptr< gtsam::Values >(in[3], "ptr_gtsamValues");
+  gtsam::Pose3& l2Tp = *unwrap_shared_ptr< gtsam::Pose3 >(in[4], "ptr_gtsamPose3");
+  Shared *self = new Shared(new ForwardKinematics(robot,start_link_name,end_link_name,joint_angles,l2Tp));
+  collector_ForwardKinematics.insert(self);
+  out[0] = mxCreateNumericMatrix(1, 1, mxUINT32OR64_CLASS, mxREAL);
+  *reinterpret_cast<Shared**> (mxGetData(out[0])) = self;
+}
+
+void ForwardKinematics_deconstructor_54(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+{
+  typedef boost::shared_ptr<ForwardKinematics> Shared;
+  checkArguments("delete_ForwardKinematics",nargout,nargin,1);
+  Shared *self = *reinterpret_cast<Shared**>(mxGetData(in[0]));
+  Collector_ForwardKinematics::iterator item;
+  item = collector_ForwardKinematics.find(self);
+  if(item != collector_ForwardKinematics.end()) {
+    delete self;
+    collector_ForwardKinematics.erase(item);
+  }
+}
+
+void MyFactorPosePoint2_collectorInsertAndMakeBase_55(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   mexAtExit(&_deleteAllObjects);
   typedef boost::shared_ptr<MyFactor<gtsam::Pose2, gtsam::Matrix>> Shared;
@@ -633,7 +679,7 @@ void MyFactorPosePoint2_collectorInsertAndMakeBase_52(int nargout, mxArray *out[
   collector_MyFactorPosePoint2.insert(self);
 }
 
-void MyFactorPosePoint2_constructor_53(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void MyFactorPosePoint2_constructor_56(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   mexAtExit(&_deleteAllObjects);
   typedef boost::shared_ptr<MyFactor<gtsam::Pose2, gtsam::Matrix>> Shared;
@@ -648,7 +694,7 @@ void MyFactorPosePoint2_constructor_53(int nargout, mxArray *out[], int nargin, 
   *reinterpret_cast<Shared**> (mxGetData(out[0])) = self;
 }
 
-void MyFactorPosePoint2_deconstructor_54(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void MyFactorPosePoint2_deconstructor_57(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   typedef boost::shared_ptr<MyFactor<gtsam::Pose2, gtsam::Matrix>> Shared;
   checkArguments("delete_MyFactorPosePoint2",nargout,nargin,1);
@@ -661,7 +707,7 @@ void MyFactorPosePoint2_deconstructor_54(int nargout, mxArray *out[], int nargin
   }
 }
 
-void MyFactorPosePoint2_print_55(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void MyFactorPosePoint2_print_58(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   checkArguments("print",nargout,nargin-1,2);
   auto obj = unwrap_shared_ptr<MyFactor<gtsam::Pose2, gtsam::Matrix>>(in[0], "ptr_MyFactorPosePoint2");
@@ -839,16 +885,25 @@ void mexFunction(int nargout, mxArray *out[], int nargin, const mxArray *in[])
       MultipleTemplatesIntFloat_deconstructor_51(nargout, out, nargin-1, in+1);
       break;
     case 52:
-      MyFactorPosePoint2_collectorInsertAndMakeBase_52(nargout, out, nargin-1, in+1);
+      ForwardKinematics_collectorInsertAndMakeBase_52(nargout, out, nargin-1, in+1);
       break;
     case 53:
-      MyFactorPosePoint2_constructor_53(nargout, out, nargin-1, in+1);
+      ForwardKinematics_constructor_53(nargout, out, nargin-1, in+1);
       break;
     case 54:
-      MyFactorPosePoint2_deconstructor_54(nargout, out, nargin-1, in+1);
+      ForwardKinematics_deconstructor_54(nargout, out, nargin-1, in+1);
       break;
     case 55:
-      MyFactorPosePoint2_print_55(nargout, out, nargin-1, in+1);
+      MyFactorPosePoint2_collectorInsertAndMakeBase_55(nargout, out, nargin-1, in+1);
+      break;
+    case 56:
+      MyFactorPosePoint2_constructor_56(nargout, out, nargin-1, in+1);
+      break;
+    case 57:
+      MyFactorPosePoint2_deconstructor_57(nargout, out, nargin-1, in+1);
+      break;
+    case 58:
+      MyFactorPosePoint2_print_58(nargout, out, nargin-1, in+1);
       break;
     }
   } catch(const std::exception& e) {

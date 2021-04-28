@@ -291,10 +291,7 @@ class PybindWrapper:
 
         for enum in enums:
             res += "\n" + self.wrap_enum(
-                enum,
-                class_name=cpp_class,
-                module=module_var,
-                prefix=prefix)
+                enum, class_name=cpp_class, module=module_var, prefix=prefix)
         return res
 
     def wrap_instantiated_class(

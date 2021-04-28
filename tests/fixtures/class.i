@@ -106,3 +106,11 @@ class MyVector {
 // Class with multiple instantiated templates
 template<T = {int}, U = {double, float}>
 class MultipleTemplates {};
+
+// Test for default args in constructor
+class ForwardKinematics {
+  ForwardKinematics(const gtdynamics::Robot& robot,
+                    const string& start_link_name, const string& end_link_name,
+                    const gtsam::Values& joint_angles,
+                    const gtsam::Pose3& l2Tp = gtsam::Pose3());
+};
