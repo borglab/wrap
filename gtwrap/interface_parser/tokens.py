@@ -11,7 +11,7 @@ Author: Duy Nguyen Ta, Fan Jiang, Matthew Sklar, Varun Agrawal, and Frank Dellae
 """
 
 from pyparsing import (Keyword, Literal, Or, QuotedString, Suppress, Word,
-                       ZeroOrMore, alphanums, alphas, nestedExpr, nums,
+                       ZeroOrMore, OneOrMore, alphanums, alphas, nestedExpr, nums,
                        originalTextFor, printables, pyparsing_common)
 
 # rule for identifiers (e.g. variable names)
@@ -37,8 +37,15 @@ TEMPLATED_ARG = originalTextFor(
     ZeroOrMore(Word(printables, excludeChars='>')) + Literal('>') +
     nestedExpr())
 # Default argument passed to functions/methods.
-DEFAULT_ARG = (NUMBER_OR_STRING | TEMPLATED_ARG | PARAMETERIZED_ARG
-               | BASIC_ARG)
+DEFAULT_ARG = originalTextFor(
+    OneOrMore(
+        QuotedString('"') ^  #
+        QuotedString("'") ^  #
+        nestedExpr(opener='(', closer=')') ^  #
+        nestedExpr(opener='[', closer=']') ^  #
+        nestedExpr(opener='{', closer='}') ^  #
+        nestedExpr(opener='<', closer='>') ^  #
+        Word(printables, excludeChars="(){}[]<>,;")))
 
 CONST, VIRTUAL, CLASS, STATIC, PAIR, TEMPLATE, TYPEDEF, INCLUDE = map(
     Keyword,

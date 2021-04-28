@@ -182,25 +182,26 @@ class TestInterfaceParser(unittest.TestCase):
         """Tests any expression that is a valid default argument"""
         args = ArgumentList.rule.parseString("""
             string c = "", int z = 0, double z2 = 0.0, bool f = false,
-            string s="hello", char c='a', int a=3,
+            string s="hello"+"goodbye", char c='a', int a=3,
             int b, double pi = 3.1415""")[0].args_list
 
         # Test for basic types
         self.assertEqual(args[0].default, '""')
-        self.assertEqual(args[1].default, 0)
-        self.assertEqual(args[2].default, 0)
+        self.assertEqual(args[1].default, '0')
+        self.assertEqual(args[2].default, '0.0')
         self.assertEqual(args[3].default, "false")
-        self.assertEqual(args[4].default, '"hello"')
+        self.assertEqual(args[4].default, '"hello"+"goodbye"')
         self.assertEqual(args[5].default, "'a'")
-        self.assertEqual(args[6].default, 3)
+        self.assertEqual(args[6].default, '3')
         # No default argument should set `default` to None
         self.assertIsNone(args[7].default)
-        self.assertEqual(args[8].default, 3.1415)
+        self.assertEqual(args[8].default, '3.1415')
 
         args = ArgumentList.rule.parseString("""
             gtsam::KeyFormatter kf = gtsam::DefaultKeyFormatter,
             std::vector<size_t> v = std::vector<size_t>(),
-            std::vector<size_t> l = {},
+            std::vector<size_t> l = {1, 2},
+            gtsam::KeyFormatter lambda = [&c1, &c2](string s=5, int a){return s+"hello"+a+c1+c2;},
             gtsam::Pose3 p = gtsam::Pose3(),
             Factor<gtsam::Pose3, gtsam::Point3> x = Factor<gtsam::Pose3, gtsam::Point3>(),
             gtsam::Point3 x = gtsam::Point3(1, 2, 3),
@@ -211,15 +212,16 @@ class TestInterfaceParser(unittest.TestCase):
         self.assertEqual(args[0].default, 'gtsam::DefaultKeyFormatter')
         # Test templated type
         self.assertEqual(args[1].default, 'std::vector<size_t>()')
-        self.assertEqual(args[2].default, '{}')
-        self.assertEqual(args[3].default, 'gtsam::Pose3()')
+        self.assertEqual(args[2].default, '{1, 2}')
+        self.assertEqual(args[3].default, '[&c1, &c2](string s=5, int a){return s+"hello"+a+c1+c2;}')
+        self.assertEqual(args[4].default, 'gtsam::Pose3()')
         # Test for allowing multiple templates in default argument
-        self.assertEqual(args[4].default,
+        self.assertEqual(args[5].default,
                          'Factor<gtsam::Pose3, gtsam::Point3>()')
         # Test for default argument with params
-        self.assertEqual(args[5].default, 'gtsam::Point3(1, 2, 3)')
+        self.assertEqual(args[6].default, 'gtsam::Point3(1, 2, 3)')
         # Test for default argument with multiple templates and params
-        self.assertEqual(args[6].default, 'ns::Class<T, U>(3, 2, 1, "name")')
+        self.assertEqual(args[7].default, 'ns::Class<T, U>(3, 2, 1, "name")')
 
     def test_return_type(self):
         """Test ReturnType"""
@@ -504,14 +506,14 @@ class TestInterfaceParser(unittest.TestCase):
         variable = Variable.rule.parseString("string kGravity = 9.81;")[0]
         self.assertEqual(variable.name, "kGravity")
         self.assertEqual(variable.ctype.typename.name, "string")
-        self.assertEqual(variable.default, 9.81)
+        self.assertEqual(variable.default, "9.81")
 
         variable = Variable.rule.parseString(
             "const string kGravity = 9.81;")[0]
         self.assertEqual(variable.name, "kGravity")
         self.assertEqual(variable.ctype.typename.name, "string")
         self.assertTrue(variable.ctype.is_const)
-        self.assertEqual(variable.default, 9.81)
+        self.assertEqual(variable.default, "9.81")
 
         variable = Variable.rule.parseString(
             "gtsam::Pose3 wTc = gtsam::Pose3();")[0]
