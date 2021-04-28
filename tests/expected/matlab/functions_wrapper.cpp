@@ -234,13 +234,20 @@ void DefaultFuncZero_11(int nargout, mxArray *out[], int nargin, const mxArray *
   bool e = unwrap< bool >(in[4]);
   DefaultFuncZero(a,b,c,d,e);
 }
-void setPose_12(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void DefaultFuncVector_12(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+{
+  checkArguments("DefaultFuncVector",nargout,nargin,2);
+  std::vector<int>& i = *unwrap_shared_ptr< std::vector<int> >(in[0], "ptr_stdvectorint");
+  std::vector<string>& s = *unwrap_shared_ptr< std::vector<string> >(in[1], "ptr_stdvectorstring");
+  DefaultFuncVector(i,s);
+}
+void setPose_13(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   checkArguments("setPose",nargout,nargin,1);
   gtsam::Pose3& pose = *unwrap_shared_ptr< gtsam::Pose3 >(in[0], "ptr_gtsamPose3");
   setPose(pose);
 }
-void TemplatedFunctionRot3_13(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void TemplatedFunctionRot3_14(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   checkArguments("TemplatedFunctionRot3",nargout,nargin,1);
   gtsam::Rot3& t = *unwrap_shared_ptr< gtsam::Rot3 >(in[0], "ptr_gtsamRot3");
@@ -295,10 +302,13 @@ void mexFunction(int nargout, mxArray *out[], int nargin, const mxArray *in[])
       DefaultFuncZero_11(nargout, out, nargin-1, in+1);
       break;
     case 12:
-      setPose_12(nargout, out, nargin-1, in+1);
+      DefaultFuncVector_12(nargout, out, nargin-1, in+1);
       break;
     case 13:
-      TemplatedFunctionRot3_13(nargout, out, nargin-1, in+1);
+      setPose_13(nargout, out, nargin-1, in+1);
+      break;
+    case 14:
+      TemplatedFunctionRot3_14(nargout, out, nargin-1, in+1);
       break;
     }
   } catch(const std::exception& e) {

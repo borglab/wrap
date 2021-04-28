@@ -201,6 +201,7 @@ class TestInterfaceParser(unittest.TestCase):
             gtsam::KeyFormatter kf = gtsam::DefaultKeyFormatter,
             std::vector<size_t> v = std::vector<size_t>(),
             std::vector<size_t> l = {},
+            std::vector<size_t> l = {1, 2},
             gtsam::Pose3 p = gtsam::Pose3(),
             Factor<gtsam::Pose3, gtsam::Point3> x = Factor<gtsam::Pose3, gtsam::Point3>(),
             gtsam::Point3 x = gtsam::Point3(1, 2, 3),
@@ -212,14 +213,15 @@ class TestInterfaceParser(unittest.TestCase):
         # Test templated type
         self.assertEqual(args[1].default, 'std::vector<size_t>()')
         self.assertEqual(args[2].default, '{}')
-        self.assertEqual(args[3].default, 'gtsam::Pose3()')
+        self.assertEqual(args[3].default, '{1, 2}')
+        self.assertEqual(args[4].default, 'gtsam::Pose3()')
         # Test for allowing multiple templates in default argument
-        self.assertEqual(args[4].default,
+        self.assertEqual(args[5].default,
                          'Factor<gtsam::Pose3, gtsam::Point3>()')
         # Test for default argument with params
-        self.assertEqual(args[5].default, 'gtsam::Point3(1, 2, 3)')
+        self.assertEqual(args[6].default, 'gtsam::Point3(1, 2, 3)')
         # Test for default argument with multiple templates and params
-        self.assertEqual(args[6].default, 'ns::Class<T, U>(3, 2, 1, "name")')
+        self.assertEqual(args[7].default, 'ns::Class<T, U>(3, 2, 1, "name")')
 
     def test_return_type(self):
         """Test ReturnType"""
