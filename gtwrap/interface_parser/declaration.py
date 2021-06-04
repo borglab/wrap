@@ -42,11 +42,12 @@ class ForwardDeclaration:
                 t.name, t.parent_type, t.is_virtual))
 
     def __init__(self,
-                 name: Typename,
+                 typename: Typename,
                  parent_type: str,
                  is_virtual: str,
                  parent: str = ''):
-        self.name = name
+        self.name = typename.name
+        self.namespaces = typename.namespaces
         if parent_type:
             self.parent_type = parent_type
         else:
@@ -56,5 +57,4 @@ class ForwardDeclaration:
         self.parent = parent
 
     def __repr__(self) -> str:
-        return "ForwardDeclaration: {} {}({})".format(self.is_virtual,
-                                                      self.name, self.parent)
+        return "ForwardDeclaration: {} {}".format(self.is_virtual, self.name)

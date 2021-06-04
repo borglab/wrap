@@ -197,27 +197,45 @@ class TestInterfaceParser(unittest.TestCase):
         self.assertIsNone(args[7].default)
         self.assertEqual(args[8].default, '3.1415')
 
-        args = ArgumentList.rule.parseString("""
-            gtsam::KeyFormatter kf = gtsam::DefaultKeyFormatter,
-            std::vector<size_t> v = std::vector<size_t>(),
-            std::vector<size_t> l = {1, 2},
-            gtsam::KeyFormatter lambda = [&c1, &c2](string s=5, int a){return s+"hello"+a+c1+c2;},
-            gtsam::Pose3 p = gtsam::Pose3(),
-            Factor<gtsam::Pose3, gtsam::Point3> x = Factor<gtsam::Pose3, gtsam::Point3>(),
-            gtsam::Point3 x = gtsam::Point3(1, 2, 3),
-            ns::Class<T, U> obj = ns::Class<T, U>(3, 2, 1, "name")
-            """)[0].args_list
+        arg0 = 'gtsam::DefaultKeyFormatter'
+        arg1 = 'std::vector<size_t>()'
+        arg2 = '{1, 2}'
+        arg3 = '[&c1, &c2](string s=5, int a){return s+"hello"+a+c1+c2;}'
+        arg4 = 'gtsam::Pose3()'
+        arg5 = 'Factor<gtsam::Pose3, gtsam::Point3>()'
+        arg6 = 'gtsam::Point3(1, 2, 3)'
+        arg7 = 'ns::Class<T, U>(3, 2, 1, "name")'
+
+        argument_list = """
+            gtsam::KeyFormatter kf = {arg0},
+            std::vector<size_t> v = {arg1},
+            std::vector<size_t> l = {arg2},
+            gtsam::KeyFormatter lambda = {arg3},
+            gtsam::Pose3 p = {arg4},
+            Factor<gtsam::Pose3, gtsam::Point3> x = {arg5},
+            gtsam::Point3 x = {arg6},
+            ns::Class<T, U> obj = {arg7}
+            """.format(arg0=arg0,
+                       arg1=arg1,
+                       arg2=arg2,
+                       arg3=arg3,
+                       arg4=arg4,
+                       arg5=arg5,
+                       arg6=arg6,
+                       arg7=arg7)
+        args = ArgumentList.rule.parseString(argument_list)[0].args_list
 
         # Test non-basic type
-        self.assertEqual(args[0].default, 'gtsam::DefaultKeyFormatter')
+        self.assertEqual(args[0].default, arg0)
         # Test templated type
-        self.assertEqual(args[1].default, 'std::vector<size_t>()')
-        self.assertEqual(args[2].default, '{1, 2}')
-        self.assertEqual(args[3].default, '[&c1, &c2](string s=5, int a){return s+"hello"+a+c1+c2;}')
-        self.assertEqual(args[4].default, 'gtsam::Pose3()')
-        self.assertEqual(args[6].default, 'gtsam::Point3(1, 2, 3)')
+        self.assertEqual(args[1].default, arg1)
+        self.assertEqual(args[2].default, arg2)
+        self.assertEqual(args[3].default, arg3)
+        self.assertEqual(args[4].default, arg4)
+        self.assertEqual(args[5].default, arg5)
+        self.assertEqual(args[6].default, arg6)
         # Test for default argument with multiple templates and params
-        self.assertEqual(args[7].default, 'ns::Class<T, U>(3, 2, 1, "name")')
+        self.assertEqual(args[7].default, arg7)
 
     def test_return_type(self):
         """Test ReturnType"""
@@ -479,8 +497,7 @@ class TestInterfaceParser(unittest.TestCase):
         fwd = ForwardDeclaration.rule.parseString(
             "virtual class Test:gtsam::Point3;")[0]
 
-        fwd_name = fwd.name
-        self.assertEqual("Test", fwd_name.name)
+        self.assertEqual("Test", fwd.name)
         self.assertTrue(fwd.is_virtual)
 
     def test_function(self):
