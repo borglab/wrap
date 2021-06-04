@@ -104,7 +104,6 @@ class Namespace:
             classes_and_funcs = (c for c in namespace.content
                                  if isinstance(c, (Class, GlobalFunction, ForwardDeclaration)))
             res += [c for c in classes_and_funcs if c.name == typename.name]
-        print(res)
         if not res:
             raise ValueError("Cannot find class {} in module!".format(
                 typename.name))
