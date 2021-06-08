@@ -15,6 +15,7 @@ from pyparsing import CharsNotIn, Optional
 from .tokens import (CLASS, COLON, INCLUDE, LOPBRACK, ROPBRACK, SEMI_COLON,
                      VIRTUAL)
 from .type import Typename
+from .utils import collect_namespaces
 
 
 class Include:
@@ -47,7 +48,7 @@ class ForwardDeclaration:
                  is_virtual: str,
                  parent: str = ''):
         self.name = typename.name
-        self.namespaces = typename.namespaces
+        self.typename = typename
         if parent_type:
             self.parent_type = parent_type
         else:
@@ -55,6 +56,10 @@ class ForwardDeclaration:
 
         self.is_virtual = is_virtual
         self.parent = parent
+
+    def namespaces(self) -> list:
+        """Get the namespaces which this class is nested under as a list."""
+        return collect_namespaces(self)
 
     def __repr__(self) -> str:
         return "ForwardDeclaration: {} {}".format(self.is_virtual, self.name)
