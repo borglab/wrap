@@ -562,7 +562,7 @@ class InstantiatedDeclaration(parser.ForwardDeclaration):
             super(InstantiatedDeclaration, self).__repr__())
 
 
-def instantiate_namespace_inplace(namespace):
+def instantiate_namespace(namespace):
     """
     Instantiate the classes and other elements in the `namespace` content and
     assign it back to the namespace content attribute.
@@ -631,7 +631,7 @@ def instantiate_namespace_inplace(namespace):
                         typedef_inst.new_name))
 
         elif isinstance(element, parser.Namespace):
-            element = instantiate_namespace_inplace(element)
+            element = instantiate_namespace(element)
             instantiated_content.append(element)
         else:
             instantiated_content.append(element)
