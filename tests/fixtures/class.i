@@ -114,3 +114,6 @@ class ForwardKinematics {
                     const gtsam::Values& joint_angles,
                     const gtsam::Pose3& l2Tp = gtsam::Pose3());
 };
+
+class SuperCoolFactor;
+typedef SuperCoolFactor<gtsam::Pose3> SuperCoolFactorPose3;

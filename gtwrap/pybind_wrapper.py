@@ -350,6 +350,23 @@ class PybindWrapper:
                     wrapped_operators=self.wrap_operators(
                         instantiated_class.operators, cpp_class)))
 
+    def wrap_instantiated_declaration(
+            self, instantiated_decl: instantiator.InstantiatedDeclaration):
+        """Wrap the class."""
+        module_var = self._gen_module_var(instantiated_decl.namespaces())
+        cpp_class = instantiated_decl.to_cpp()
+        if cpp_class in self.ignore_classes:
+            return ""
+
+        res = (
+            '\n    py::class_<{cpp_class}, '
+            '{shared_ptr_type}::shared_ptr<{cpp_class}>>({module_var}, "{class_name}")'
+        ).format(shared_ptr_type=('boost' if self.use_boost else 'std'),
+                 cpp_class=cpp_class,
+                 class_name=instantiated_decl.name,
+                 module_var=module_var)
+        return res
+
     def wrap_stl_class(self, stl_class):
         """Wrap STL containers."""
         module_var = self._gen_module_var(stl_class.namespaces())
@@ -453,6 +470,9 @@ class PybindWrapper:
                 elif isinstance(element, instantiator.InstantiatedClass):
                     wrapped += self.wrap_instantiated_class(element)
                     wrapped += self.wrap_enums(element.enums, element)
+
+                elif isinstance(element, instantiator.InstantiatedDeclaration):
+                    wrapped += self.wrap_instantiated_declaration(element)
 
                 elif isinstance(element, parser.Variable):
                     variable_namespace = self._add_namespaces('', namespaces)
