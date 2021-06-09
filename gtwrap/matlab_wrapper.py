@@ -82,11 +82,9 @@ class MatlabWrapper(object):
         wrapper_file_header = f.read()
 
     def __init__(self,
-                 module,
                  module_name,
                  top_module_namespace='',
                  ignore_classes=()):
-        self.module = module
         self.module_name = module_name
         self.top_module_namespace = top_module_namespace
         self.ignore_classes = ignore_classes
@@ -1872,10 +1870,14 @@ class MatlabWrapper(object):
                     namespace=namespace),
                                prefix='  ')
 
-    def wrap(self):
+    def wrap(self, content):
         """High level function to wrap the project."""
-        self.wrap_namespace(self.module)
-        self.generate_wrapper(self.module)
+        # Parse the contents of the interface file
+        parsed_result = parser.Module.parseString(content)
+        # Instantiate the module
+        module = instantiator.instantiate_namespace(parsed_result)
+        self.wrap_namespace(module)
+        self.generate_wrapper(module)
 
         return self.content
 

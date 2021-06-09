@@ -23,13 +23,11 @@ class PybindWrapper:
     Class to generate binding code for Pybind11 specifically.
     """
     def __init__(self,
-                 module,
                  module_name,
                  top_module_namespaces='',
                  use_boost=False,
                  ignore_classes=(),
                  module_template=""):
-        self.module = module
         self.module_name = module_name
         self.top_module_namespaces = top_module_namespaces
         self.use_boost = use_boost
@@ -498,9 +496,14 @@ class PybindWrapper:
             )
         return wrapped, includes
 
-    def wrap(self):
+    def wrap(self, content):
         """Wrap the code in the interface file."""
-        wrapped_namespace, includes = self.wrap_namespace(self.module)
+        # Parse the contents of the interface file
+        module = parser.Module.parseString(content)
+        # Instantiate all templates
+        module = instantiator.instantiate_namespace(module)
+
+        wrapped_namespace, includes = self.wrap_namespace(module)
 
         # Export classes for serialization.
         boost_class_export = ""
