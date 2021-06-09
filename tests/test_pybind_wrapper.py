@@ -16,8 +16,6 @@ sys.path.append(osp.dirname(osp.dirname(osp.abspath(__file__))))
 sys.path.append(
     osp.normpath(osp.abspath(osp.join(__file__, '../../../build/wrap'))))
 
-import gtwrap.interface_parser as parser
-import gtwrap.template_instantiator as instantiator
 from gtwrap.pybind_wrapper import PybindWrapper
 
 sys.path.append(osp.dirname(osp.dirname(osp.abspath(__file__))))

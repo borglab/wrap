@@ -9,8 +9,6 @@ and invoked during the wrapping by CMake.
 
 import argparse
 
-import gtwrap.interface_parser as parser
-import gtwrap.template_instantiator as instantiator
 from gtwrap.pybind_wrapper import PybindWrapper
 
 

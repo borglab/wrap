@@ -15,8 +15,6 @@ from loguru import logger
 
 sys.path.append(osp.dirname(osp.dirname(osp.abspath(__file__))))
 
-import gtwrap.interface_parser as parser
-import gtwrap.template_instantiator as instantiator
 from gtwrap.matlab_wrapper import MatlabWrapper
 
 
