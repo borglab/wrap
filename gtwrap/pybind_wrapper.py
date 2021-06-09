@@ -283,7 +283,7 @@ class PybindWrapper:
 
     def wrap_enums(self, enums, instantiated_class, prefix=' ' * 4):
         """Wrap multiple enums defined in a class."""
-        cpp_class = instantiated_class.cpp_class()
+        cpp_class = instantiated_class.to_cpp()
         module_var = instantiated_class.name.lower()
         res = ''
 
@@ -296,7 +296,7 @@ class PybindWrapper:
             self, instantiated_class: instantiator.InstantiatedClass):
         """Wrap the class."""
         module_var = self._gen_module_var(instantiated_class.namespaces())
-        cpp_class = instantiated_class.cpp_class()
+        cpp_class = instantiated_class.to_cpp()
         if cpp_class in self.ignore_classes:
             return ""
         if instantiated_class.parent_class:
@@ -368,7 +368,7 @@ class PybindWrapper:
     def wrap_stl_class(self, stl_class):
         """Wrap STL containers."""
         module_var = self._gen_module_var(stl_class.namespaces())
-        cpp_class = stl_class.cpp_class()
+        cpp_class = stl_class.to_cpp()
         if cpp_class in self.ignore_classes:
             return ""
 

@@ -70,7 +70,8 @@ class MatlabWrapper(object):
     includes: Dict[parser.Include, int] = {}
     # Set of all classes in the namespace
     classes: List[Union[parser.Class, instantiator.InstantiatedClass]] = []
-    classes_elems: Dict[Union[parser.Class, instantiator.InstantiatedClass], int] = {}
+    classes_elems: Dict[Union[parser.Class, instantiator.InstantiatedClass],
+                        int] = {}
     # Id for ordering global functions in the wrapper
     global_function_id = 0
     # Files and their content
@@ -936,7 +937,7 @@ class MatlabWrapper(object):
                            namespace_name,
                            inst_class,
                            methods,
-                           serialize=(False,)):
+                           serialize=(False, )):
         """Wrap the methods in the class.
 
         Args:
@@ -1095,7 +1096,8 @@ class MatlabWrapper(object):
 
             method_text += textwrap.indent(textwrap.dedent("""\
                                     end\n
-                """), prefix="  ")
+                """),
+                                           prefix="  ")
 
         if serialize:
             method_text += textwrap.indent(textwrap.dedent("""\
@@ -1347,14 +1349,14 @@ class MatlabWrapper(object):
 
         else:
             if isinstance(method.parent, instantiator.InstantiatedClass):
-                method_name = method.parent.cpp_class() + "::"
+                method_name = method.parent.to_cpp() + "::"
             else:
                 method_name = self._format_static_method(method, '::')
             method_name += method.name
 
         if "MeasureRange" in method_name:
             self._debug("method: {}, method: {}, inst: {}".format(
-                method_name, method.name, method.parent.cpp_class()))
+                method_name, method.name, method.parent.to_cpp()))
 
         obj = '  ' if return_1_name == 'void' else ''
         obj += '{}{}({})'.format(obj_start, method_name, params)
@@ -1445,7 +1447,7 @@ class MatlabWrapper(object):
             extra = collector_func[4]
 
             class_name = collector_func[0] + collector_func[1].name
-            class_name_separated = collector_func[1].cpp_class()
+            class_name_separated = collector_func[1].to_cpp()
             is_method = isinstance(extra, parser.Method)
             is_static_method = isinstance(extra, parser.StaticMethod)
 
@@ -1508,12 +1510,12 @@ class MatlabWrapper(object):
             elif extra == 'serialize':
                 body += self.wrap_collector_function_serialize(
                     collector_func[1].name,
-                    full_name=collector_func[1].cpp_class(),
+                    full_name=collector_func[1].to_cpp(),
                     namespace=collector_func[0])
             elif extra == 'deserialize':
                 body += self.wrap_collector_function_deserialize(
                     collector_func[1].name,
-                    full_name=collector_func[1].cpp_class(),
+                    full_name=collector_func[1].to_cpp(),
                     namespace=collector_func[0])
             elif is_method or is_static_method:
                 method_name = ''
@@ -1566,7 +1568,8 @@ class MatlabWrapper(object):
                         len=len(collector_func[1].args.args_list))
 
             body += self._wrapper_unwrap_arguments(collector_func[1].args)[1]
-            body += self.wrap_collector_function_return(collector_func[1]) + '\n}\n'
+            body += self.wrap_collector_function_return(
+                collector_func[1]) + '\n}\n'
 
             collector_function += body
 
@@ -1721,7 +1724,7 @@ class MatlabWrapper(object):
                     cls_insts += self._format_type_name(inst)
 
                 typedef_instances += 'typedef {original_class_name} {class_name_sep};\n' \
-                    .format(original_class_name=cls.cpp_class(),
+                    .format(original_class_name=cls.to_cpp(),
                             class_name_sep=cls.name)
 
                 class_name_sep = cls.name
@@ -1732,7 +1735,7 @@ class MatlabWrapper(object):
                     boost_class_export_guid += 'BOOST_CLASS_EXPORT_GUID({}, "{}");\n'.format(
                         class_name_sep, class_name)
             else:
-                class_name_sep = cls.cpp_class()
+                class_name_sep = cls.to_cpp()
                 class_name = self._format_class_name(cls)
 
                 if len(cls.original.namespaces()) > 1 and _has_serialization(
@@ -1778,7 +1781,7 @@ class MatlabWrapper(object):
 
             if queue_set_next_case:
                 ptr_ctor_frag += self.wrap_collector_function_upcast_from_void(
-                    id_val[1].name, idx, id_val[1].cpp_class())
+                    id_val[1].name, idx, id_val[1].to_cpp())
 
         wrapper_file += textwrap.dedent('''\
             {typedef_instances}
