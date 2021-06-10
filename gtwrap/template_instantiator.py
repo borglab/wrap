@@ -346,7 +346,7 @@ class InstantiatedClass(parser.Class):
             "{ctors}\n{static_methods}\n{methods}".format(
                virtual="virtual" if self.is_virtual else '',
                name=self.name,
-               cpp_class=self.cpp_class(),
+               cpp_class=self.to_cpp(),
                parent_class=self.parent,
                ctors="\n".join([repr(ctor) for ctor in self.ctors]),
                methods="\n".join([repr(m) for m in self.methods]),
@@ -501,10 +501,6 @@ class InstantiatedClass(parser.Class):
         )
         return instantiated_properties
 
-    def cpp_class(self):
-        """Generate the C++ code for wrapping."""
-        return self.cpp_typename().to_cpp()
-
     def cpp_typename(self):
         """
         Return a parser.Typename including namespaces and cpp name of this
@@ -519,6 +515,10 @@ class InstantiatedClass(parser.Class):
         namespaces_name = self.namespaces()
         namespaces_name.append(name)
         return parser.Typename(namespaces_name)
+
+    def to_cpp(self):
+        """Generate the C++ code for wrapping."""
+        return self.cpp_typename().to_cpp()
 
 
 class InstantiatedDeclaration(parser.ForwardDeclaration):
@@ -551,7 +551,7 @@ class InstantiatedDeclaration(parser.ForwardDeclaration):
             inst.qualified_name() for inst in self.instantiations
         ]
         name = "{}<{}>".format(self.original.name,
-                                ",".join(instantiated_names))
+                               ",".join(instantiated_names))
         namespaces_name = self.namespaces()
         namespaces_name.append(name)
         # Leverage Typename to generate the fully qualified C++ name
