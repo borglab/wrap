@@ -57,7 +57,7 @@ class MatlabWrapper(object):
     # Methods that should be ignored
     ignore_methods = ['pickle']
     # Datatypes that do not need to be checked in methods
-    not_check_type: list = []
+    not_check_type = []  # type: list
     # Data types that are primitive types
     not_ptr_type = ['int', 'double', 'bool', 'char', 'unsigned char', 'size_t']
     # Ignore the namespace for these datatypes
@@ -65,17 +65,18 @@ class MatlabWrapper(object):
     # The amount of times the wrapper has created a call to geometry_wrapper
     wrapper_id = 0
     # Map each wrapper id to what its collector function namespace, class, type, and string format
-    wrapper_map: dict = {}
+    wrapper_map = {}
     # Set of all the includes in the namespace
-    includes: Dict[parser.Include, int] = {}
+    includes = {}  # type: Dict[parser.Include, int]
     # Set of all classes in the namespace
-    classes: List[Union[parser.Class, instantiator.InstantiatedClass]] = []
-    classes_elems: Dict[Union[parser.Class, instantiator.InstantiatedClass],
-                        int] = {}
+    classes = [
+    ]  # type: List[Union[parser.Class, instantiator.InstantiatedClass]]
+    classes_elems = {
+    }  # type: Dict[Union[parser.Class, instantiator.InstantiatedClass], int]
     # Id for ordering global functions in the wrapper
     global_function_id = 0
     # Files and their content
-    content: List[str] = []
+    content = []  # type: List[str]
 
     # Ensure the template file is always picked up from the correct directory.
     dir_path = osp.dirname(osp.realpath(__file__))
