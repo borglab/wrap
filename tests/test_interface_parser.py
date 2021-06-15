@@ -142,7 +142,7 @@ class TestInterfaceParser(unittest.TestCase):
             "const C6* c6"
         args = ArgumentList.rule.parseString(arg_string)[0]
 
-        self.assertEqual(7, len(args.args_list))
+        self.assertEqual(7, len(args.list()))
         self.assertEqual(['a', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6'],
                          args.names())
 
@@ -153,7 +153,7 @@ class TestInterfaceParser(unittest.TestCase):
         """
         arg_string = "double x1, double* x2, double& x3, double@ x4, " \
             "const double x5, const double* x6, const double& x7, const double@ x8"
-        args = ArgumentList.rule.parseString(arg_string)[0].args_list
+        args = ArgumentList.rule.parseString(arg_string)[0].list()
         self.assertEqual(8, len(args))
         self.assertFalse(args[1].ctype.is_ptr and args[1].ctype.is_shared_ptr
                          and args[1].ctype.is_ref)
@@ -169,7 +169,7 @@ class TestInterfaceParser(unittest.TestCase):
         """Test arguments list where the arguments can be templated."""
         arg_string = "std::pair<string, double> steps, vector<T*> vector_of_pointers"
         args = ArgumentList.rule.parseString(arg_string)[0]
-        args_list = args.args_list
+        args_list = args.list()
         self.assertEqual(2, len(args_list))
         self.assertEqual("std::pair<string, double>",
                          args_list[0].ctype.to_cpp(False))
@@ -183,7 +183,7 @@ class TestInterfaceParser(unittest.TestCase):
         args = ArgumentList.rule.parseString("""
             string c = "", int z = 0, double z2 = 0.0, bool f = false,
             string s="hello"+"goodbye", char c='a', int a=3,
-            int b, double pi = 3.1415""")[0].args_list
+            int b, double pi = 3.1415""")[0].list()
 
         # Test for basic types
         self.assertEqual(args[0].default, '""')
@@ -223,7 +223,7 @@ class TestInterfaceParser(unittest.TestCase):
                        arg5=arg5,
                        arg6=arg6,
                        arg7=arg7)
-        args = ArgumentList.rule.parseString(argument_list)[0].args_list
+        args = ArgumentList.rule.parseString(argument_list)[0].list()
 
         # Test non-basic type
         self.assertEqual(args[0].default, arg0)
@@ -312,7 +312,7 @@ class TestInterfaceParser(unittest.TestCase):
                     const gtsam::Pose3& l2Tp = gtsam::Pose3());""")[0]
         self.assertEqual("ForwardKinematics", ret.name)
         self.assertEqual(5, len(ret.args))
-        self.assertEqual("gtsam::Pose3()", ret.args.args_list[4].default)
+        self.assertEqual("gtsam::Pose3()", ret.args.list()[4].default)
 
     def test_operator_overload(self):
         """Test for operator overloading."""
@@ -337,7 +337,7 @@ class TestInterfaceParser(unittest.TestCase):
                          ret.return_type.type1.typename.to_cpp())
         self.assertTrue(len(ret.args) == 1)
         self.assertEqual("const gtsam::Vector2 &",
-                         repr(ret.args.args_list[0].ctype))
+                         repr(ret.args.list()[0].ctype))
         self.assertTrue(not ret.is_unary)
 
     def test_typedef_template_instantiation(self):

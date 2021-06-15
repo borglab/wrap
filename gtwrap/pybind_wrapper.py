@@ -39,12 +39,12 @@ class PybindWrapper:
         # amount of indentation to add before each function/method declaration.
         self.method_indent = '\n' + (' ' * 8)
 
-    def _py_args_names(self, args_list):
+    def _py_args_names(self, args):
         """Set the argument names in Pybind11 format."""
-        names = args_list.names()
+        names = args.names()
         if names:
             py_args = []
-            for arg in args_list.args_list:
+            for arg in args.list():
                 if arg.default is not None:
                     default = ' = {arg.default}'.format(arg=arg)
                 else:
@@ -56,10 +56,10 @@ class PybindWrapper:
         else:
             return ''
 
-    def _method_args_signature(self, args_list):
+    def _method_args_signature(self, args):
         """Generate the argument types and names as per the method signature."""
-        cpp_types = args_list.to_cpp(self.use_boost)
-        names = args_list.names()
+        cpp_types = args.to_cpp(self.use_boost)
+        names = args.names()
         types_names = [
             "{} {}".format(ctype, name)
             for ctype, name in zip(cpp_types, names)

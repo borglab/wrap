@@ -170,7 +170,7 @@ class InstantiatedGlobalFunction(parser.GlobalFunction):
                 cpp_typename='',
             )
             instantiated_args = instantiate_args_list(
-                original.args.args_list,
+                original.args.list(),
                 self.original.template.typenames,
                 self.instantiations,
                 # Keyword type name `This` should already be replaced in the
@@ -233,7 +233,7 @@ class InstantiatedMethod(parser.Method):
         )
 
         instantiated_args = instantiate_args_list(
-            original.args.args_list,
+            original.args.list(),
             typenames,
             self.instantiations,
             # Keyword type name `This` should already be replaced in the
@@ -368,7 +368,7 @@ class InstantiatedClass(parser.Class):
 
         for ctor in self.original.ctors:
             instantiated_args = instantiate_args_list(
-                ctor.args.args_list,
+                ctor.args.list(),
                 typenames,
                 self.instantiations,
                 self.cpp_typename(),
@@ -393,7 +393,7 @@ class InstantiatedClass(parser.Class):
         instantiated_static_methods = []
         for static_method in self.original.static_methods:
             instantiated_args = instantiate_args_list(
-                static_method.args.args_list, typenames, self.instantiations,
+                static_method.args.list(), typenames, self.instantiations,
                 self.cpp_typename())
             instantiated_static_methods.append(
                 parser.StaticMethod(
@@ -430,7 +430,7 @@ class InstantiatedClass(parser.Class):
         class_instantiated_methods = []
         for method in self.original.methods:
             instantiated_args = instantiate_args_list(
-                method.args.args_list,
+                method.args.list(),
                 typenames,
                 self.instantiations,
                 self.cpp_typename(),
@@ -463,7 +463,7 @@ class InstantiatedClass(parser.Class):
         instantiated_operators = []
         for operator in self.original.operators:
             instantiated_args = instantiate_args_list(
-                operator.args.args_list,
+                operator.args.list(),
                 typenames,
                 self.instantiations,
                 self.cpp_typename(),
