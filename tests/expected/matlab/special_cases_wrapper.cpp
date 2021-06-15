@@ -9,6 +9,7 @@
 #include <gtsam/geometry/Cal3Bundler.h>
 #include <gtsam/geometry/Point2.h>
 #include <gtsam/geometry/Point3.h>
+#include <gtsam/nonlinear/Values.h>
 #include <path/to/ns1.h>
 #include <path/to/ns1/ClassB.h>
 #include <path/to/ns2.h>
@@ -74,6 +75,8 @@ typedef std::set<boost::shared_ptr<ns2::ClassC>*> Collector_ns2ClassC;
 static Collector_ns2ClassC collector_ns2ClassC;
 typedef std::set<boost::shared_ptr<ClassD>*> Collector_ClassD;
 static Collector_ClassD collector_ClassD;
+typedef std::set<boost::shared_ptr<gtsam::Values>*> Collector_gtsamValues;
+static Collector_gtsamValues collector_gtsamValues;
 typedef std::set<boost::shared_ptr<gtsam::NonlinearFactorGraph>*> Collector_gtsamNonlinearFactorGraph;
 static Collector_gtsamNonlinearFactorGraph collector_gtsamNonlinearFactorGraph;
 typedef std::set<boost::shared_ptr<gtsam::SfmTrack>*> Collector_gtsamSfmTrack;
@@ -219,6 +222,12 @@ void _deleteAllObjects()
       iter != collector_ClassD.end(); ) {
     delete *iter;
     collector_ClassD.erase(iter++);
+    anyDeleted = true;
+  } }
+  { for(Collector_gtsamValues::iterator iter = collector_gtsamValues.begin();
+      iter != collector_gtsamValues.end(); ) {
+    delete *iter;
+    collector_gtsamValues.erase(iter++);
     anyDeleted = true;
   } }
   { for(Collector_gtsamNonlinearFactorGraph::iterator iter = collector_gtsamNonlinearFactorGraph.begin();

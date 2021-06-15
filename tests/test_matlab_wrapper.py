@@ -215,7 +215,7 @@ class TestWrap(unittest.TestCase):
         for file in files:
             self.compare_and_diff(file)
 
-    def test_namspaces(self):
+    def test_namespaces(self):
         """
         Test interface file with full namespace definition.
         """

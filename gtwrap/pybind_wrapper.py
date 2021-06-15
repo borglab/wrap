@@ -46,11 +46,11 @@ class PybindWrapper:
             py_args = []
             for arg in args_list.args_list:
                 if arg.default is not None:
-                    arg.default = ' = {arg.default}'.format(arg=arg)
+                    default = ' = {arg.default}'.format(arg=arg)
                 else:
-                    arg.default = ''
+                    default = ''
                 argument = 'py::arg("{name}"){default}'.format(
-                    name=arg.name, default='{0}'.format(arg.default))
+                    name=arg.name, default='{0}'.format(default))
                 py_args.append(argument)
             return ", " + ", ".join(py_args)
         else:
@@ -179,7 +179,7 @@ class PybindWrapper:
         res = ""
         for method in methods:
 
-            # To avoid type confusion for insert, currently unused
+            # To avoid type confusion for insert
             if method.name == 'insert' and cpp_class == 'gtsam::Values':
                 name_list = method.args.args_names()
                 type_list = method.args.to_cpp(self.use_boost)
