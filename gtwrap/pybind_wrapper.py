@@ -41,7 +41,7 @@ class PybindWrapper:
 
     def _py_args_names(self, args_list):
         """Set the argument names in Pybind11 format."""
-        names = args_list.args_names()
+        names = args_list.names()
         if names:
             py_args = []
             for arg in args_list.args_list:
@@ -59,7 +59,7 @@ class PybindWrapper:
     def _method_args_signature(self, args_list):
         """Generate the argument types and names as per the method signature."""
         cpp_types = args_list.to_cpp(self.use_boost)
-        names = args_list.args_names()
+        names = args_list.names()
         types_names = [
             "{} {}".format(ctype, name)
             for ctype, name in zip(cpp_types, names)
@@ -111,7 +111,7 @@ class PybindWrapper:
         is_method = isinstance(method, instantiator.InstantiatedMethod)
         is_static = isinstance(method, parser.StaticMethod)
         return_void = method.return_type.is_void()
-        args_names = method.args.args_names()
+        args_names = method.args.names()
         py_args_names = self._py_args_names(method.args)
         args_signature_with_names = self._method_args_signature(method.args)
 
@@ -181,7 +181,7 @@ class PybindWrapper:
 
             # To avoid type confusion for insert
             if method.name == 'insert' and cpp_class == 'gtsam::Values':
-                name_list = method.args.args_names()
+                name_list = method.args.names()
                 type_list = method.args.to_cpp(self.use_boost)
                 # inserting non-wrapped value types
                 if type_list[0].strip() == 'size_t':
@@ -413,7 +413,7 @@ class PybindWrapper:
 
             is_static = isinstance(function, parser.StaticMethod)
             return_void = function.return_type.is_void()
-            args_names = function.args.args_names()
+            args_names = function.args.names()
             py_args_names = self._py_args_names(function.args)
             args_signature = self._method_args_signature(function.args)
 

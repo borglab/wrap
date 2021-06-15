@@ -144,7 +144,7 @@ class TestInterfaceParser(unittest.TestCase):
 
         self.assertEqual(7, len(args.args_list))
         self.assertEqual(['a', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6'],
-                         args.args_names())
+                         args.names())
 
     def test_argument_list_qualifiers(self):
         """
