@@ -47,7 +47,7 @@ class Argument:
             self.ctype = ctype
         self.name = name
         self.default = default
-        self.parent: Union[ArgumentList, None] = None
+        self.parent = None  # type: Union[ArgumentList, None]
 
     def __repr__(self) -> str:
         return self.to_cpp()
