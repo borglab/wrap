@@ -86,9 +86,13 @@ class ArgumentList:
     def __len__(self) -> int:
         return len(self.args_list)
 
-    def args_names(self) -> List[str]:
+    def names(self) -> List[str]:
         """Return a list of the names of all the arguments."""
         return [arg.name for arg in self.args_list]
+
+    def list(self) -> List[Argument]:
+        """Return a list of the names of all the arguments."""
+        return self.args_list
 
     def to_cpp(self, use_boost: bool) -> List[str]:
         """Generate the C++ code for wrapping."""

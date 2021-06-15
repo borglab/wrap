@@ -57,7 +57,7 @@ class MatlabWrapper(object):
     # Methods that should be ignored
     ignore_methods = ['pickle']
     # Datatypes that do not need to be checked in methods
-    not_check_type: list = []
+    not_check_type = []  # type: list
     # Data types that are primitive types
     not_ptr_type = ['int', 'double', 'bool', 'char', 'unsigned char', 'size_t']
     # Ignore the namespace for these datatypes
@@ -65,17 +65,18 @@ class MatlabWrapper(object):
     # The amount of times the wrapper has created a call to geometry_wrapper
     wrapper_id = 0
     # Map each wrapper id to what its collector function namespace, class, type, and string format
-    wrapper_map: dict = {}
+    wrapper_map = {}
     # Set of all the includes in the namespace
-    includes: Dict[parser.Include, int] = {}
+    includes = {}  # type: Dict[parser.Include, int]
     # Set of all classes in the namespace
-    classes: List[Union[parser.Class, instantiator.InstantiatedClass]] = []
-    classes_elems: Dict[Union[parser.Class, instantiator.InstantiatedClass],
-                        int] = {}
+    classes = [
+    ]  # type: List[Union[parser.Class, instantiator.InstantiatedClass]]
+    classes_elems = {
+    }  # type: Dict[Union[parser.Class, instantiator.InstantiatedClass], int]
     # Id for ordering global functions in the wrapper
     global_function_id = 0
     # Files and their content
-    content: List[str] = []
+    content = []  # type: List[str]
 
     # Ensure the template file is always picked up from the correct directory.
     dir_path = osp.dirname(osp.realpath(__file__))
@@ -373,14 +374,14 @@ class MatlabWrapper(object):
         """
         arg_wrap = ''
 
-        for i, arg in enumerate(args.args_list, 1):
+        for i, arg in enumerate(args.list(), 1):
             c_type = self._format_type_name(arg.ctype.typename,
                                             include_namespace=False)
 
             arg_wrap += '{c_type} {arg_name}{comma}'.format(
                 c_type=c_type,
                 arg_name=arg.name,
-                comma='' if i == len(args.args_list) else ', ')
+                comma='' if i == len(args.list()) else ', ')
 
         return arg_wrap
 
@@ -395,7 +396,7 @@ class MatlabWrapper(object):
         """
         var_arg_wrap = ''
 
-        for i, arg in enumerate(args.args_list, 1):
+        for i, arg in enumerate(args.list(), 1):
             name = arg.ctype.typename.name
             if name in self.not_check_type:
                 continue
@@ -441,7 +442,7 @@ class MatlabWrapper(object):
         var_list_wrap = ''
         first = True
 
-        for i in range(1, len(args.args_list) + 1):
+        for i in range(1, len(args.list()) + 1):
             if first:
                 var_list_wrap += 'varargin{{{}}}'.format(i)
                 first = False
@@ -461,9 +462,9 @@ class MatlabWrapper(object):
         if check_statement == '':
             check_statement = \
                 'if length(varargin) == {param_count}'.format(
-                    param_count=len(args.args_list))
+                    param_count=len(args.list()))
 
-        for _, arg in enumerate(args.args_list):
+        for _, arg in enumerate(args.list()):
             name = arg.ctype.typename.name
 
             if name in self.not_check_type:
@@ -515,7 +516,7 @@ class MatlabWrapper(object):
         params = ''
         body_args = ''
 
-        for arg in args.args_list:
+        for arg in args.list():
             if params != '':
                 params += ','
 
@@ -724,10 +725,10 @@ class MatlabWrapper(object):
             param_wrap += '      if' if i == 0 else '      elseif'
             param_wrap += ' length(varargin) == '
 
-            if len(overload.args.args_list) == 0:
+            if len(overload.args.list()) == 0:
                 param_wrap += '0\n'
             else:
-                param_wrap += str(len(overload.args.args_list)) \
+                param_wrap += str(len(overload.args.list())) \
                               + self._wrap_variable_arguments(overload.args, False) + '\n'
 
             # Determine format of return and varargout statements
@@ -824,14 +825,14 @@ class MatlabWrapper(object):
             methods_wrap += textwrap.indent(textwrap.dedent('''\
                 elseif nargin == {len}{varargin}
                   {ptr}{wrapper}({num}{comma}{var_arg});
-            ''').format(len=len(ctor.args.args_list),
+            ''').format(len=len(ctor.args.list()),
                         varargin=self._wrap_variable_arguments(
                             ctor.args, False),
                         ptr=wrapper_return,
                         wrapper=self._wrapper_name(),
                         num=self._update_wrapper_id(
                             (namespace_name, inst_class, 'constructor', ctor)),
-                        comma='' if len(ctor.args.args_list) == 0 else ', ',
+                        comma='' if len(ctor.args.list()) == 0 else ', ',
                         var_arg=self._wrap_list_variable_arguments(ctor.args)),
                                             prefix='    ')
 
@@ -1074,7 +1075,7 @@ class MatlabWrapper(object):
                         static_overload.return_type,
                         include_namespace=True,
                         separator="."),
-                    length=len(static_overload.args.args_list),
+                    length=len(static_overload.args.list()),
                     var_args_list=self._wrap_variable_arguments(
                         static_overload.args),
                     check_statement=check_statement,
@@ -1548,7 +1549,7 @@ class MatlabWrapper(object):
                     min1='-1' if is_method else '',
                     shared_obj=shared_obj,
                     method_name=method_name,
-                    num_args=len(extra.args.args_list),
+                    num_args=len(extra.args.list()),
                     body_args=body_args,
                     return_body=return_body)
 
@@ -1565,7 +1566,7 @@ class MatlabWrapper(object):
                   checkArguments("{function_name}",nargout,nargin,{len});
             ''').format(function_name=collector_func[1].name,
                         id=self.global_function_id,
-                        len=len(collector_func[1].args.args_list))
+                        len=len(collector_func[1].args.list()))
 
             body += self._wrapper_unwrap_arguments(collector_func[1].args)[1]
             body += self.wrap_collector_function_return(
