@@ -34,7 +34,13 @@ class PybindWrapper:
         self.ignore_classes = ignore_classes
         self._serializing_classes = list()
         self.module_template = module_template
-        self.python_keywords = ['print', 'lambda']
+        self.python_keywords = [
+            'lambda', 'False', 'def', 'if', 'raise', 'None', 'del', 'import',
+            'return', 'True', 'elif', 'in', 'try', 'and', 'else', 'is',
+            'while', 'as', 'except', 'lambda', 'with', 'assert', 'finally',
+            'nonlocal', 'yield', 'break', 'for', 'not', 'class', 'from', 'or',
+            'continue', 'global', 'pass'
+        ]
 
         # amount of indentation to add before each function/method declaration.
         self.method_indent = '\n' + (' ' * 8)
@@ -107,6 +113,10 @@ class PybindWrapper:
                 ".def(py::pickle({indent}    [](const {cpp_class} &a){{ /* __getstate__: Returns a string that encodes the state of the object */ return py::make_tuple(gtsam::serialize(a)); }},{indent}    [](py::tuple t){{ /* __setstate__ */ {cpp_class} obj; gtsam::deserialize(t[0].cast<std::string>(), obj); return obj; }}))"
             return pickle_method.format(cpp_class=cpp_class,
                                         indent=self.method_indent)
+
+        # Add underscore to disambiguate if the method name matches a python keyword
+        if py_method in self.python_keywords:
+            py_method = py_method + "_"
 
         is_method = isinstance(method, instantiator.InstantiatedMethod)
         is_static = isinstance(method, parser.StaticMethod)
@@ -406,7 +416,8 @@ class PybindWrapper:
             function_name = function.name
 
             # Add underscore to disambiguate if the function name matches a python keyword
-            if function_name in self.python_keywords:
+            python_keywords = self.python_keywords + ['print']
+            if function_name in python_keywords:
                 function_name = function_name + "_"
 
             cpp_method = function.to_cpp()

@@ -61,7 +61,10 @@ class Test {
   pair<Test ,Test*> create_MixedPtrs () const;
   pair<Test*,Test*> return_ptrs (Test* p1, Test* p2) const;
 
+  // This should be callable as .print() in python
   void print() const;
+  // Since this is a reserved keyword, it should be updated to `lambda_`
+  void lambda() const;
 
   void set_container(std::vector<testing::Test> container);
   void set_container(std::vector<testing::Test*> container);

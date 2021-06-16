@@ -572,12 +572,12 @@ void MyTemplateMatrix_Level_34(int nargout, mxArray *out[], int nargin, const mx
   out[0] = wrap_shared_ptr(boost::make_shared<MyTemplate<Matrix>>(MyTemplate<gtsam::Matrix>::Level(K)),"MyTemplateMatrix", false);
 }
 
-void Test_set_container_35(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void Test_return_vector2_35(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
-  checkArguments("set_container",nargout,nargin-1,1);
+  checkArguments("return_vector2",nargout,nargin-1,1);
   auto obj = unwrap_shared_ptr<Test>(in[0], "ptr_Test");
-  boost::shared_ptr<std::vector<testing::Test>> container = unwrap_shared_ptr< std::vector<testing::Test> >(in[1], "ptr_stdvectorTest");
-  obj->set_container(*container);
+  Vector value = unwrap< Vector >(in[1]);
+  out[0] = wrap< Vector >(obj->return_vector2(value));
 }
 
 void ForwardKinematicsFactor_collectorInsertAndMakeBase_35(int nargout, mxArray *out[], int nargin, const mxArray *in[])
@@ -724,7 +724,7 @@ void mexFunction(int nargout, mxArray *out[], int nargin, const mxArray *in[])
       MyTemplateMatrix_Level_34(nargout, out, nargin-1, in+1);
       break;
     case 35:
-      Test_set_container_35(nargout, out, nargin-1, in+1);
+      Test_return_vector2_35(nargout, out, nargin-1, in+1);
       break;
     case 36:
       ForwardKinematicsFactor_collectorInsertAndMakeBase_35(nargout, out, nargin-1, in+1);
