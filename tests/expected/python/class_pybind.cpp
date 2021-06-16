@@ -62,6 +62,7 @@ PYBIND11_MODULE(class_py, m_) {
                         self.print();
                         return redirect.str();
                     })
+        .def("lambda_",[](Test* self){ self->lambda();})
         .def("set_container",[](Test* self, std::vector<testing::Test> container){ self->set_container(container);}, py::arg("container"))
         .def("set_container",[](Test* self, std::vector<std::shared_ptr<testing::Test>> container){ self->set_container(container);}, py::arg("container"))
         .def("set_container",[](Test* self, std::vector<testing::Test&> container){ self->set_container(container);}, py::arg("container"))
