@@ -194,10 +194,7 @@ The python wrapper supports keyword arguments for functions/methods. Hence, the 
 
 
 ### TODO
-- Default values for arguments.
-    - WORKAROUND: make multiple versions of the same function for different configurations of default arguments.
 - Handle `gtsam::Rot3M` conversions to quaternions.
 - Parse return of const ref arguments.
 - Parse `std::string` variants and convert directly to special string.
-- Add enum support.
 - Add generalized serialization support via `boost.serialization` with hooks to MATLAB save/load.
