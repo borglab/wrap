@@ -13,6 +13,7 @@ Author: Duy Nguyen Ta, Fan Jiang, Matthew Sklar, Varun Agrawal, and Frank Dellae
 # pylint: disable=too-many-arguments, too-many-instance-attributes, no-self-use, no-else-return, too-many-arguments, unused-format-string-argument, line-too-long
 
 import re
+from pathlib import Path
 
 import gtwrap.interface_parser as parser
 import gtwrap.template_instantiator as instantiator
@@ -557,8 +558,15 @@ class PybindWrapper:
             )
         return wrapped, includes
 
-    def wrap(self, content):
-        """Wrap the code in the interface file."""
+    def wrap_file(self, content, module_name=None, submodules=None):
+        """
+        Wrap the code in the interface file.
+
+        Args:
+            content: The contents of the interface file.
+            module_name: The name of the module.
+            submodules: List of other interface file names that should be linked to.
+        """
         # Parse the contents of the interface file
         module = parser.Module.parseString(content)
         # Instantiate all templates
@@ -584,13 +592,65 @@ class PybindWrapper:
                       "{shared_ptr_type}::shared_ptr<TYPE_PLACEHOLDER_DONOTUSE>);"
         include_boost = "#include <boost/shared_ptr.hpp>" if self.use_boost else ""
 
+        submodules_init = []
+
+        if submodules is not None:
+            module_def = "PYBIND11_MODULE({0}, m_)".format(module_name)
+
+            # Only add these includes if it is the main module
+            gtsam_includes = '#include "gtsam/base/serialization.h"\n#include "gtsam/nonlinear/utilities.h"  // for RedirectCout.\n'
+            includes = gtsam_includes + includes
+
+            for idx, submodule in enumerate(submodules):
+                submodules[idx] = "void {0}(py::module_ &);".format(submodule)
+                submodules_init.append("{0}(m_);".format(submodule))
+
+        else:
+            module_def = "void {0}(py::module_ &m_)".format(module_name)
+            submodules = []
+
         return self.module_template.format(
             include_boost=include_boost,
-            module_name=self.module_name,
+            module_def=module_def,
+            module_name=module_name,
             includes=includes,
             holder_type=holder_type.format(
                 shared_ptr_type=('boost' if self.use_boost else 'std'))
             if self.use_boost else "",
             wrapped_namespace=wrapped_namespace,
             boost_class_export=boost_class_export,
+            submodules="\n".join(submodules),
+            submodules_init="\n".join(submodules_init),
         )
+
+    def wrap(self, sources, main_output):
+        """
+        Wrap all the source interface files.
+
+        Args:
+            sources: List of all interface files.
+            main_output: The name for the main module.
+        """
+        main_module = sources[0]
+        submodules = []
+        for source in sources[1:]:
+            filename = Path(source).name
+            module_name = Path(source).stem
+            # Read in the complete interface (.i) file
+            with open(source, "r") as f:
+                content = f.read()
+            submodules.append(module_name)
+            cc_content = self.wrap_file(content, module_name=module_name)
+
+        # Generate the C++ code which Pybind11 will use.
+        with open(filename.replace(".i", ".cpp"), "w") as f:
+            f.write(cc_content)
+
+        with open(main_module, "r") as f:
+            content = f.read()
+        cc_content = self.wrap_file(content,
+                                    module_name=self.module_name,
+                                    submodules=submodules)
+
+        with open(main_output, "w") as f:
+            f.write(cc_content)
