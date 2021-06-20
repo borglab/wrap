@@ -192,6 +192,11 @@ The python wrapper supports keyword arguments for functions/methods. Hence, the 
 
    - **DO NOT** re-define an overriden function already declared in the external (forward-declared) base class. This will cause an ambiguity problem in the Pybind header file.
 
+- Splitting wrapper over multiple files
+    - The Pybind11 wrapper supports splitting the wrapping code over multiple files.
+    - To be able to use classes from another module, simply import the C++ header file in that wrapper file.
+    - Unfortunately, this means that aliases can no longer be used.
+    - Similarly, there can be multiple `preamble.h` and `specializations.h` files. Each of these should match the module file name.
 
 ### TODO
 - Handle `gtsam::Rot3M` conversions to quaternions.
