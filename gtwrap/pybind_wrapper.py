@@ -33,7 +33,7 @@ class PybindWrapper:
         self.top_module_namespaces = top_module_namespaces
         self.use_boost = use_boost
         self.ignore_classes = ignore_classes
-        self._serializing_classes = list()
+        self._serializing_classes = []
         self.module_template = module_template
         self.python_keywords = [
             'lambda', 'False', 'def', 'if', 'raise', 'None', 'del', 'import',
@@ -161,7 +161,7 @@ class PybindWrapper:
                 'self->print',
                 'py::scoped_ostream_redirect output; self->print')
 
-            # Make __repr__() call print() internally
+            # Make __repr__() call .print() internally
             ret += '''{prefix}.def("__repr__",
                     [](const {cpp_class}& self{opt_comma}{args_signature_with_names}){{
                         gtsam::RedirectCout redirect;
@@ -582,11 +582,13 @@ class PybindWrapper:
             if ',' in cpp_class:
                 new_name = re.sub("[,:<> ]", "", cpp_class)
                 boost_class_export += "typedef {cpp_class} {new_name};\n".format(  # noqa
-                    cpp_class=cpp_class,
-                    new_name=new_name,
-                )
+                    cpp_class=cpp_class, new_name=new_name)
+
             boost_class_export += "BOOST_CLASS_EXPORT({new_name})\n".format(
                 new_name=new_name, )
+
+        # Reset the serializing classes list
+        self._serializing_classes = []
 
         holder_type = "PYBIND11_DECLARE_HOLDER_TYPE(TYPE_PLACEHOLDER_DONOTUSE, " \
                       "{shared_ptr_type}::shared_ptr<TYPE_PLACEHOLDER_DONOTUSE>);"
@@ -596,10 +598,6 @@ class PybindWrapper:
 
         if submodules is not None:
             module_def = "PYBIND11_MODULE({0}, m_)".format(module_name)
-
-            # Only add these includes if it is the main module
-            gtsam_includes = '#include "gtsam/base/serialization.h"\n#include "gtsam/nonlinear/utilities.h"  // for RedirectCout.\n'
-            includes = gtsam_includes + includes
 
             for idx, submodule in enumerate(submodules):
                 submodules[idx] = "void {0}(py::module_ &);".format(submodule)
@@ -642,9 +640,9 @@ class PybindWrapper:
             submodules.append(module_name)
             cc_content = self.wrap_file(content, module_name=module_name)
 
-        # Generate the C++ code which Pybind11 will use.
-        with open(filename.replace(".i", ".cpp"), "w") as f:
-            f.write(cc_content)
+            # Generate the C++ code which Pybind11 will use.
+            with open(filename.replace(".i", ".cpp"), "w") as f:
+                f.write(cc_content)
 
         with open(main_module, "r") as f:
             content = f.read()
@@ -652,5 +650,6 @@ class PybindWrapper:
                                     module_name=self.module_name,
                                     submodules=submodules)
 
+        # Generate the C++ code which Pybind11 will use.
         with open(main_output, "w") as f:
             f.write(cc_content)

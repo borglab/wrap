@@ -6,6 +6,8 @@
 #include <pybind11/operators.h>
 #include <pybind11/iostream.h>
 #include <pybind11/functional.h>
+#include "gtsam/base/serialization.h"
+#include "gtsam/base/utilities.h"  // for RedirectCout.
 
 {includes}
 #include <boost/serialization/export.hpp>
