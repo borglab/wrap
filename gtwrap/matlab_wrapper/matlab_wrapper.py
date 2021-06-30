@@ -14,9 +14,10 @@ from typing import Dict, Iterable, List, Union
 
 import gtwrap.interface_parser as parser
 import gtwrap.template_instantiator as instantiator
+from gtwrap.matlab_wrapper.utils import CheckMixin
 
 
-class MatlabWrapper(object):
+class MatlabWrapper(CheckMixin):
     """ Wrap the given C++ code into Matlab.
 
     Attributes
@@ -58,10 +59,6 @@ class MatlabWrapper(object):
     ignore_methods = ['pickle']
     # Datatypes that do not need to be checked in methods
     not_check_type: list = []
-    # Data types that are primitive types
-    not_ptr_type = ['int', 'double', 'bool', 'char', 'unsigned char', 'size_t']
-    # Ignore the namespace for these datatypes
-    ignore_namespace = ['Matrix', 'Vector', 'Point2', 'Point3']
     # The amount of times the wrapper has created a call to geometry_wrapper
     wrapper_id = 0
     # Map each wrapper id to what its collector function namespace, class, type, and string format
@@ -86,6 +83,8 @@ class MatlabWrapper(object):
                  module_name,
                  top_module_namespace='',
                  ignore_classes=()):
+        super().__init__()
+
         self.module_name = module_name
         self.top_module_namespace = top_module_namespace
         self.ignore_classes = ignore_classes
@@ -97,16 +96,18 @@ class MatlabWrapper(object):
         print(message, file=sys.stderr)
 
     def _add_include(self, include):
+        """"""
         self.includes[include] = 0
 
-    def _add_class(self, instantiated_class):
+    def add_class(self, instantiated_class):
+        """Add `instantiated_class` to the list of classes."""
         if self.classes_elems.get(instantiated_class) is None:
             self.classes_elems[instantiated_class] = 0
             self.classes.append(instantiated_class)
 
     def _update_wrapper_id(self, collector_function=None, id_diff=0):
-        """Get and define wrapper ids.
-
+        """
+        Get and define wrapper ids.
         Generates the map of id -> collector function.
 
         Args:
@@ -149,34 +150,6 @@ class MatlabWrapper(object):
         """
         return x + '\n' + ('' if y == '' else '  ') + y
 
-    def _is_shared_ptr(self, arg_type):
-        """
-        Determine if the `interface_parser.Type` should be treated as a
-        shared pointer in the wrapper.
-        """
-        return arg_type.is_shared_ptr or (
-            arg_type.typename.name not in self.not_ptr_type
-            and arg_type.typename.name not in self.ignore_namespace
-            and arg_type.typename.name != 'string')
-
-    def _is_ptr(self, arg_type):
-        """
-        Determine if the `interface_parser.Type` should be treated as a
-        raw pointer in the wrapper.
-        """
-        return arg_type.is_ptr or (
-            arg_type.typename.name not in self.not_ptr_type
-            and arg_type.typename.name not in self.ignore_namespace
-            and arg_type.typename.name != 'string')
-
-    def _is_ref(self, arg_type):
-        """Determine if the interface_parser.Type should be treated as a
-        reference in the wrapper.
-        """
-        return arg_type.typename.name not in self.ignore_namespace and \
-               arg_type.typename.name not in self.not_ptr_type and \
-               arg_type.is_ref
-
     def _group_methods(self, methods):
         """Group overloaded methods together"""
         method_map = {}
@@ -204,8 +177,7 @@ class MatlabWrapper(object):
 
         return instantiated_class.name
 
-    @classmethod
-    def _format_type_name(cls,
+    def _format_type_name(self,
                           type_name,
                           separator='::',
                           include_namespace=True,
@@ -231,14 +203,14 @@ class MatlabWrapper(object):
 
         if include_namespace:
             for namespace in type_name.namespaces:
-                if name not in cls.ignore_namespace and namespace != '':
+                if name not in self.ignore_namespace and namespace != '':
                     formatted_type_name += namespace + separator
 
         #self._debug("formatted_ns: {}, ns: {}".format(formatted_type_name, type_name.namespaces))
         if constructor:
-            formatted_type_name += cls.data_type.get(name) or name
+            formatted_type_name += self.data_type.get(name) or name
         elif method:
-            formatted_type_name += cls.data_type_param.get(name) or name
+            formatted_type_name += self.data_type_param.get(name) or name
         else:
             formatted_type_name += name
 
@@ -246,7 +218,7 @@ class MatlabWrapper(object):
             templates = []
             for idx in range(len(type_name.instantiations)):
                 template = '{}'.format(
-                    cls._format_type_name(type_name.instantiations[idx],
+                    self._format_type_name(type_name.instantiations[idx],
                                           include_namespace=include_namespace,
                                           constructor=constructor,
                                           method=method))
@@ -258,7 +230,7 @@ class MatlabWrapper(object):
         else:
             for idx in range(len(type_name.instantiations)):
                 formatted_type_name += '{}'.format(
-                    cls._format_type_name(type_name.instantiations[idx],
+                    self._format_type_name(type_name.instantiations[idx],
                                           separator=separator,
                                           include_namespace=False,
                                           constructor=constructor,
@@ -266,8 +238,7 @@ class MatlabWrapper(object):
 
         return formatted_type_name
 
-    @classmethod
-    def _format_return_type(cls,
+    def _format_return_type(self,
                             return_type,
                             include_namespace=False,
                             separator="::"):
@@ -279,18 +250,18 @@ class MatlabWrapper(object):
         """
         return_wrap = ''
 
-        if cls._return_count(return_type) == 1:
-            return_wrap = cls._format_type_name(
+        if self._return_count(return_type) == 1:
+            return_wrap = self._format_type_name(
                 return_type.type1.typename,
                 separator=separator,
                 include_namespace=include_namespace)
         else:
             return_wrap = 'pair< {type1}, {type2} >'.format(
-                type1=cls._format_type_name(
+                type1=self._format_type_name(
                     return_type.type1.typename,
                     separator=separator,
                     include_namespace=include_namespace),
-                type2=cls._format_type_name(
+                type2=self._format_type_name(
                     return_type.type2.typename,
                     separator=separator,
                     include_namespace=include_namespace))
@@ -519,7 +490,7 @@ class MatlabWrapper(object):
             if params != '':
                 params += ','
 
-            if self._is_ref(arg.ctype):  # and not constructor:
+            if self.is_ref(arg.ctype):  # and not constructor:
                 ctype_camel = self._format_type_name(arg.ctype.typename,
                                                      separator='')
                 body_args += textwrap.indent(textwrap.dedent('''\
@@ -530,7 +501,7 @@ class MatlabWrapper(object):
                            id=arg_id)),
                                              prefix='  ')
 
-            elif (self._is_shared_ptr(arg.ctype) or self._is_ptr(arg.ctype)) and \
+            elif (self.is_shared_ptr(arg.ctype) or self.is_ptr(arg.ctype)) and \
                     arg.ctype.typename.name not in self.ignore_namespace:
                 if arg.ctype.is_shared_ptr:
                     call_type = arg.ctype.is_shared_ptr
@@ -664,21 +635,12 @@ class MatlabWrapper(object):
 
         return comment
 
-    def generate_matlab_wrapper(self):
-        """Generate the C++ file for the wrapper."""
-        file_name = self._wrapper_name() + '.cpp'
-
-        wrapper_file = self.wrapper_file_header
-
-        return file_name, wrapper_file
-
     def wrap_method(self, methods):
-        """Wrap methods in the body of a class."""
+        """
+        Wrap methods in the body of a class.
+        """
         if not isinstance(methods, list):
             methods = [methods]
-
-        # for method in methods:
-        #     output = ''
 
         return ''
 
@@ -696,10 +658,6 @@ class MatlabWrapper(object):
                 continue
 
             if global_funcs:
-                self._debug("[wrap_methods] wrapping: {}..{}={}".format(
-                    method[0].parent.name, method[0].name,
-                    type(method[0].parent.name)))
-
                 method_text = self.wrap_global_function(method)
                 self.content.append(("".join([
                     '+' + x + '/' for x in global_ns.full_namespaces()[1:]
@@ -1212,22 +1170,19 @@ class MatlabWrapper(object):
 
         return file_name + '.m', content_text
 
-    def wrap_namespace(self, namespace, parent=()):
+    def wrap_namespace(self, namespace):
         """Wrap a namespace by wrapping all of its components.
 
         Args:
             namespace: the interface_parser.namespace instance of the namespace
             parent: parent namespace
         """
-        test_output = ''
         namespaces = namespace.full_namespaces()
         inner_namespace = namespace.name != ''
         wrapped = []
-        self._debug("wrapping ns: {}, parent: {}".format(
-            namespace.full_namespaces(), parent))
 
-        matlab_wrapper = self.generate_matlab_wrapper()
-        self.content.append((matlab_wrapper[0], matlab_wrapper[1]))
+        cpp_filename = self._wrapper_name() + '.cpp'
+        self.content.append((cpp_filename, self.wrapper_file_header))
 
         current_scope = []
         namespace_scope = []
@@ -1235,10 +1190,12 @@ class MatlabWrapper(object):
         for element in namespace.content:
             if isinstance(element, parser.Include):
                 self._add_include(element)
+
             elif isinstance(element, parser.Namespace):
-                self.wrap_namespace(element, namespaces)
+                self.wrap_namespace(element)
+
             elif isinstance(element, instantiator.InstantiatedClass):
-                self._add_class(element)
+                self.add_class(element)
 
                 if inner_namespace:
                     class_text = self.wrap_instantiated_class(
@@ -1264,7 +1221,7 @@ class MatlabWrapper(object):
             if isinstance(func, parser.GlobalFunction)
         ]
 
-        test_output += self.wrap_methods(all_funcs, True, global_ns=namespace)
+        self.wrap_methods(all_funcs, True, global_ns=namespace)
 
         return wrapped
 
@@ -1295,7 +1252,7 @@ class MatlabWrapper(object):
         pair_value = 'first' if func_id == 0 else 'second'
         new_line = '\n' if func_id == 0 else ''
 
-        if self._is_shared_ptr(return_type) or self._is_ptr(return_type):
+        if self.is_shared_ptr(return_type) or self.is_ptr(return_type):
             shared_obj = 'pairResult.' + pair_value
 
             if not (return_type.is_shared_ptr or return_type.is_ptr):
@@ -1363,7 +1320,7 @@ class MatlabWrapper(object):
 
         if return_1_name != 'void':
             if return_count == 1:
-                if self._is_shared_ptr(return_1) or self._is_ptr(return_1):
+                if self.is_shared_ptr(return_1) or self.is_ptr(return_1):
                     sep_method_name = partial(self._format_type_name,
                                               return_1.typename,
                                               include_namespace=True)
@@ -1642,16 +1599,8 @@ class MatlabWrapper(object):
         includes_list = sorted(list(self.includes.keys()),
                                key=lambda include: include.header)
 
-        # Check the number of includes.
-        # If no includes, do nothing, if 1 then just append newline.
-        # if more than one, concatenate them with newlines.
-        if len(includes_list) == 0:
-            pass
-        elif len(includes_list) == 1:
-            wrapper_file += (str(includes_list[0]) + '\n')
-        else:
-            wrapper_file += reduce(lambda x, y: str(x) + '\n' + str(y),
-                                   includes_list)
+        # Add the header includes
+        wrapper_file += '\n'.join(map(str, includes_list))
         wrapper_file += '\n'
 
         typedef_instances = '\n'
@@ -1701,7 +1650,6 @@ class MatlabWrapper(object):
         for cls in self.classes:
             uninstantiated_name = "::".join(
                 cls.namespaces()[1:]) + "::" + cls.name
-            self._debug("Cls: {} -> {}".format(cls.name, uninstantiated_name))
 
             if uninstantiated_name in self.ignore_classes:
                 self._debug("Ignoring: {} -> {}".format(
@@ -1747,6 +1695,7 @@ class MatlabWrapper(object):
                 typedef std::set<boost::shared_ptr<{class_name_sep}>*> Collector_{class_name};
                 static Collector_{class_name} collector_{class_name};
             ''').format(class_name_sep=class_name_sep, class_name=class_name)
+
             delete_objs += textwrap.indent(textwrap.dedent('''\
                 {{ for(Collector_{class_name}::iterator iter = collector_{class_name}.begin();
                     iter != collector_{class_name}.end(); ) {{
@@ -1879,32 +1828,27 @@ class MatlabWrapper(object):
         parsed_result = parser.Module.parseString(content)
         # Instantiate the module
         module = instantiator.instantiate_namespace(parsed_result)
+        #
         self.wrap_namespace(module)
         self.generate_wrapper(module)
 
         return self.content
 
 
-def generate_content(cc_content, path, verbose=False):
+def generate_content(cc_content, path):
     """
     Generate files and folders from matlab wrapper content.
-
+    
     Args:
         cc_content: The content to generate formatted as
             (file_name, file_content) or
             (folder_name, [(file_name, file_content)])
         path: The path to the files parent folder within the main folder
     """
-    def _debug(message):
-        if not verbose:
-            return
-        print(message, file=sys.stderr)
-
     for c in cc_content:
         if isinstance(c, list):
             if len(c) == 0:
                 continue
-            _debug("c object: {}".format(c[0][0]))
             path_to_folder = osp.join(path, c[0][0])
 
             if not os.path.isdir(path_to_folder):
@@ -1914,13 +1858,11 @@ def generate_content(cc_content, path, verbose=False):
                     pass
 
             for sub_content in c:
-                _debug("sub object: {}".format(sub_content[1][0][0]))
                 generate_content(sub_content[1], path_to_folder)
 
         elif isinstance(c[1], list):
             path_to_folder = osp.join(path, c[0])
 
-            _debug("[generate_content_global]: {}".format(path_to_folder))
             if not os.path.isdir(path_to_folder):
                 try:
                     os.makedirs(path_to_folder, exist_ok=True)
@@ -1928,13 +1870,11 @@ def generate_content(cc_content, path, verbose=False):
                     pass
             for sub_content in c[1]:
                 path_to_file = osp.join(path_to_folder, sub_content[0])
-                _debug("[generate_global_method]: {}".format(path_to_file))
                 with open(path_to_file, 'w') as f:
                     f.write(sub_content[1])
         else:
             path_to_file = osp.join(path, c[0])
 
-            _debug("[generate_content]: {}".format(path_to_file))
             if not os.path.isdir(path_to_file):
                 try:
                     os.mkdir(path)

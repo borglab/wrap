@@ -7,7 +7,6 @@
 
 #include <folder/path/to/Test.h>
 
-
 typedef Fun<double> FunDouble;
 typedef PrimitiveRef<double> PrimitiveRefDouble;
 typedef MyVector<3> MyVector3;
