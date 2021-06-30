@@ -14,10 +14,10 @@ from typing import Dict, Iterable, List, Union
 
 import gtwrap.interface_parser as parser
 import gtwrap.template_instantiator as instantiator
-from gtwrap.matlab_wrapper.utils import CheckMixin
+from gtwrap.matlab_wrapper.utils import CheckMixin, FormatMixin
 
 
-class MatlabWrapper(CheckMixin):
+class MatlabWrapper(CheckMixin, FormatMixin):
     """ Wrap the given C++ code into Matlab.
 
     Attributes
@@ -53,18 +53,12 @@ class MatlabWrapper(CheckMixin):
         'Matrix': 'double',
         'bool': 'bool'
     }
-    # Methods that should not be wrapped directly
-    whitelist = ['serializable', 'serialize']
-    # Methods that should be ignored
-    ignore_methods = ['pickle']
-    # Datatypes that do not need to be checked in methods
-    not_check_type: list = []
     # The amount of times the wrapper has created a call to geometry_wrapper
     wrapper_id = 0
     # Map each wrapper id to what its collector function namespace, class, type, and string format
     wrapper_map: Dict = {}
     # Set of all the includes in the namespace
-    includes: Dict[parser.Include, int] = {}
+    includes: List[parser.Include] = []
     # Set of all classes in the namespace
     classes: List[Union[parser.Class, instantiator.InstantiatedClass]] = []
     classes_elems: Dict[Union[parser.Class, instantiator.InstantiatedClass],
@@ -94,10 +88,6 @@ class MatlabWrapper(CheckMixin):
         if not self.verbose:
             return
         print(message, file=sys.stderr)
-
-    def _add_include(self, include):
-        """"""
-        self.includes[include] = 0
 
     def add_class(self, instantiated_class):
         """Add `instantiated_class` to the list of classes."""
@@ -167,173 +157,6 @@ class MatlabWrapper(CheckMixin):
                 method_out[method_index].append(method)
 
         return method_out
-
-    def _clean_class_name(self, instantiated_class):
-        """Reformatted the C++ class name to fit Matlab defined naming
-        standards
-        """
-        if len(instantiated_class.ctors) != 0:
-            return instantiated_class.ctors[0].name
-
-        return instantiated_class.name
-
-    def _format_type_name(self,
-                          type_name,
-                          separator='::',
-                          include_namespace=True,
-                          constructor=False,
-                          method=False):
-        """
-        Args:
-            type_name: an interface_parser.Typename to reformat
-            separator: the statement to add between namespaces and typename
-            include_namespace: whether to include namespaces when reformatting
-            constructor: if the typename will be in a constructor
-            method: if the typename will be in a method
-
-        Raises:
-            constructor and method cannot both be true
-        """
-        if constructor and method:
-            raise Exception(
-                'Constructor and method parameters cannot both be True')
-
-        formatted_type_name = ''
-        name = type_name.name
-
-        if include_namespace:
-            for namespace in type_name.namespaces:
-                if name not in self.ignore_namespace and namespace != '':
-                    formatted_type_name += namespace + separator
-
-        #self._debug("formatted_ns: {}, ns: {}".format(formatted_type_name, type_name.namespaces))
-        if constructor:
-            formatted_type_name += self.data_type.get(name) or name
-        elif method:
-            formatted_type_name += self.data_type_param.get(name) or name
-        else:
-            formatted_type_name += name
-
-        if separator == "::":  # C++
-            templates = []
-            for idx in range(len(type_name.instantiations)):
-                template = '{}'.format(
-                    self._format_type_name(type_name.instantiations[idx],
-                                          include_namespace=include_namespace,
-                                          constructor=constructor,
-                                          method=method))
-                templates.append(template)
-
-            if len(templates) > 0:  # If there are no templates
-                formatted_type_name += '<{}>'.format(','.join(templates))
-
-        else:
-            for idx in range(len(type_name.instantiations)):
-                formatted_type_name += '{}'.format(
-                    self._format_type_name(type_name.instantiations[idx],
-                                          separator=separator,
-                                          include_namespace=False,
-                                          constructor=constructor,
-                                          method=method))
-
-        return formatted_type_name
-
-    def _format_return_type(self,
-                            return_type,
-                            include_namespace=False,
-                            separator="::"):
-        """Format return_type.
-
-        Args:
-            return_type: an interface_parser.ReturnType to reformat
-            include_namespace: whether to include namespaces when reformatting
-        """
-        return_wrap = ''
-
-        if self._return_count(return_type) == 1:
-            return_wrap = self._format_type_name(
-                return_type.type1.typename,
-                separator=separator,
-                include_namespace=include_namespace)
-        else:
-            return_wrap = 'pair< {type1}, {type2} >'.format(
-                type1=self._format_type_name(
-                    return_type.type1.typename,
-                    separator=separator,
-                    include_namespace=include_namespace),
-                type2=self._format_type_name(
-                    return_type.type2.typename,
-                    separator=separator,
-                    include_namespace=include_namespace))
-
-        return return_wrap
-
-    def _format_class_name(self, instantiated_class, separator=''):
-        """Format a template_instantiator.InstantiatedClass name."""
-        if instantiated_class.parent == '':
-            parent_full_ns = ['']
-        else:
-            parent_full_ns = instantiated_class.parent.full_namespaces()
-        # class_name = instantiated_class.parent.name
-        #
-        # if class_name != '':
-        #     class_name += separator
-        #
-        # class_name += instantiated_class.name
-        parentname = "".join([separator + x
-                              for x in parent_full_ns]) + separator
-
-        class_name = parentname[2 * len(separator):]
-
-        class_name += instantiated_class.name
-
-        return class_name
-
-    def _format_static_method(self, static_method, separator=''):
-        """Example:
-
-                gtsamPoint3.staticFunction
-        """
-        method = ''
-
-        if isinstance(static_method, parser.StaticMethod):
-            method += "".join([separator + x for x in static_method.parent.namespaces()]) + \
-                      separator + static_method.parent.name + separator
-
-        return method[2 * len(separator):]
-
-    def _format_instance_method(self, instance_method, separator=''):
-        """Example:
-
-                gtsamPoint3.staticFunction
-        """
-        method = ''
-
-        if isinstance(instance_method, instantiator.InstantiatedMethod):
-            method_list = [
-                separator + x
-                for x in instance_method.parent.parent.full_namespaces()
-            ]
-            method += "".join(method_list) + separator
-
-            method += instance_method.parent.name + separator
-            method += instance_method.original.name
-            method += "<" + instance_method.instantiations.to_cpp() + ">"
-
-        return method[2 * len(separator):]
-
-    def _format_global_method(self, static_method, separator=''):
-        """Example:
-
-                gtsamPoint3.staticFunction
-        """
-        method = ''
-
-        if isinstance(static_method, parser.GlobalFunction):
-            method += "".join([separator + x for x in static_method.parent.full_namespaces()]) + \
-                      separator
-
-        return method[2 * len(separator):]
 
     def _wrap_args(self, args):
         """Wrap an interface_parser.ArgumentList into a list of arguments.
@@ -1189,7 +1012,7 @@ class MatlabWrapper(CheckMixin):
 
         for element in namespace.content:
             if isinstance(element, parser.Include):
-                self._add_include(element)
+                self.includes.append(element)
 
             elif isinstance(element, parser.Namespace):
                 self.wrap_namespace(element)
@@ -1585,86 +1408,41 @@ class MatlabWrapper(CheckMixin):
 
         return mex_function
 
-    def generate_wrapper(self, namespace):
-        """Generate the c++ wrapper."""
-        # Includes
-        wrapper_file = self.wrapper_file_header + textwrap.dedent("""
-            #include <boost/archive/text_iarchive.hpp>
-            #include <boost/archive/text_oarchive.hpp>
-            #include <boost/serialization/export.hpp>\n
-        """)
+    def get_class_name(self, cls):
+        """Get the name of the class `cls` taking template instantiations into account."""
+        if cls.instantiations:
+            class_name_sep = cls.name
+        else:
+            class_name_sep = cls.to_cpp()
 
-        assert namespace
+        class_name = self._format_class_name(cls)
 
-        includes_list = sorted(list(self.includes.keys()),
-                               key=lambda include: include.header)
+        return class_name, class_name_sep
 
-        # Add the header includes
-        wrapper_file += '\n'.join(map(str, includes_list))
-        wrapper_file += '\n'
-
-        typedef_instances = '\n'
-        typedef_collectors = ''
+    def generate_preamble(self):
+        """
+        Generate the preamble of the wrapper file, which includes
+        the Boost exports, typedefs for collectors, and
+        the _deleteAllObjects and _RTTIRegister functions.
+        """
+        delete_objs = ''
+        typedef_instances = ''
         boost_class_export_guid = ''
-        delete_objs = textwrap.dedent('''\
-            void _deleteAllObjects()
-            {
-              mstream mout;
-              std::streambuf *outbuf = std::cout.rdbuf(&mout);\n
-              bool anyDeleted = false;
-        ''')
-        rtti_reg_start = textwrap.dedent('''\
-            void _{module_name}_RTTIRegister() {{
-              const mxArray *alreadyCreated = mexGetVariablePtr("global", "gtsam_{module_name}_rttiRegistry_created");
-              if(!alreadyCreated) {{
-                std::map<std::string, std::string> types;
-        ''').format(module_name=self.module_name)
-        rtti_reg_mid = ''
-        rtti_reg_end = textwrap.indent(
-            textwrap.dedent('''
-                mxArray *registry = mexGetVariable("global", "gtsamwrap_rttiRegistry");
-                if(!registry)
-                  registry = mxCreateStructMatrix(1, 1, 0, NULL);
-                typedef std::pair<std::string, std::string> StringPair;
-                for(const StringPair& rtti_matlab: types) {
-                  int fieldId = mxAddField(registry, rtti_matlab.first.c_str());
-                  if(fieldId < 0)
-                    mexErrMsgTxt("gtsam wrap:  Error indexing RTTI types, inheritance will not work correctly");
-                  mxArray *matlabName = mxCreateString(rtti_matlab.second.c_str());
-                  mxSetFieldByNumber(registry, 0, fieldId, matlabName);
-                }
-                if(mexPutVariable("global", "gtsamwrap_rttiRegistry", registry) != 0)
-                  mexErrMsgTxt("gtsam wrap:  Error indexing RTTI types, inheritance will not work correctly");
-                mxDestroyArray(registry);
-        '''),
-            prefix='    ') + '    \n' + textwrap.dedent('''\
-                mxArray *newAlreadyCreated = mxCreateNumericMatrix(0, 0, mxINT8_CLASS, mxREAL);
-                if(mexPutVariable("global", "gtsam_geometry_rttiRegistry_created", newAlreadyCreated) != 0)
-                  mexErrMsgTxt("gtsam wrap:  Error indexing RTTI types, inheritance will not work correctly");
-                mxDestroyArray(newAlreadyCreated);
-              }
-            }
-        ''')
-        ptr_ctor_frag = ''
+        typedef_collectors = ''
+        rtti_classes = ''
 
         for cls in self.classes:
-            uninstantiated_name = "::".join(
-                cls.namespaces()[1:]) + "::" + cls.name
-
+            # Check if class is in ignore list.
+            # If so, then skip
+            uninstantiated_name = "::".join(cls.namespaces()[1:] + [cls.name])
             if uninstantiated_name in self.ignore_classes:
-                self._debug("Ignoring: {} -> {}".format(
-                    cls.name, uninstantiated_name))
                 continue
 
-            def _has_serialization(cls):
-                for m in cls.methods:
-                    if m.name in self.whitelist:
-                        return True
-                return False
+            class_name, class_name_sep = self.get_class_name(cls)
 
+            # If a class has instantiations, then declare the typedef for each instance
             if cls.instantiations:
                 cls_insts = ''
-
                 for i, inst in enumerate(cls.instantiations):
                     if i != 0:
                         cls_insts += ', '
@@ -1675,27 +1453,18 @@ class MatlabWrapper(CheckMixin):
                     .format(original_class_name=cls.to_cpp(),
                             class_name_sep=cls.name)
 
-                class_name_sep = cls.name
-                class_name = self._format_class_name(cls)
+            # Get the Boost exports for serialization
+            if cls.original.namespaces() and self._has_serialization(cls):
+                boost_class_export_guid += 'BOOST_CLASS_EXPORT_GUID({}, "{}");\n'.format(
+                    class_name_sep, class_name)
 
-                if len(cls.original.namespaces()) > 1 and _has_serialization(
-                        cls):
-                    boost_class_export_guid += 'BOOST_CLASS_EXPORT_GUID({}, "{}");\n'.format(
-                        class_name_sep, class_name)
-            else:
-                class_name_sep = cls.to_cpp()
-                class_name = self._format_class_name(cls)
-
-                if len(cls.original.namespaces()) > 1 and _has_serialization(
-                        cls):
-                    boost_class_export_guid += 'BOOST_CLASS_EXPORT_GUID({}, "{}");\n'.format(
-                        class_name_sep, class_name)
-
+            # Typedef and declare the collector objects.
             typedef_collectors += textwrap.dedent('''\
                 typedef std::set<boost::shared_ptr<{class_name_sep}>*> Collector_{class_name};
                 static Collector_{class_name} collector_{class_name};
             ''').format(class_name_sep=class_name_sep, class_name=class_name)
 
+            # Generate the _deleteAllObjects method
             delete_objs += textwrap.indent(textwrap.dedent('''\
                 {{ for(Collector_{class_name}::iterator iter = collector_{class_name}.begin();
                     iter != collector_{class_name}.end(); ) {{
@@ -1707,11 +1476,88 @@ class MatlabWrapper(CheckMixin):
                                            prefix='  ')
 
             if cls.is_virtual:
-                rtti_reg_mid += '    types.insert(std::make_pair(typeid({}).name(), "{}"));\n' \
+                class_name, class_name_sep = self.get_class_name(cls)
+                rtti_classes += '    types.insert(std::make_pair(typeid({}).name(), "{}"));\n' \
                     .format(class_name_sep, class_name)
 
-        set_next_case = False
+        # Generate the full deleteAllObjects function
+        delete_all_objs = textwrap.dedent('''\
+            void _deleteAllObjects()
+            {{
+              mstream mout;
+              std::streambuf *outbuf = std::cout.rdbuf(&mout);\n
+              bool anyDeleted = false;
+            {delete_objs}
+              if(anyDeleted)
+                cout <<
+                  "WARNING:  Wrap modules with variables in the workspace have been reloaded due to\\n"
+                  "calling destructors, call \'clear all\' again if you plan to now recompile a wrap\\n"
+                  "module, so that your recompiled module is used instead of the old one." << endl;
+              std::cout.rdbuf(outbuf);
+            }}
+        ''').format(delete_objs=delete_objs)
 
+        # Generate the full RTTIRegister function
+        rtti_register = textwrap.dedent('''\
+            void _{module_name}_RTTIRegister() {{
+              const mxArray *alreadyCreated = mexGetVariablePtr("global", "gtsam_{module_name}_rttiRegistry_created");
+              if(!alreadyCreated) {{
+                std::map<std::string, std::string> types;
+
+                {rtti_classes}
+
+                mxArray *registry = mexGetVariable("global", "gtsamwrap_rttiRegistry");
+                if(!registry)
+                  registry = mxCreateStructMatrix(1, 1, 0, NULL);
+                typedef std::pair<std::string, std::string> StringPair;
+                for(const StringPair& rtti_matlab: types) {{
+                  int fieldId = mxAddField(registry, rtti_matlab.first.c_str());
+                  if(fieldId < 0) {{
+                    mexErrMsgTxt("gtsam wrap:  Error indexing RTTI types, inheritance will not work correctly");
+                  }}
+                  mxArray *matlabName = mxCreateString(rtti_matlab.second.c_str());
+                  mxSetFieldByNumber(registry, 0, fieldId, matlabName);
+                }}
+                if(mexPutVariable("global", "gtsamwrap_rttiRegistry", registry) != 0) {{
+                  mexErrMsgTxt("gtsam wrap:  Error indexing RTTI types, inheritance will not work correctly");
+                }}
+                mxDestroyArray(registry);
+
+                mxArray *newAlreadyCreated = mxCreateNumericMatrix(0, 0, mxINT8_CLASS, mxREAL);
+                if(mexPutVariable("global", "gtsam_geometry_rttiRegistry_created", newAlreadyCreated) != 0) {{
+                  mexErrMsgTxt("gtsam wrap:  Error indexing RTTI types, inheritance will not work correctly");
+                }}
+                mxDestroyArray(newAlreadyCreated);
+              }}
+            }}
+        ''').format(module_name=self.module_name, rtti_classes=rtti_classes)
+
+        return typedef_instances, boost_class_export_guid, \
+            typedef_collectors, delete_all_objs, rtti_register
+
+    def generate_wrapper(self, namespace):
+        """Generate the c++ wrapper."""
+        # Includes
+        wrapper_file = self.wrapper_file_header + textwrap.dedent("""
+            #include <boost/archive/text_iarchive.hpp>
+            #include <boost/archive/text_oarchive.hpp>
+            #include <boost/serialization/export.hpp>\n
+        """)
+
+        assert namespace, "Namespace if empty"
+
+        # Generate the header includes
+        includes_list = sorted(self.includes,
+                               key=lambda include: include.header)
+        includes = '\n'.join(map(str, includes_list))
+
+        preamble = self.generate_preamble()
+        typedef_instances, boost_class_export_guid, \
+            typedef_collectors, delete_all_objs, \
+                rtti_register = preamble
+
+        ptr_ctor_frag = ''
+        set_next_case = False
         for idx in range(self.wrapper_id):
             id_val = self.wrapper_map.get(idx)
             queue_set_next_case = set_next_case
@@ -1733,23 +1579,19 @@ class MatlabWrapper(CheckMixin):
                     id_val[1].name, idx, id_val[1].to_cpp())
 
         wrapper_file += textwrap.dedent('''\
+            {includes}
             {typedef_instances}
             {boost_class_export_guid}
             {typedefs_collectors}
-            {delete_objs}  if(anyDeleted)
-                cout <<
-                  "WARNING:  Wrap modules with variables in the workspace have been reloaded due to\\n"
-                  "calling destructors, call \'clear all\' again if you plan to now recompile a wrap\\n"
-                  "module, so that your recompiled module is used instead of the old one." << endl;
-              std::cout.rdbuf(outbuf);
-            }}\n
+            {delete_all_objs}
             {rtti_register}
             {pointer_constructor_fragment}{mex_function}''') \
-            .format(typedef_instances=typedef_instances,
+            .format(includes=includes,
+                    typedef_instances=typedef_instances,
                     boost_class_export_guid=boost_class_export_guid,
                     typedefs_collectors=typedef_collectors,
-                    delete_objs=delete_objs,
-                    rtti_register=rtti_reg_start + rtti_reg_mid + rtti_reg_end,
+                    delete_all_objs=delete_all_objs,
+                    rtti_register=rtti_register,
                     pointer_constructor_fragment=ptr_ctor_frag,
                     mex_function=self.mex_function())
 
