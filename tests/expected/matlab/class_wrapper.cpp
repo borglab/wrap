@@ -15,7 +15,6 @@ typedef MultipleTemplates<int, double> MultipleTemplatesIntDouble;
 typedef MultipleTemplates<int, float> MultipleTemplatesIntFloat;
 typedef MyFactor<gtsam::Pose2, gtsam::Matrix> MyFactorPosePoint2;
 
-
 typedef std::set<boost::shared_ptr<FunRange>*> Collector_FunRange;
 static Collector_FunRange collector_FunRange;
 typedef std::set<boost::shared_ptr<FunDouble>*> Collector_FunDouble;
@@ -36,6 +35,7 @@ typedef std::set<boost::shared_ptr<ForwardKinematics>*> Collector_ForwardKinemat
 static Collector_ForwardKinematics collector_ForwardKinematics;
 typedef std::set<boost::shared_ptr<MyFactorPosePoint2>*> Collector_MyFactorPosePoint2;
 static Collector_MyFactorPosePoint2 collector_MyFactorPosePoint2;
+
 
 void _deleteAllObjects()
 {
@@ -103,6 +103,7 @@ void _deleteAllObjects()
     collector_MyFactorPosePoint2.erase(iter++);
     anyDeleted = true;
   } }
+
   if(anyDeleted)
     cout <<
       "WARNING:  Wrap modules with variables in the workspace have been reloaded due to\n"
@@ -116,24 +117,29 @@ void _class_RTTIRegister() {
   if(!alreadyCreated) {
     std::map<std::string, std::string> types;
 
+
+
     mxArray *registry = mexGetVariable("global", "gtsamwrap_rttiRegistry");
     if(!registry)
       registry = mxCreateStructMatrix(1, 1, 0, NULL);
     typedef std::pair<std::string, std::string> StringPair;
     for(const StringPair& rtti_matlab: types) {
       int fieldId = mxAddField(registry, rtti_matlab.first.c_str());
-      if(fieldId < 0)
+      if(fieldId < 0) {
         mexErrMsgTxt("gtsam wrap:  Error indexing RTTI types, inheritance will not work correctly");
+      }
       mxArray *matlabName = mxCreateString(rtti_matlab.second.c_str());
       mxSetFieldByNumber(registry, 0, fieldId, matlabName);
     }
-    if(mexPutVariable("global", "gtsamwrap_rttiRegistry", registry) != 0)
+    if(mexPutVariable("global", "gtsamwrap_rttiRegistry", registry) != 0) {
       mexErrMsgTxt("gtsam wrap:  Error indexing RTTI types, inheritance will not work correctly");
+    }
     mxDestroyArray(registry);
-    
+
     mxArray *newAlreadyCreated = mxCreateNumericMatrix(0, 0, mxINT8_CLASS, mxREAL);
-    if(mexPutVariable("global", "gtsam_geometry_rttiRegistry_created", newAlreadyCreated) != 0)
+    if(mexPutVariable("global", "gtsam_geometry_rttiRegistry_created", newAlreadyCreated) != 0) {
       mexErrMsgTxt("gtsam wrap:  Error indexing RTTI types, inheritance will not work correctly");
+    }
     mxDestroyArray(newAlreadyCreated);
   }
 }
