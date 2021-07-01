@@ -7,15 +7,16 @@ that Matlab's MEX compiler can use.
 
 import os
 import os.path as osp
-import sys
 import textwrap
 from functools import partial, reduce
 from typing import Dict, Iterable, List, Union
 
+from loguru import logger
+
 import gtwrap.interface_parser as parser
 import gtwrap.template_instantiator as instantiator
-from gtwrap.matlab_wrapper.templates import WrapperTemplate
 from gtwrap.matlab_wrapper.mixins import CheckMixin, FormatMixin
+from gtwrap.matlab_wrapper.templates import WrapperTemplate
 
 
 class MatlabWrapper(CheckMixin, FormatMixin):
@@ -1518,64 +1519,77 @@ class MatlabWrapper(CheckMixin, FormatMixin):
         return WrapperTemplate.collector_function_deserialize.format(
             class_name=class_name, full_name=full_name, namespace=namespace)
 
-    def wrap(self, content):
+    def generate_content(self, cc_content, path):
+        """
+        Generate files and folders from matlab wrapper content.
+
+        Args:
+            cc_content: The content to generate formatted as
+                (file_name, file_content) or
+                (folder_name, [(file_name, file_content)])
+            path: The path to the files parent folder within the main folder
+        """
+        for c in cc_content:
+            if isinstance(c, list):
+                if len(c) == 0:
+                    continue
+
+                logger.debug("c object: {}".format(c[0][0]))
+                path_to_folder = osp.join(path, c[0][0])
+
+                if not osp.isdir(path_to_folder):
+                    try:
+                        os.makedirs(path_to_folder, exist_ok=True)
+                    except OSError:
+                        pass
+
+                for sub_content in c:
+                    self.generate_content(sub_content[1], path_to_folder)
+
+            elif isinstance(c[1], list):
+                path_to_folder = osp.join(path, c[0])
+
+                logger.debug(
+                    "[generate_content_global]: {}".format(path_to_folder))
+                if not osp.isdir(path_to_folder):
+                    try:
+                        os.makedirs(path_to_folder, exist_ok=True)
+                    except OSError:
+                        pass
+                for sub_content in c[1]:
+                    path_to_file = osp.join(path_to_folder, sub_content[0])
+                    logger.debug(
+                        "[generate_global_method]: {}".format(path_to_file))
+                    with open(path_to_file, 'w') as f:
+                        f.write(sub_content[1])
+            else:
+                path_to_file = osp.join(path, c[0])
+
+                logger.debug("[generate_content]: {}".format(path_to_file))
+                if not osp.isdir(path_to_file):
+                    try:
+                        os.mkdir(path)
+                    except OSError:
+                        pass
+
+                with open(path_to_file, 'w') as f:
+                    f.write(c[1])
+
+    def wrap(self, files, path):
         """High level function to wrap the project."""
+        with open(files[0], 'r') as f:
+            content = f.read()
+
         # Parse the contents of the interface file
         parsed_result = parser.Module.parseString(content)
+
         # Instantiate the module
         module = instantiator.instantiate_namespace(parsed_result)
-        #
+        # Wrap the full namespace
         self.wrap_namespace(module)
         self.generate_wrapper(module)
 
+        # Generate the corresponding .m and .cpp files
+        self.generate_content(self.content, path)
+
         return self.content
-
-
-def generate_content(cc_content, path):
-    """
-    Generate files and folders from matlab wrapper content.
-
-    Args:
-        cc_content: The content to generate formatted as
-            (file_name, file_content) or
-            (folder_name, [(file_name, file_content)])
-        path: The path to the files parent folder within the main folder
-    """
-    for c in cc_content:
-        if isinstance(c, list):
-            if len(c) == 0:
-                continue
-            path_to_folder = osp.join(path, c[0][0])
-
-            if not os.path.isdir(path_to_folder):
-                try:
-                    os.makedirs(path_to_folder, exist_ok=True)
-                except OSError:
-                    pass
-
-            for sub_content in c:
-                generate_content(sub_content[1], path_to_folder)
-
-        elif isinstance(c[1], list):
-            path_to_folder = osp.join(path, c[0])
-
-            if not os.path.isdir(path_to_folder):
-                try:
-                    os.makedirs(path_to_folder, exist_ok=True)
-                except OSError:
-                    pass
-            for sub_content in c[1]:
-                path_to_file = osp.join(path_to_folder, sub_content[0])
-                with open(path_to_file, 'w') as f:
-                    f.write(sub_content[1])
-        else:
-            path_to_file = osp.join(path, c[0])
-
-            if not os.path.isdir(path_to_file):
-                try:
-                    os.mkdir(path)
-                except OSError:
-                    pass
-
-            with open(path_to_file, 'w') as f:
-                f.write(c[1])

@@ -1,3 +1,3 @@
 """Package to wrap C++ code to Matlab via MEX."""
 
-from .wrapper import MatlabWrapper, generate_content
+from .wrapper import MatlabWrapper
