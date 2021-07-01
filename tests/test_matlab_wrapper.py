@@ -34,7 +34,7 @@ class TestWrap(unittest.TestCase):
     logger.remove()  # remove the default sink
     logger.add(sys.stderr, format="{time} {level} {message}", level="INFO")
 
-    def generate_content(self, cc_content, path=MATLAB_ACTUAL_DIR):
+    def generate_wrapper_files(self, cc_content, path=MATLAB_ACTUAL_DIR):
         """Generate files and folders from matlab wrapper content.
 
         Keyword arguments:
@@ -58,7 +58,7 @@ class TestWrap(unittest.TestCase):
 
                 for sub_content in c:
                     logger.debug("sub object: {}".format(sub_content[1][0][0]))
-                    self.generate_content(sub_content[1], path_to_folder)
+                    self.generate_wrapper_files(sub_content[1], path_to_folder)
 
             elif isinstance(c[1], list):
                 path_to_folder = osp.join(path, c[0])
@@ -123,8 +123,7 @@ class TestWrap(unittest.TestCase):
         )
 
         cc_content = wrapper.wrap(content)
-
-        self.generate_content(cc_content)
+        self.generate_wrapper_files(cc_content)
 
         self.assertTrue(osp.isdir(osp.join(self.MATLAB_ACTUAL_DIR, '+gtsam')))
 
@@ -149,7 +148,7 @@ class TestWrap(unittest.TestCase):
 
         cc_content = wrapper.wrap(content)
 
-        self.generate_content(cc_content)
+        self.generate_wrapper_files(cc_content)
 
         files = [
             'functions_wrapper.cpp', 'aGlobalFunction.m', 'load2D.m',
@@ -177,7 +176,7 @@ class TestWrap(unittest.TestCase):
 
         cc_content = wrapper.wrap(content)
 
-        self.generate_content(cc_content)
+        self.generate_wrapper_files(cc_content)
 
         files = [
             'class_wrapper.cpp', 'FunDouble.m', 'FunRange.m',
@@ -205,7 +204,7 @@ class TestWrap(unittest.TestCase):
 
         cc_content = wrapper.wrap(content)
 
-        self.generate_content(cc_content)
+        self.generate_wrapper_files(cc_content)
 
         files = [
             'inheritance_wrapper.cpp', 'MyBase.m', 'MyTemplateMatrix.m',
@@ -233,7 +232,7 @@ class TestWrap(unittest.TestCase):
 
         cc_content = wrapper.wrap(content)
 
-        self.generate_content(cc_content)
+        self.generate_wrapper_files(cc_content)
 
         files = [
             'namespaces_wrapper.cpp', '+ns1/aGlobalFunction.m',
@@ -263,7 +262,7 @@ class TestWrap(unittest.TestCase):
 
         cc_content = wrapper.wrap(content)
 
-        self.generate_content(cc_content)
+        self.generate_wrapper_files(cc_content)
 
         files = [
             'special_cases_wrapper.cpp',
