@@ -22,19 +22,30 @@ class TestWrap(unittest.TestCase):
     """
     Test the Matlab wrapper
     """
-    TEST_DIR = osp.dirname(osp.realpath(__file__))
-    INTERFACE_DIR = osp.join(TEST_DIR, "fixtures")
-    MATLAB_TEST_DIR = osp.join(TEST_DIR, "expected", "matlab")
-    MATLAB_ACTUAL_DIR = osp.join(TEST_DIR, "actual", "matlab")
+    def setUp(self) -> None:
+        super().setUp()
 
-    # Create the `actual/matlab` directory
-    os.makedirs(MATLAB_ACTUAL_DIR, exist_ok=True)
+        # Set up all the directories
+        self.TEST_DIR = osp.dirname(osp.realpath(__file__))
+        self.INTERFACE_DIR = osp.join(self.TEST_DIR, "fixtures")
+        self.MATLAB_TEST_DIR = osp.join(self.TEST_DIR, "expected", "matlab")
+        self.MATLAB_ACTUAL_DIR = osp.join(self.TEST_DIR, "actual", "matlab")
 
-    # set the log level to INFO by default
-    logger.remove()  # remove the default sink
-    logger.add(sys.stderr, format="{time} {level} {message}", level="INFO")
+        # Generate the matlab.h file if it does not exist
+        template_file = osp.join(self.TEST_DIR, "..", "gtwrap",
+                                 "matlab_wrapper", "matlab_wrapper.tpl")
+        if not osp.exists(template_file):
+            with open(template_file, 'w') as tpl:
+                tpl.write("#include <gtwrap/matlab.h>\n#include <map>\n")
 
-    def generate_wrapper_files(self, cc_content, path=MATLAB_ACTUAL_DIR):
+        # Create the `actual/matlab` directory
+        os.makedirs(self.MATLAB_ACTUAL_DIR, exist_ok=True)
+
+        # set the log level to INFO by default
+        logger.remove()  # remove the default sink
+        logger.add(sys.stderr, format="{time} {level} {message}", level="INFO")
+
+    def generate_wrapper_files(self, cc_content, path=None):
         """Generate files and folders from matlab wrapper content.
 
         Keyword arguments:
@@ -43,6 +54,9 @@ class TestWrap(unittest.TestCase):
             (folder_name, [(file_name, file_content)])
         path -- the path to the files parent folder within the main folder
         """
+        if path is None:
+            path = self.MATLAB_ACTUAL_DIR
+
         for c in cc_content:
             if isinstance(c, list):
                 if len(c) == 0:
