@@ -48,65 +48,6 @@ class TestWrap(unittest.TestCase):
         logger.remove()  # remove the default sink
         logger.add(sys.stderr, format="{time} {level} {message}", level="INFO")
 
-    def generate_wrapper_files(self, cc_content, path=None):
-        """Generate files and folders from matlab wrapper content.
-
-        Keyword arguments:
-        cc_content -- the content to generate formatted as
-            (file_name, file_content) or
-            (folder_name, [(file_name, file_content)])
-        path -- the path to the files parent folder within the main folder
-        """
-        if path is None:
-            path = self.MATLAB_ACTUAL_DIR
-
-        for c in cc_content:
-            if isinstance(c, list):
-                if len(c) == 0:
-                    continue
-                logger.debug("c object: {}".format(c[0][0]))
-                path_to_folder = osp.join(path, c[0][0])
-
-                if not osp.isdir(path_to_folder):
-                    try:
-                        os.makedirs(path_to_folder, exist_ok=True)
-                    except OSError:
-                        pass
-
-                for sub_content in c:
-                    logger.debug("sub object: {}".format(sub_content[1][0][0]))
-                    self.generate_wrapper_files(sub_content[1], path_to_folder)
-
-            elif isinstance(c[1], list):
-                path_to_folder = osp.join(path, c[0])
-
-                logger.debug(
-                    "[generate_content_global]: {}".format(path_to_folder))
-                if not osp.isdir(path_to_folder):
-                    try:
-                        os.makedirs(path_to_folder, exist_ok=True)
-                    except OSError:
-                        pass
-                for sub_content in c[1]:
-                    path_to_file = osp.join(path_to_folder, sub_content[0])
-                    logger.debug(
-                        "[generate_global_method]: {}".format(path_to_file))
-                    with open(path_to_file, 'w') as f:
-                        f.write(sub_content[1])
-
-            else:
-                path_to_file = osp.join(path, c[0])
-
-                logger.debug("[generate_content]: {}".format(path_to_file))
-                if not osp.isdir(path_to_file):
-                    try:
-                        os.mkdir(path)
-                    except OSError:
-                        pass
-
-                with open(path_to_file, 'w') as f:
-                    f.write(c[1])
-
     def compare_and_diff(self, file):
         """
         Compute the comparison between the expected and actual file,
@@ -126,8 +67,7 @@ class TestWrap(unittest.TestCase):
         python3 wrap/matlab_wrapper.py --src wrap/tests/geometry.h
             --module_name geometry --out wrap/tests/actual-matlab
         """
-        with open(osp.join(self.INTERFACE_DIR, 'geometry.i'), 'r') as f:
-            content = f.read()
+        file = osp.join(self.INTERFACE_DIR, 'geometry.i')
 
         # Create MATLAB wrapper instance
         wrapper = MatlabWrapper(
@@ -136,20 +76,18 @@ class TestWrap(unittest.TestCase):
             ignore_classes=[''],
         )
 
-        cc_content = wrapper.wrap(content)
-        self.generate_wrapper_files(cc_content)
-
-        self.assertTrue(osp.isdir(osp.join(self.MATLAB_ACTUAL_DIR, '+gtsam')))
+        wrapper.wrap([file], path=self.MATLAB_ACTUAL_DIR)
 
         files = ['+gtsam/Point2.m', '+gtsam/Point3.m', 'geometry_wrapper.cpp']
+
+        self.assertTrue(osp.isdir(osp.join(self.MATLAB_ACTUAL_DIR, '+gtsam')))
 
         for file in files:
             self.compare_and_diff(file)
 
     def test_functions(self):
         """Test interface file with function info."""
-        with open(osp.join(self.INTERFACE_DIR, 'functions.i'), 'r') as f:
-            content = f.read()
+        file = osp.join(self.INTERFACE_DIR, 'functions.i')
 
         wrapper = MatlabWrapper(
             module_name='functions',
@@ -157,9 +95,7 @@ class TestWrap(unittest.TestCase):
             ignore_classes=[''],
         )
 
-        cc_content = wrapper.wrap(content)
-
-        self.generate_wrapper_files(cc_content)
+        wrapper.wrap([file], path=self.MATLAB_ACTUAL_DIR)
 
         files = [
             'functions_wrapper.cpp', 'aGlobalFunction.m', 'load2D.m',
@@ -173,8 +109,7 @@ class TestWrap(unittest.TestCase):
 
     def test_class(self):
         """Test interface file with only class info."""
-        with open(osp.join(self.INTERFACE_DIR, 'class.i'), 'r') as f:
-            content = f.read()
+        file = osp.join(self.INTERFACE_DIR, 'class.i')
 
         wrapper = MatlabWrapper(
             module_name='class',
@@ -182,9 +117,7 @@ class TestWrap(unittest.TestCase):
             ignore_classes=[''],
         )
 
-        cc_content = wrapper.wrap(content)
-
-        self.generate_wrapper_files(cc_content)
+        wrapper.wrap([file], path=self.MATLAB_ACTUAL_DIR)
 
         files = [
             'class_wrapper.cpp', 'FunDouble.m', 'FunRange.m',
@@ -198,18 +131,14 @@ class TestWrap(unittest.TestCase):
 
     def test_inheritance(self):
         """Test interface file with class inheritance definitions."""
-        with open(osp.join(self.INTERFACE_DIR, 'inheritance.i'), 'r') as f:
-            content = f.read()
+        file = osp.join(self.INTERFACE_DIR, 'inheritance.i')
 
         wrapper = MatlabWrapper(
             module_name='inheritance',
             top_module_namespace=['gtsam'],
             ignore_classes=[''],
         )
-
-        cc_content = wrapper.wrap(content)
-
-        self.generate_wrapper_files(cc_content)
+        wrapper.wrap([file], path=self.MATLAB_ACTUAL_DIR)
 
         files = [
             'inheritance_wrapper.cpp', 'MyBase.m', 'MyTemplateMatrix.m',
@@ -223,8 +152,7 @@ class TestWrap(unittest.TestCase):
         """
         Test interface file with full namespace definition.
         """
-        with open(osp.join(self.INTERFACE_DIR, 'namespaces.i'), 'r') as f:
-            content = f.read()
+        file = osp.join(self.INTERFACE_DIR, 'namespaces.i')
 
         wrapper = MatlabWrapper(
             module_name='namespaces',
@@ -232,9 +160,7 @@ class TestWrap(unittest.TestCase):
             ignore_classes=[''],
         )
 
-        cc_content = wrapper.wrap(content)
-
-        self.generate_wrapper_files(cc_content)
+        wrapper.wrap([file], path=self.MATLAB_ACTUAL_DIR)
 
         files = [
             'namespaces_wrapper.cpp', '+ns1/aGlobalFunction.m',
@@ -250,18 +176,14 @@ class TestWrap(unittest.TestCase):
         """
         Tests for some unique, non-trivial features.
         """
-        with open(osp.join(self.INTERFACE_DIR, 'special_cases.i'), 'r') as f:
-            content = f.read()
+        file = osp.join(self.INTERFACE_DIR, 'special_cases.i')
 
         wrapper = MatlabWrapper(
             module_name='special_cases',
             top_module_namespace=['gtsam'],
             ignore_classes=[''],
         )
-
-        cc_content = wrapper.wrap(content)
-
-        self.generate_wrapper_files(cc_content)
+        wrapper.wrap([file], path=self.MATLAB_ACTUAL_DIR)
 
         files = [
             'special_cases_wrapper.cpp',
