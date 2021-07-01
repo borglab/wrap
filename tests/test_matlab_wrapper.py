@@ -31,6 +31,9 @@ class TestWrap(unittest.TestCase):
         self.MATLAB_TEST_DIR = osp.join(self.TEST_DIR, "expected", "matlab")
         self.MATLAB_ACTUAL_DIR = osp.join(self.TEST_DIR, "actual", "matlab")
 
+        if not osp.exists(self.MATLAB_ACTUAL_DIR):
+            os.mkdir(self.MATLAB_ACTUAL_DIR)
+
         # Generate the matlab.h file if it does not exist
         template_file = osp.join(self.TEST_DIR, "..", "gtwrap",
                                  "matlab_wrapper", "matlab_wrapper.tpl")
@@ -126,9 +129,6 @@ class TestWrap(unittest.TestCase):
         with open(osp.join(self.INTERFACE_DIR, 'geometry.i'), 'r') as f:
             content = f.read()
 
-        if not osp.exists(self.MATLAB_ACTUAL_DIR):
-            os.mkdir(self.MATLAB_ACTUAL_DIR)
-
         # Create MATLAB wrapper instance
         wrapper = MatlabWrapper(
             module_name='geometry',
@@ -150,9 +150,6 @@ class TestWrap(unittest.TestCase):
         """Test interface file with function info."""
         with open(osp.join(self.INTERFACE_DIR, 'functions.i'), 'r') as f:
             content = f.read()
-
-        if not osp.exists(self.MATLAB_ACTUAL_DIR):
-            os.mkdir(self.MATLAB_ACTUAL_DIR)
 
         wrapper = MatlabWrapper(
             module_name='functions',
@@ -179,9 +176,6 @@ class TestWrap(unittest.TestCase):
         with open(osp.join(self.INTERFACE_DIR, 'class.i'), 'r') as f:
             content = f.read()
 
-        if not osp.exists(self.MATLAB_ACTUAL_DIR):
-            os.mkdir(self.MATLAB_ACTUAL_DIR)
-
         wrapper = MatlabWrapper(
             module_name='class',
             top_module_namespace=['gtsam'],
@@ -207,9 +201,6 @@ class TestWrap(unittest.TestCase):
         with open(osp.join(self.INTERFACE_DIR, 'inheritance.i'), 'r') as f:
             content = f.read()
 
-        if not osp.exists(self.MATLAB_ACTUAL_DIR):
-            os.mkdir(self.MATLAB_ACTUAL_DIR)
-
         wrapper = MatlabWrapper(
             module_name='inheritance',
             top_module_namespace=['gtsam'],
@@ -234,9 +225,6 @@ class TestWrap(unittest.TestCase):
         """
         with open(osp.join(self.INTERFACE_DIR, 'namespaces.i'), 'r') as f:
             content = f.read()
-
-        if not osp.exists(self.MATLAB_ACTUAL_DIR):
-            os.mkdir(self.MATLAB_ACTUAL_DIR)
 
         wrapper = MatlabWrapper(
             module_name='namespaces',
@@ -264,9 +252,6 @@ class TestWrap(unittest.TestCase):
         """
         with open(osp.join(self.INTERFACE_DIR, 'special_cases.i'), 'r') as f:
             content = f.read()
-
-        if not osp.exists(self.MATLAB_ACTUAL_DIR):
-            os.mkdir(self.MATLAB_ACTUAL_DIR)
 
         wrapper = MatlabWrapper(
             module_name='special_cases',
