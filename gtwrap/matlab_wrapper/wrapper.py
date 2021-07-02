@@ -7,15 +7,16 @@ that Matlab's MEX compiler can use.
 
 import os
 import os.path as osp
-import sys
 import textwrap
 from functools import partial, reduce
 from typing import Dict, Iterable, List, Union
 
+from loguru import logger
+
 import gtwrap.interface_parser as parser
 import gtwrap.template_instantiator as instantiator
+from gtwrap.matlab_wrapper.mixins import CheckMixin, FormatMixin
 from gtwrap.matlab_wrapper.templates import WrapperTemplate
-from gtwrap.matlab_wrapper.utils import CheckMixin, FormatMixin
 
 
 class MatlabWrapper(CheckMixin, FormatMixin):
@@ -87,11 +88,6 @@ class MatlabWrapper(CheckMixin, FormatMixin):
         with open(osp.join(dir_path, "matlab_wrapper.tpl")) as f:
             self.wrapper_file_headers = f.read()
 
-    def _debug(self, message):
-        if not self.verbose:
-            return
-        print(message, file=sys.stderr)
-
     def add_class(self, instantiated_class):
         """Add `instantiated_class` to the list of classes."""
         if self.classes_elems.get(instantiated_class) is None:
@@ -155,8 +151,6 @@ class MatlabWrapper(CheckMixin, FormatMixin):
                 method_map[method.name] = len(method_out)
                 method_out.append([method])
             else:
-                self._debug("[_group_methods] Merging {} with {}".format(
-                    method_index, method.name))
                 method_out[method_index].append(method)
 
         return method_out
@@ -622,20 +616,12 @@ class MatlabWrapper(CheckMixin, FormatMixin):
         base_obj = ''
 
         if has_parent:
-            self._debug("class: {} ns: {}".format(
-                parent_name,
-                self._format_class_name(inst_class.parent, separator=".")))
-
-        if has_parent:
             base_obj = '  obj = obj@{parent_name}(uint64(5139824614673773682), base_ptr);'.format(
                 parent_name=parent_name)
 
         if base_obj:
             base_obj = '\n' + base_obj
 
-        self._debug("class: {}, name: {}".format(
-            inst_class.name, self._format_class_name(inst_class,
-                                                     separator=".")))
         methods_wrap += textwrap.indent(textwrap.dedent('''\
               else
                 error('Arguments do not match any overload of {class_name_doc} constructor');
@@ -1118,10 +1104,6 @@ class MatlabWrapper(CheckMixin, FormatMixin):
                 method_name = self._format_static_method(method, '::')
             method_name += method.name
 
-        if "MeasureRange" in method_name:
-            self._debug("method: {}, method: {}, inst: {}".format(
-                method_name, method.name, method.parent.to_cpp()))
-
         obj = '  ' if return_1_name == 'void' else ''
         obj += '{}{}({})'.format(obj_start, method_name, params)
 
@@ -1140,12 +1122,6 @@ class MatlabWrapper(CheckMixin, FormatMixin):
                         shared_obj = '{obj},"{method_name_sep}"'.format(
                             obj=obj, method_name_sep=sep_method_name('.'))
                     else:
-                        self._debug("Non-PTR: {}, {}".format(
-                            return_1, type(return_1)))
-                        self._debug("Inner type is: {}, {}".format(
-                            return_1.typename.name, sep_method_name('.')))
-                        self._debug("Inner type instantiations: {}".format(
-                            return_1.typename.instantiations))
                         method_name_sep_dot = sep_method_name('.')
                         shared_obj_template = 'boost::make_shared<{method_name_sep_col}>({obj}),' \
                                               '"{method_name_sep_dot}"'
@@ -1543,64 +1519,77 @@ class MatlabWrapper(CheckMixin, FormatMixin):
         return WrapperTemplate.collector_function_deserialize.format(
             class_name=class_name, full_name=full_name, namespace=namespace)
 
-    def wrap(self, content):
+    def generate_content(self, cc_content, path):
+        """
+        Generate files and folders from matlab wrapper content.
+
+        Args:
+            cc_content: The content to generate formatted as
+                (file_name, file_content) or
+                (folder_name, [(file_name, file_content)])
+            path: The path to the files parent folder within the main folder
+        """
+        for c in cc_content:
+            if isinstance(c, list):
+                if len(c) == 0:
+                    continue
+
+                logger.debug("c object: {}".format(c[0][0]))
+                path_to_folder = osp.join(path, c[0][0])
+
+                if not osp.isdir(path_to_folder):
+                    try:
+                        os.makedirs(path_to_folder, exist_ok=True)
+                    except OSError:
+                        pass
+
+                for sub_content in c:
+                    self.generate_content(sub_content[1], path_to_folder)
+
+            elif isinstance(c[1], list):
+                path_to_folder = osp.join(path, c[0])
+
+                logger.debug(
+                    "[generate_content_global]: {}".format(path_to_folder))
+                if not osp.isdir(path_to_folder):
+                    try:
+                        os.makedirs(path_to_folder, exist_ok=True)
+                    except OSError:
+                        pass
+                for sub_content in c[1]:
+                    path_to_file = osp.join(path_to_folder, sub_content[0])
+                    logger.debug(
+                        "[generate_global_method]: {}".format(path_to_file))
+                    with open(path_to_file, 'w') as f:
+                        f.write(sub_content[1])
+            else:
+                path_to_file = osp.join(path, c[0])
+
+                logger.debug("[generate_content]: {}".format(path_to_file))
+                if not osp.isdir(path_to_file):
+                    try:
+                        os.mkdir(path)
+                    except OSError:
+                        pass
+
+                with open(path_to_file, 'w') as f:
+                    f.write(c[1])
+
+    def wrap(self, files, path):
         """High level function to wrap the project."""
+        with open(files[0], 'r') as f:
+            content = f.read()
+
         # Parse the contents of the interface file
         parsed_result = parser.Module.parseString(content)
+
         # Instantiate the module
         module = instantiator.instantiate_namespace(parsed_result)
-        #
+        # Wrap the full namespace
         self.wrap_namespace(module)
         self.generate_wrapper(module)
 
+        # Generate the corresponding .m and .cpp files
+        self.generate_content(self.content, path)
+
         return self.content
-
-
-def generate_content(cc_content, path):
-    """
-    Generate files and folders from matlab wrapper content.
-    
-    Args:
-        cc_content: The content to generate formatted as
-            (file_name, file_content) or
-            (folder_name, [(file_name, file_content)])
-        path: The path to the files parent folder within the main folder
-    """
-    for c in cc_content:
-        if isinstance(c, list):
-            if len(c) == 0:
-                continue
-            path_to_folder = osp.join(path, c[0][0])
-
-            if not os.path.isdir(path_to_folder):
-                try:
-                    os.makedirs(path_to_folder, exist_ok=True)
-                except OSError:
-                    pass
-
-            for sub_content in c:
-                generate_content(sub_content[1], path_to_folder)
-
-        elif isinstance(c[1], list):
-            path_to_folder = osp.join(path, c[0])
-
-            if not os.path.isdir(path_to_folder):
-                try:
-                    os.makedirs(path_to_folder, exist_ok=True)
-                except OSError:
-                    pass
-            for sub_content in c[1]:
-                path_to_file = osp.join(path_to_folder, sub_content[0])
-                with open(path_to_file, 'w') as f:
-                    f.write(sub_content[1])
-        else:
-            path_to_file = osp.join(path, c[0])
-
-            if not os.path.isdir(path_to_file):
-                try:
-                    os.mkdir(path)
-                except OSError:
-                    pass
-
-            with open(path_to_file, 'w') as f:
-                f.write(c[1])
