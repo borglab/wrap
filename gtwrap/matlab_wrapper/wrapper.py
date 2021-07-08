@@ -68,7 +68,7 @@ class MatlabWrapper(CheckMixin, FormatMixin):
         }
         # The amount of times the wrapper has created a call to geometry_wrapper
         self.wrapper_id = 0
-        # Map each wrapper id to what its collector function namespace, class, type, and string format
+        # Map each wrapper id to its collector function namespace, class, type, and string format
         self.wrapper_map: Dict = {}
         # Set of all the includes in the namespace
         self.includes: List[parser.Include] = []
@@ -1533,7 +1533,6 @@ class MatlabWrapper(CheckMixin, FormatMixin):
                 if len(c) == 0:
                     continue
 
-                logger.debug("c object: {}".format(c[0][0]))
                 path_to_folder = osp.join(path, c[0][0])
 
                 if not osp.isdir(path_to_folder):
@@ -1548,8 +1547,6 @@ class MatlabWrapper(CheckMixin, FormatMixin):
             elif isinstance(c[1], list):
                 path_to_folder = osp.join(path, c[0])
 
-                logger.debug(
-                    "[generate_content_global]: {}".format(path_to_folder))
                 if not osp.isdir(path_to_folder):
                     try:
                         os.makedirs(path_to_folder, exist_ok=True)
@@ -1557,14 +1554,11 @@ class MatlabWrapper(CheckMixin, FormatMixin):
                         pass
                 for sub_content in c[1]:
                     path_to_file = osp.join(path_to_folder, sub_content[0])
-                    logger.debug(
-                        "[generate_global_method]: {}".format(path_to_file))
                     with open(path_to_file, 'w') as f:
                         f.write(sub_content[1])
             else:
                 path_to_file = osp.join(path, c[0])
 
-                logger.debug("[generate_content]: {}".format(path_to_file))
                 if not osp.isdir(path_to_file):
                     try:
                         os.mkdir(path)
@@ -1589,7 +1583,8 @@ class MatlabWrapper(CheckMixin, FormatMixin):
             module = instantiator.instantiate_namespace(parsed_result)
 
             if module.name in modules:
-                modules[module.name].content[0].content += module.content[0].content
+                modules[module.
+                        name].content[0].content += module.content[0].content
             else:
                 modules[module.name] = module
 
