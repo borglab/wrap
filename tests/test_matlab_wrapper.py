@@ -194,6 +194,31 @@ class TestWrap(unittest.TestCase):
         for file in files:
             self.compare_and_diff(file)
 
+    def test_multiple_files(self):
+        """
+        Test for when multiple interface files are specified.
+        """
+        file1 = osp.join(self.INTERFACE_DIR, 'part1.i')
+        file2 = osp.join(self.INTERFACE_DIR, 'part2.i')
+
+        wrapper = MatlabWrapper(
+            module_name='multiple_files',
+            top_module_namespace=['gtsam'],
+            ignore_classes=[''],
+        )
+
+        wrapper.wrap([file1, file2], path=self.MATLAB_ACTUAL_DIR)
+
+        files = [
+            'multiple_files_wrapper.cpp',
+            '+gtsam/Class1.m',
+            '+gtsam/Class2.m',
+            '+gtsam/ClassA.m',
+        ]
+
+        for file in files:
+            self.compare_and_diff(file)
+
 
 if __name__ == '__main__':
     unittest.main()

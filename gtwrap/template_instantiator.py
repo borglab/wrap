@@ -345,9 +345,9 @@ class InstantiatedClass(parser.Class):
         )
 
     def __repr__(self):
-        return "{virtual} class {name} [{cpp_class}]: {parent_class}\n"\
+        return "{virtual}Class {cpp_class} : {parent_class}\n"\
             "{ctors}\n{static_methods}\n{methods}\n{operators}".format(
-               virtual="virtual" if self.is_virtual else '',
+               virtual="virtual " if self.is_virtual else '',
                name=self.name,
                cpp_class=self.to_cpp(),
                parent_class=self.parent,

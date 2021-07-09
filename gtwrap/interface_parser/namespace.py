@@ -115,7 +115,7 @@ class Namespace:
             return res[0]
 
     def top_level(self) -> "Namespace":
-        """Return the top leve namespace."""
+        """Return the top level namespace."""
         if self.name == '' or self.parent == '':
             return self
         else:
