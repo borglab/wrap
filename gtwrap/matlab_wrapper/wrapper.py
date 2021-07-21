@@ -11,8 +11,6 @@ import textwrap
 from functools import partial, reduce
 from typing import Dict, Iterable, List, Union
 
-from loguru import logger
-
 import gtwrap.interface_parser as parser
 import gtwrap.template_instantiator as instantiator
 from gtwrap.matlab_wrapper.mixins import CheckMixin, FormatMixin
