@@ -42,7 +42,7 @@ def instantiate_type(ctype: parser.Type,
     str_arg_typename = str(ctype.typename)
 
     # Instantiate templates which have enumerated instantiations in the template.
-    # E.g. `template<T={double}`.
+    # E.g. `template<T={double}>`.
     if str_arg_typename in template_typenames:
         idx = template_typenames.index(str_arg_typename)
         return parser.Type(
