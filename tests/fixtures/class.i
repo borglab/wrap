@@ -7,8 +7,6 @@ class FunRange {
 
 template<M={double}>
 class Fun {
-  Fun();
-  Fun(M arg);
 
   static This staticMethodWithThis();
 
