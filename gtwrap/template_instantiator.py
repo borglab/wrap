@@ -15,7 +15,8 @@ def is_scoped_template(template_typenames, str_arg_typename):
     and if so, return what template and index matches the scoped template correctly.
     """
     for idx, template in enumerate(template_typenames):
-        if template in str_arg_typename.split("::"):
+        if "::" in str_arg_typename and \
+            template in str_arg_typename.split("::"):
             return template, idx
     return False, -1
 
@@ -26,7 +27,7 @@ def instantiate_type(ctype: parser.Type,
                      cpp_typename: parser.Typename,
                      instantiated_class=None):
     """
-    Instantiate template typename for @p ctype.
+    Instantiate template typename for `ctype`.
 
     Args:
         instiated_class (InstantiatedClass):
@@ -463,22 +464,53 @@ class InstantiatedClass(parser.Class):
         Return: List of static methods instantiated with provided template args.
         """
         instantiated_static_methods = []
-        for static_method in self.original.static_methods:
+
+        def instantiate(instantiated_static_methods, static_method, typenames,
+                        instantiations):
             instantiated_args = instantiate_args_list(
-                static_method.args.list(), typenames, self.instantiations,
+                static_method.args.list(), typenames, instantiations,
                 self.cpp_typename())
+
             instantiated_static_methods.append(
                 parser.StaticMethod(
                     name=static_method.name,
                     return_type=instantiate_return_type(
                         static_method.return_type,
                         typenames,
-                        self.instantiations,
+                        instantiations,
                         self.cpp_typename(),
                         instantiated_class=self),
                     args=parser.ArgumentList(instantiated_args),
+                    template=self.original.template,
                     parent=self,
                 ))
+
+            return instantiated_static_methods
+
+        for static_method in self.original.static_methods:
+            # Add constructor templates to the typenames and instantiations
+            if isinstance(static_method.template, parser.template.Template):
+                typenames.extend(static_method.template.typenames)
+
+                # Get all combinations of template args
+                for instantiations in itertools.product(
+                        *static_method.template.instantiations):
+                    instantiations = self.instantiations + list(instantiations)
+
+                    instantiated_static_methods = instantiate(
+                        instantiated_static_methods,
+                        static_method,
+                        typenames=typenames,
+                        instantiations=instantiations)
+
+            else:
+                # If no constructor level templates, just use the class templates
+                instantiated_static_methods = instantiate(
+                    instantiated_static_methods,
+                    static_method,
+                    typenames=typenames,
+                    instantiations=self.instantiations)
+
         return instantiated_static_methods
 
     def instantiate_class_templates_in_methods(self, typenames):
@@ -501,10 +533,17 @@ class InstantiatedClass(parser.Class):
         """
         class_instantiated_methods = []
         for method in self.original.methods:
+            # Add the template instantiations to the list of instantiations
+            # so that the indexing works correctly.
+            instantiations = list(self.instantiations)
+            if isinstance(method.template, parser.template.Template):
+                inst = [x[0] for x in method.template.instantiations]
+                instantiations += inst
+
             instantiated_args = instantiate_args_list(
                 method.args.list(),
                 typenames,
-                self.instantiations,
+                instantiations,
                 self.cpp_typename(),
             )
             class_instantiated_methods.append(
