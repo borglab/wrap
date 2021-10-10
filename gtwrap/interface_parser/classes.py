@@ -84,7 +84,8 @@ class StaticMethod:
     ```
     """
     rule = (
-        STATIC  #
+        Optional(Template.rule("template"))  #
+        + STATIC  #
         + ReturnType.rule("return_type")  #
         + IDENT("name")  #
         + LPAREN  #
@@ -92,16 +93,18 @@ class StaticMethod:
         + RPAREN  #
         + SEMI_COLON  # BR
     ).setParseAction(
-        lambda t: StaticMethod(t.name, t.return_type, t.args_list))
+        lambda t: StaticMethod(t.name, t.return_type, t.args_list, t.template))
 
     def __init__(self,
                  name: str,
                  return_type: ReturnType,
                  args: ArgumentList,
+                 template: Union[Template, Any] = None,
                  parent: Union["Class", Any] = ''):
         self.name = name
         self.return_type = return_type
         self.args = args
+        self.template = template
 
         self.parent = parent
 
