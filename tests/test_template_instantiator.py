@@ -19,8 +19,102 @@ import unittest
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from gtwrap import template_instantiator
-from gtwrap.interface_parser import (Argument, ArgumentList, ReturnType,
-                                     Typename)
+from gtwrap.interface_parser import (Argument, ArgumentList, Class,
+                                     Constructor, Include, Method, Namespace,
+                                     ReturnType, StaticMethod, Typename)
+
+
+class TestInstantiationHelper(unittest.TestCase):
+    """Tests for the InstantiationHelper class."""
+    def test_constructor(self):
+        pass
+
+    def test_instantiate(self):
+        pass
+
+    def test_multilevel_instantiation(self):
+        pass
+
+
+class TestInstantiatedGlobalFunction(unittest.TestCase):
+    """Tests for the InstantiatedGlobalFunction class."""
+    def test_constructor(self):
+        pass
+
+    def test_to_cpp(self):
+        pass
+
+
+class TestInstantiatedConstructor(unittest.TestCase):
+    """Tests for the InstantiatedConstructor class."""
+    def test_constructor(self):
+        pass
+
+    def test_construct(self):
+        pass
+
+    def test_to_cpp(self):
+        pass
+
+
+class TestInstantiatedMethod(unittest.TestCase):
+    """Tests for the InstantiatedMethod class."""
+    def test_constructor(self):
+        pass
+
+    def test_construct(self):
+        pass
+
+    def test_to_cpp(self):
+        pass
+
+
+class TestInstantiatedStaticMethod(unittest.TestCase):
+    """Tests for the InstantiatedStaticMethod class."""
+    def test_constructor(self):
+        pass
+
+    def test_construct(self):
+        pass
+
+    def test_to_cpp(self):
+        pass
+
+
+class TestInstantiatedClass(unittest.TestCase):
+    """Tests for the InstantiatedClass class."""
+    def test_constructor(self):
+        pass
+
+    def test_instantiate_ctors(self):
+        pass
+
+    def test_instantiate_static_methods(self):
+        pass
+
+    def test_instantiate_methods(self):
+        pass
+
+    def test_instantiate_operators(self):
+        pass
+
+    def test_instantiate_properties(self):
+        pass
+
+    def test_cpp_typename(self):
+        pass
+
+    def test_to_cpp(self):
+        pass
+
+
+class TestInstantiatedDeclaration(unittest.TestCase):
+    """Tests for the InstantiatedDeclaration class."""
+    def test_constructor(self):
+        pass
+
+    def test_to_cpp(self):
+        pass
 
 
 class TestTemplateInstantiator(unittest.TestCase):
@@ -132,9 +226,7 @@ class TestTemplateInstantiator(unittest.TestCase):
         """Test for instantiate_return_type."""
         return_type = ReturnType.rule.parseString("T")[0]
         template_typenames = ['T']
-        instantiations = [
-            Typename.rule.parseString("double")[0],
-        ]
+        instantiations = [Typename.rule.parseString("double")[0]]
         instantiated_return_type = template_instantiator.instantiate_return_type(
             return_type,
             template_typenames,
@@ -162,11 +254,60 @@ class TestTemplateInstantiator(unittest.TestCase):
 
     def test_instantiate_name(self):
         """Test for instantiate_name."""
-        pass
+        instantiations = [Typename.rule.parseString("Man")[0]]
+        instantiated_name = template_instantiator.instantiate_name(
+            "Iron", instantiations)
+        self.assertEqual(instantiated_name, "IronMan")
 
     def test_instantiate_namespace(self):
         """Test for instantiate_namespace."""
-        pass
+        namespace = Namespace.rule.parseString("""
+            namespace gtsam {
+                #include <gtsam/nonlinear/Values.h>
+                template<T={gtsam::Basis}>
+                class Values {
+                    Values(const T& other);
+
+                    template<V={Vector, Matrix}>
+                    void insert(size_t j, V x);
+
+                    template<S={double}>
+                    static S staticMethod(const S& s);
+                };
+            }
+        """)[0]
+        instantiated_namespace = template_instantiator.instantiate_namespace(
+            namespace)
+
+        self.assertEqual(instantiated_namespace.name, "gtsam")
+        self.assertEqual(instantiated_namespace.parent, "")
+
+        self.assertEqual(instantiated_namespace.content[0].header,
+                         "gtsam/nonlinear/Values.h")
+        self.assertIsInstance(instantiated_namespace.content[0], Include)
+
+        self.assertEqual(instantiated_namespace.content[1].name, "ValuesBasis")
+        self.assertIsInstance(instantiated_namespace.content[1], Class)
+
+        self.assertIsInstance(instantiated_namespace.content[1].ctors[0],
+                              Constructor)
+        self.assertEqual(instantiated_namespace.content[1].ctors[0].name,
+                         "ValuesBasis")
+
+        self.assertIsInstance(instantiated_namespace.content[1].methods[0],
+                              Method)
+        self.assertIsInstance(instantiated_namespace.content[1].methods[1],
+                              Method)
+        self.assertEqual(instantiated_namespace.content[1].methods[0].name,
+                         "insertVector")
+        self.assertEqual(instantiated_namespace.content[1].methods[1].name,
+                         "insertMatrix")
+
+        self.assertIsInstance(
+            instantiated_namespace.content[1].static_methods[0], StaticMethod)
+        self.assertEqual(
+            instantiated_namespace.content[1].static_methods[0].name,
+            "staticMethodDouble")
 
 
 if __name__ == '__main__':
