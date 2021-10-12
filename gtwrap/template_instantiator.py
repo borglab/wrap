@@ -4,7 +4,7 @@
 
 import itertools
 from copy import deepcopy
-from typing import Any, Iterable, List, Sequence
+from typing import Iterable, List, Sequence
 
 import gtwrap.interface_parser as parser
 
@@ -619,55 +619,6 @@ class InstantiatedClass(parser.Class):
             self.original.methods, typenames, self)
 
         return instantiated_methods
-
-    def instantiate_class_templates_in_methods(self, typenames):
-        """
-        This function only instantiates the class-level templates in the methods.
-        Template methods are instantiated in InstantiatedMethod in the second
-        round.
-
-        E.g.
-        ```
-        template<T={string}>
-        class Greeter{
-            void sayHello(T& name);
-        };
-
-        Args:
-            typenames: List of template types to instantiate.
-
-        Return: List of methods instantiated with provided template args on the class.
-        """
-        class_instantiated_methods = []
-        for method in self.original.methods:
-            # Add the template instantiations to the list of instantiations
-            # so that the indexing works correctly.
-            instantiations = list(self.instantiations)
-            if isinstance(method.template, parser.template.Template):
-                inst = [x[0] for x in method.template.instantiations]
-                instantiations += inst
-
-            instantiated_args = instantiate_args_list(
-                method.args.list(),
-                typenames,
-                instantiations,
-                self.cpp_typename(),
-            )
-            class_instantiated_methods.append(
-                parser.Method(
-                    template=method.template,
-                    name=method.name,
-                    return_type=instantiate_return_type(
-                        method.return_type,
-                        typenames,
-                        self.instantiations,
-                        self.cpp_typename(),
-                    ),
-                    args=parser.ArgumentList(instantiated_args),
-                    is_const=method.is_const,
-                    parent=self,
-                ))
-        return class_instantiated_methods
 
     def instantiate_operators(self, typenames):
         """
