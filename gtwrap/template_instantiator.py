@@ -1,6 +1,6 @@
 """Code to help instantiate templated classes, methods and functions."""
 
-# pylint: disable=too-many-arguments, too-many-instance-attributes, no-self-use, no-else-return, too-many-arguments, unused-format-string-argument, unused-variable
+# pylint: disable=too-many-arguments, too-many-instance-attributes, no-self-use, no-else-return, too-many-arguments, unused-format-string-argument, unused-variable. unused-argument
 
 import itertools
 from copy import deepcopy
@@ -185,6 +185,47 @@ def instantiate_name(original_name, instantiations):
     return "{}{}".format(original_name, "".join(instantiated_names))
 
 
+class InstantiationHelper:
+    """
+    Helper class for instantiation templates.
+    Requires that `instantiation_type` defines a class method called
+    `construct` to generate the appropriate object type.
+
+    Signature for `construct` should be
+    ```
+        construct(method,
+                  typenames,
+                  class_instantiations,
+                  method_instantiations,
+                  instantiated_args,
+                  parent=parent)
+    ```
+    """
+    def __init__(self, instantiation_type):
+        self.instantiation_type = instantiation_type
+
+    def instantiate(self, instantiated_methods, method, typenames,
+                    class_instantiations, method_instantiations, parent):
+        """
+        Instantiate both the class and method level templates.
+        """
+        instantiations = class_instantiations + method_instantiations
+
+        instantiated_args = instantiate_args_list(method.args.list(),
+                                                  typenames, instantiations,
+                                                  parent.cpp_typename())
+
+        instantiated_methods.append(
+            self.instantiation_type.construct(method,
+                                              typenames,
+                                              class_instantiations,
+                                              method_instantiations,
+                                              instantiated_args,
+                                              parent=parent))
+
+        return instantiated_methods
+
+
 class InstantiatedGlobalFunction(parser.GlobalFunction):
     """
     Instantiate global functions.
@@ -247,6 +288,60 @@ class InstantiatedGlobalFunction(parser.GlobalFunction):
             super(InstantiatedGlobalFunction, self).__repr__())
 
 
+class InstantiatedConstructor(parser.Constructor):
+    """
+    Instantiate constructor with template parameters.
+
+    E.g.
+    class A {
+        template<X, Y>
+        A(X x, Y y);
+    }
+    """
+    def __init__(self,
+                 original: parser.Constructor,
+                 instantiations: Iterable[parser.Typename] = ()):
+        self.original = original
+        self.instantiations = instantiations
+        self.name = original.name
+        self.args = original.args
+        self.template = original.template
+        self.parent = original.parent
+
+        super().__init__(self.name,
+                         self.args,
+                         self.template,
+                         parent=self.parent)
+
+    @classmethod
+    def construct(cls, original, typenames, class_instantiations,
+                  method_instantiations, instantiated_args, parent):
+        """Class method to construct object as required by InstantiationHelper."""
+        method = parser.Constructor(
+            name=parent.name,
+            args=parser.ArgumentList(instantiated_args),
+            template=original.template,
+            parent=parent,
+        )
+        return InstantiatedConstructor(method,
+                                       instantiations=method_instantiations)
+
+    def to_cpp(self):
+        """Generate the C++ code for wrapping."""
+        if self.original.template:
+            # to_cpp will handle all the namespacing and templating
+            instantiation_list = [x.to_cpp() for x in self.instantiations]
+            # now can simply combine the instantiations, separated by commas
+            ret = "{}<{}>".format(self.original.name,
+                                  ",".join(instantiation_list))
+        else:
+            ret = self.original.name
+        return ret
+
+    def __repr__(self):
+        return "Instantiated {}".format(super().__repr__())
+
+
 class InstantiatedMethod(parser.Method):
     """
     Instantiate method with template parameters.
@@ -262,32 +357,13 @@ class InstantiatedMethod(parser.Method):
                  instantiations: Iterable[parser.Typename] = ()):
         self.original = original
         self.instantiations = instantiations
-        self.template: Any = ''
+        self.template = original.template
         self.is_const = original.is_const
         self.parent = original.parent
 
-        # Check for typenames if templated.
-        # This way, we can gracefully handle both templated and non-templated methods.
-        typenames: Sequence = self.original.template.typenames if self.original.template else []
         self.name = instantiate_name(original.name, self.instantiations)
-        self.return_type = instantiate_return_type(
-            original.return_type,
-            typenames,
-            self.instantiations,
-            # Keyword type name `This` should already be replaced in the
-            # previous class template instantiation round.
-            cpp_typename='',
-        )
-
-        instantiated_args = instantiate_args_list(
-            original.args.list(),
-            typenames,
-            self.instantiations,
-            # Keyword type name `This` should already be replaced in the
-            # previous class template instantiation round.
-            cpp_typename='',
-        )
-        self.args = parser.ArgumentList(instantiated_args)
+        self.return_type = original.return_type
+        self.args = original.args
 
         super().__init__(self.template,
                          self.name,
@@ -295,6 +371,23 @@ class InstantiatedMethod(parser.Method):
                          self.args,
                          self.is_const,
                          parent=self.parent)
+
+    @classmethod
+    def construct(cls, original, typenames, class_instantiations,
+                  method_instantiations, instantiated_args, parent):
+        """Class method to construct object as required by InstantiationHelper."""
+        method = parser.Method(
+            template=original.template,
+            name=original.name,
+            return_type=instantiate_return_type(
+                original.return_type, typenames,
+                class_instantiations + method_instantiations,
+                parent.cpp_typename()),
+            args=parser.ArgumentList(instantiated_args),
+            is_const=original.is_const,
+            parent=parent,
+        )
+        return InstantiatedMethod(method, instantiations=method_instantiations)
 
     def to_cpp(self):
         """Generate the C++ code for wrapping."""
@@ -309,8 +402,61 @@ class InstantiatedMethod(parser.Method):
         return ret
 
     def __repr__(self):
-        return "Instantiated {}".format(
-            super(InstantiatedMethod, self).__repr__())
+        return "Instantiated {}".format(super().__repr__())
+
+
+class InstantiatedStaticMethod(parser.StaticMethod):
+    """
+    Instantiate static method with template parameters.
+    """
+    def __init__(self,
+                 original: parser.StaticMethod,
+                 instantiations: Iterable[parser.Typename] = ()):
+        self.original = original
+        self.instantiations = instantiations
+
+        self.name = instantiate_name(original.name, self.instantiations)
+        self.return_type = original.return_type
+        self.args = original.args
+        self.template = original.template
+        self.parent = original.parent
+
+        super().__init__(self.name, self.return_type, self.args, self.template,
+                         self.parent)
+
+    @classmethod
+    def construct(cls, original, typenames, class_instantiations,
+                  method_instantiations, instantiated_args, parent):
+        """Class method to construct object as required by InstantiationHelper."""
+        method = parser.StaticMethod(
+            name=original.name,
+            return_type=instantiate_return_type(original.return_type,
+                                                typenames,
+                                                class_instantiations +
+                                                method_instantiations,
+                                                parent.cpp_typename(),
+                                                instantiated_class=parent),
+            args=parser.ArgumentList(instantiated_args),
+            template=original.template,
+            parent=parent,
+        )
+        return InstantiatedStaticMethod(method,
+                                        instantiations=method_instantiations)
+
+    def to_cpp(self):
+        """Generate the C++ code for wrapping."""
+        if self.original.template:
+            # to_cpp will handle all the namespacing and templating
+            instantiation_list = [x.to_cpp() for x in self.instantiations]
+            # now can simply combine the instantiations, separated by commas
+            ret = "{}<{}>".format(self.original.name,
+                                  ",".join(instantiation_list))
+        else:
+            ret = self.original.name
+        return ret
+
+    def __repr__(self):
+        return "Instantiated {}".format(super().__repr__())
 
 
 class InstantiatedClass(parser.Class):
@@ -357,22 +503,7 @@ class InstantiatedClass(parser.Class):
         self.enums = original.enums
 
         # Instantiate all instance methods
-        instantiated_methods = \
-            self.instantiate_class_templates_in_methods(typenames)
-
-        # Second instantiation round to instantiate templated methods.
-        # This is done in case both the class and the method are templated.
-        self.methods = []
-        for method in instantiated_methods:
-            if not method.template:
-                self.methods.append(InstantiatedMethod(method, ()))
-            else:
-                instantiations = []
-                # Get all combinations of template parameters
-                for instantiations in itertools.product(
-                        *method.template.instantiations):
-                    self.methods.append(
-                        InstantiatedMethod(method, instantiations))
+        self.methods = self.instantiate_methods(typenames)
 
         super().__init__(
             self.template,
@@ -412,45 +543,37 @@ class InstantiatedClass(parser.Class):
         """
         instantiated_ctors = []
 
-        def instantiate(instantiated_ctors, ctor, typenames, instantiations):
-            instantiated_args = instantiate_args_list(
-                ctor.args.list(),
-                typenames,
-                instantiations,
-                self.cpp_typename(),
-            )
-            instantiated_ctors.append(
-                parser.Constructor(
-                    name=self.name,
-                    args=parser.ArgumentList(instantiated_args),
-                    template=self.original.template,
-                    parent=self,
-                ))
-            return instantiated_ctors
+        helper = InstantiationHelper(
+            instantiation_type=InstantiatedConstructor)
 
         for ctor in self.original.ctors:
+            ctor_typenames = deepcopy(typenames)
+
             # Add constructor templates to the typenames and instantiations
             if isinstance(ctor.template, parser.template.Template):
-                typenames.extend(ctor.template.typenames)
+                ctor_typenames.extend(ctor.template.typenames)
 
                 # Get all combinations of template args
                 for instantiations in itertools.product(
                         *ctor.template.instantiations):
-                    instantiations = self.instantiations + list(instantiations)
 
-                    instantiated_ctors = instantiate(
+                    instantiated_ctors = helper.instantiate(
                         instantiated_ctors,
                         ctor,
-                        typenames=typenames,
-                        instantiations=instantiations)
+                        typenames=ctor_typenames,
+                        class_instantiations=self.instantiations,
+                        method_instantiations=list(instantiations),
+                        parent=self)
 
             else:
                 # If no constructor level templates, just use the class templates
-                instantiated_ctors = instantiate(
+                instantiated_ctors = helper.instantiate(
                     instantiated_ctors,
                     ctor,
-                    typenames=typenames,
-                    instantiations=self.instantiations)
+                    typenames=ctor_typenames,
+                    class_instantiations=self.instantiations,
+                    method_instantiations=[],
+                    parent=self)
 
         return instantiated_ctors
 
@@ -465,53 +588,84 @@ class InstantiatedClass(parser.Class):
         """
         instantiated_static_methods = []
 
-        def instantiate(instantiated_static_methods, static_method, typenames,
-                        instantiations):
-            instantiated_args = instantiate_args_list(
-                static_method.args.list(), typenames, instantiations,
-                self.cpp_typename())
-
-            instantiated_static_methods.append(
-                parser.StaticMethod(
-                    name=static_method.name,
-                    return_type=instantiate_return_type(
-                        static_method.return_type,
-                        typenames,
-                        instantiations,
-                        self.cpp_typename(),
-                        instantiated_class=self),
-                    args=parser.ArgumentList(instantiated_args),
-                    template=self.original.template,
-                    parent=self,
-                ))
-
-            return instantiated_static_methods
+        helper = InstantiationHelper(
+            instantiation_type=InstantiatedStaticMethod)
 
         for static_method in self.original.static_methods:
+            static_method_typenames = deepcopy(typenames)
+
             # Add constructor templates to the typenames and instantiations
             if isinstance(static_method.template, parser.template.Template):
-                typenames.extend(static_method.template.typenames)
+                static_method_typenames.extend(
+                    static_method.template.typenames)
 
                 # Get all combinations of template args
                 for instantiations in itertools.product(
                         *static_method.template.instantiations):
-                    instantiations = self.instantiations + list(instantiations)
 
-                    instantiated_static_methods = instantiate(
+                    instantiated_static_methods = helper.instantiate(
                         instantiated_static_methods,
                         static_method,
-                        typenames=typenames,
-                        instantiations=instantiations)
+                        typenames=static_method_typenames,
+                        class_instantiations=self.instantiations,
+                        method_instantiations=list(instantiations),
+                        parent=self)
 
             else:
                 # If no constructor level templates, just use the class templates
-                instantiated_static_methods = instantiate(
+                instantiated_static_methods = helper.instantiate(
                     instantiated_static_methods,
                     static_method,
-                    typenames=typenames,
-                    instantiations=self.instantiations)
+                    typenames=static_method_typenames,
+                    class_instantiations=self.instantiations,
+                    method_instantiations=[],
+                    parent=self)
 
         return instantiated_static_methods
+
+    def instantiate_methods(self, typenames):
+        """
+        Instantiate regular methods in the class.
+
+        Args:
+            typenames: List of template types to instantiate.
+
+        Return: List of methods instantiated with provided template args.
+        """
+        instantiated_methods = []
+
+        helper = InstantiationHelper(instantiation_type=InstantiatedMethod)
+
+        for method in self.original.methods:
+            method_typenames = deepcopy(typenames)
+
+            # Add constructor templates to the typenames and instantiations
+            if isinstance(method.template, parser.template.Template):
+                method_typenames.extend(method.template.typenames)
+
+                # Get all combinations of template args
+                for instantiations in itertools.product(
+                        *method.template.instantiations):
+
+                    instantiated_methods = helper.instantiate(
+                        instantiated_methods,
+                        method,
+                        typenames=method_typenames,
+                        class_instantiations=self.instantiations,
+                        method_instantiations=list(instantiations),
+                        parent=self)
+
+            else:
+                # If no constructor level templates, just use the class templates
+                instantiated_methods = helper.instantiate(
+                    instantiated_methods,
+                    method,
+                    typenames=method_typenames,
+                    class_instantiations=self.instantiations,
+                    method_instantiations=[],
+                    parent=self)
+
+        return instantiated_methods
 
     def instantiate_class_templates_in_methods(self, typenames):
         """
