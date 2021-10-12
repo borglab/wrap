@@ -62,6 +62,10 @@ class Method:
 
         self.parent = parent
 
+    def to_cpp(self) -> str:
+        """Generate the C++ code for wrapping."""
+        return self.name
+
     def __repr__(self) -> str:
         return "Method: {} {} {}({}){}".format(
             self.template,
