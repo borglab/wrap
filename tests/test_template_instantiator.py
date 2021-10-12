@@ -20,25 +20,37 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from gtwrap import template_instantiator
 from gtwrap.interface_parser import (Argument, ArgumentList, Class,
-                                     Constructor, Include, Method, Namespace,
-                                     ReturnType, StaticMethod, Typename)
+                                     Constructor, ForwardDeclaration, Include,
+                                     Method, Namespace, ReturnType,
+                                     StaticMethod, Typename)
+from gtwrap.template_instantiator import (InstantiatedClass,
+                                          InstantiatedDeclaration,
+                                          InstantiationHelper)
 
 
 class TestInstantiationHelper(unittest.TestCase):
     """Tests for the InstantiationHelper class."""
     def test_constructor(self):
-        pass
+        """Test constructor."""
+        helper = InstantiationHelper(InstantiatedClass)
+        self.assertEqual(helper.instantiation_type, InstantiatedClass)
 
     def test_instantiate(self):
+        """Test instantiate method."""
         pass
 
     def test_multilevel_instantiation(self):
+        """
+        Test method for multilevel instantiation
+        i.e. instantiation at both the class and method level.
+        """
         pass
 
 
 class TestInstantiatedGlobalFunction(unittest.TestCase):
     """Tests for the InstantiatedGlobalFunction class."""
     def test_constructor(self):
+        """Test constructor."""
         pass
 
     def test_to_cpp(self):
@@ -48,6 +60,7 @@ class TestInstantiatedGlobalFunction(unittest.TestCase):
 class TestInstantiatedConstructor(unittest.TestCase):
     """Tests for the InstantiatedConstructor class."""
     def test_constructor(self):
+        """Test constructor."""
         pass
 
     def test_construct(self):
@@ -60,6 +73,7 @@ class TestInstantiatedConstructor(unittest.TestCase):
 class TestInstantiatedMethod(unittest.TestCase):
     """Tests for the InstantiatedMethod class."""
     def test_constructor(self):
+        """Test constructor."""
         pass
 
     def test_construct(self):
@@ -72,6 +86,7 @@ class TestInstantiatedMethod(unittest.TestCase):
 class TestInstantiatedStaticMethod(unittest.TestCase):
     """Tests for the InstantiatedStaticMethod class."""
     def test_constructor(self):
+        """Test constructor."""
         pass
 
     def test_construct(self):
@@ -84,6 +99,7 @@ class TestInstantiatedStaticMethod(unittest.TestCase):
 class TestInstantiatedClass(unittest.TestCase):
     """Tests for the InstantiatedClass class."""
     def test_constructor(self):
+        """Test constructor."""
         pass
 
     def test_instantiate_ctors(self):
@@ -110,11 +126,25 @@ class TestInstantiatedClass(unittest.TestCase):
 
 class TestInstantiatedDeclaration(unittest.TestCase):
     """Tests for the InstantiatedDeclaration class."""
+    def setUp(self):
+        #TODO(Varun) Need to support templated class forward declaration.
+        forward_declaration = ForwardDeclaration.rule.parseString("""
+            class FooBar;
+            """)[0]
+        instantiations = [Typename.rule.parseString("double")[0]]
+        self.declaration = InstantiatedDeclaration(
+            forward_declaration, instantiations=instantiations)
+
     def test_constructor(self):
-        pass
+        """Test constructor."""
+        self.assertIsInstance(self.declaration, InstantiatedDeclaration)
+        self.assertIsInstance(self.declaration.original, ForwardDeclaration)
+        self.assertEqual(self.declaration.instantiations[0].name, "double")
 
     def test_to_cpp(self):
-        pass
+        """Test to_cpp method."""
+        cpp = self.declaration.to_cpp()
+        self.assertEqual(cpp, "FooBar<double>")
 
 
 class TestTemplateInstantiator(unittest.TestCase):
