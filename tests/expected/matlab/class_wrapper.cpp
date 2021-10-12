@@ -246,11 +246,11 @@ void FunDouble_staticMethodWithThis_9(int nargout, mxArray *out[], int nargin, c
   out[0] = wrap_shared_ptr(boost::make_shared<Fun<double>>(Fun<double>::staticMethodWithThis()),"Fundouble", false);
 }
 
-void FunDouble_templatedStaticMethod_10(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void FunDouble_templatedStaticMethodInt_10(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
-  checkArguments("FunDouble.templatedStaticMethod",nargout,nargin,1);
+  checkArguments("FunDouble.templatedStaticMethodInt",nargout,nargin,1);
   int m = unwrap< int >(in[0]);
-  out[0] = wrap< double >(Fun<double>::templatedStaticMethod(m));
+  out[0] = wrap< double >(Fun<double>::templatedStaticMethodInt(m));
 }
 
 void Test_collectorInsertAndMakeBase_11(int nargout, mxArray *out[], int nargin, const mxArray *in[])
@@ -855,7 +855,7 @@ void mexFunction(int nargout, mxArray *out[], int nargin, const mxArray *in[])
       FunDouble_staticMethodWithThis_9(nargout, out, nargin-1, in+1);
       break;
     case 10:
-      FunDouble_templatedStaticMethod_10(nargout, out, nargin-1, in+1);
+      FunDouble_templatedStaticMethodInt_10(nargout, out, nargin-1, in+1);
       break;
     case 11:
       Test_collectorInsertAndMakeBase_11(nargout, out, nargin-1, in+1);

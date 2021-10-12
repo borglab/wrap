@@ -7,7 +7,7 @@
 %
 %-------Static Methods-------
 %staticMethodWithThis() : returns Fun<double>
-%templatedStaticMethod(int m) : returns double
+%templatedStaticMethodInt(int m) : returns double
 %
 %-------Serialization Interface-------
 %string_serialize() : returns string
@@ -70,15 +70,15 @@ classdef FunDouble < handle
       error('Arguments do not match any overload of function FunDouble.staticMethodWithThis');
     end
 
-    function varargout = TemplatedStaticMethod(varargin)
-      % TEMPLATEDSTATICMETHOD usage: templatedStaticMethod(int m) : returns double
+    function varargout = TemplatedStaticMethodInt(varargin)
+      % TEMPLATEDSTATICMETHODINT usage: templatedStaticMethodInt(int m) : returns double
       % Doxygen can be found at https://gtsam.org/doxygen/
       if length(varargin) == 1 && isa(varargin{1},'numeric')
         varargout{1} = class_wrapper(10, varargin{:});
         return
       end
 
-      error('Arguments do not match any overload of function FunDouble.templatedStaticMethod');
+      error('Arguments do not match any overload of function FunDouble.templatedStaticMethodInt');
     end
 
   end
