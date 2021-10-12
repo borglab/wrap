@@ -225,6 +225,41 @@ class InstantiationHelper:
 
         return instantiated_methods
 
+    def multilevel_instantiation(self, methods_list, typenames, parent):
+        """Helper to instantiate methods at both the class and method level."""
+        instantiated_methods = []
+
+        for method in methods_list:
+            # We creare a copy since we will modify the typenames list.
+            method_typenames = deepcopy(typenames)
+
+            if isinstance(method.template, parser.template.Template):
+                method_typenames.extend(method.template.typenames)
+
+                # Get all combinations of template args
+                for instantiations in itertools.product(
+                        *method.template.instantiations):
+
+                    instantiated_methods = self.instantiate(
+                        instantiated_methods,
+                        method,
+                        typenames=method_typenames,
+                        class_instantiations=parent.instantiations,
+                        method_instantiations=list(instantiations),
+                        parent=parent)
+
+            else:
+                # If no constructor level templates, just use the class templates
+                instantiated_methods = self.instantiate(
+                    instantiated_methods,
+                    method,
+                    typenames=method_typenames,
+                    class_instantiations=parent.instantiations,
+                    method_instantiations=[],
+                    parent=parent)
+
+        return instantiated_methods
+
 
 class InstantiatedGlobalFunction(parser.GlobalFunction):
     """
@@ -541,39 +576,12 @@ class InstantiatedClass(parser.Class):
 
         Return: List of constructors instantiated with provided template args.
         """
-        instantiated_ctors = []
 
         helper = InstantiationHelper(
             instantiation_type=InstantiatedConstructor)
 
-        for ctor in self.original.ctors:
-            ctor_typenames = deepcopy(typenames)
-
-            # Add constructor templates to the typenames and instantiations
-            if isinstance(ctor.template, parser.template.Template):
-                ctor_typenames.extend(ctor.template.typenames)
-
-                # Get all combinations of template args
-                for instantiations in itertools.product(
-                        *ctor.template.instantiations):
-
-                    instantiated_ctors = helper.instantiate(
-                        instantiated_ctors,
-                        ctor,
-                        typenames=ctor_typenames,
-                        class_instantiations=self.instantiations,
-                        method_instantiations=list(instantiations),
-                        parent=self)
-
-            else:
-                # If no constructor level templates, just use the class templates
-                instantiated_ctors = helper.instantiate(
-                    instantiated_ctors,
-                    ctor,
-                    typenames=ctor_typenames,
-                    class_instantiations=self.instantiations,
-                    method_instantiations=[],
-                    parent=self)
+        instantiated_ctors = helper.multilevel_instantiation(
+            self.original.ctors, typenames, self)
 
         return instantiated_ctors
 
@@ -586,40 +594,11 @@ class InstantiatedClass(parser.Class):
 
         Return: List of static methods instantiated with provided template args.
         """
-        instantiated_static_methods = []
-
         helper = InstantiationHelper(
             instantiation_type=InstantiatedStaticMethod)
 
-        for static_method in self.original.static_methods:
-            static_method_typenames = deepcopy(typenames)
-
-            # Add constructor templates to the typenames and instantiations
-            if isinstance(static_method.template, parser.template.Template):
-                static_method_typenames.extend(
-                    static_method.template.typenames)
-
-                # Get all combinations of template args
-                for instantiations in itertools.product(
-                        *static_method.template.instantiations):
-
-                    instantiated_static_methods = helper.instantiate(
-                        instantiated_static_methods,
-                        static_method,
-                        typenames=static_method_typenames,
-                        class_instantiations=self.instantiations,
-                        method_instantiations=list(instantiations),
-                        parent=self)
-
-            else:
-                # If no constructor level templates, just use the class templates
-                instantiated_static_methods = helper.instantiate(
-                    instantiated_static_methods,
-                    static_method,
-                    typenames=static_method_typenames,
-                    class_instantiations=self.instantiations,
-                    method_instantiations=[],
-                    parent=self)
+        instantiated_static_methods = helper.multilevel_instantiation(
+            self.original.static_methods, typenames, self)
 
         return instantiated_static_methods
 
@@ -636,34 +615,8 @@ class InstantiatedClass(parser.Class):
 
         helper = InstantiationHelper(instantiation_type=InstantiatedMethod)
 
-        for method in self.original.methods:
-            method_typenames = deepcopy(typenames)
-
-            # Add constructor templates to the typenames and instantiations
-            if isinstance(method.template, parser.template.Template):
-                method_typenames.extend(method.template.typenames)
-
-                # Get all combinations of template args
-                for instantiations in itertools.product(
-                        *method.template.instantiations):
-
-                    instantiated_methods = helper.instantiate(
-                        instantiated_methods,
-                        method,
-                        typenames=method_typenames,
-                        class_instantiations=self.instantiations,
-                        method_instantiations=list(instantiations),
-                        parent=self)
-
-            else:
-                # If no constructor level templates, just use the class templates
-                instantiated_methods = helper.instantiate(
-                    instantiated_methods,
-                    method,
-                    typenames=method_typenames,
-                    class_instantiations=self.instantiations,
-                    method_instantiations=[],
-                    parent=self)
+        instantiated_methods = helper.multilevel_instantiation(
+            self.original.methods, typenames, self)
 
         return instantiated_methods
 
