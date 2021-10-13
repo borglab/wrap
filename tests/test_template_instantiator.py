@@ -219,30 +219,92 @@ class TestInstantiatedStaticMethod(unittest.TestCase):
 
 class TestInstantiatedClass(unittest.TestCase):
     """Tests for the InstantiatedClass class."""
+    def setUp(self):
+        cl = Class.rule.parseString("""
+            template<T={string}>
+            class Foo {
+                template<C={int}>
+                Foo(C& c);
+
+                template<S={char}>
+                static T staticMethod(const S& s);
+
+                template<M={double}>
+                T method(const M& m);
+
+                T operator*(T other) const;
+
+                T prop;
+            };
+        """)[0]
+        class_instantiations = [Typename.rule.parseString('string')[0]]
+        self.member_instantiations = [
+            Typename.rule.parseString('int')[0],
+            Typename.rule.parseString('char')[0],
+            Typename.rule.parseString('double')[0],
+        ]
+        self.cl = InstantiatedClass(cl, class_instantiations)
+        self.typenames = self.cl.original.template.typenames
+
     def test_constructor(self):
         """Test constructor."""
-        pass
+        self.assertIsInstance(self.cl, InstantiatedClass)
+        self.assertIsInstance(self.cl.original, Class)
+        self.assertEqual(self.cl.name, "FooString")
 
     def test_instantiate_ctors(self):
-        pass
+        """Test instantiate_ctors method."""
+        ctors = self.cl.instantiate_ctors(self.typenames)
+        self.assertEqual(len(ctors), 1)
+        self.assertEqual(ctors[0].name, "FooString")
+        self.assertEqual(ctors[0].args.list()[0].ctype.get_typename(), "int")
 
     def test_instantiate_static_methods(self):
-        pass
+        """Test instantiate_static_methods method."""
+        static_methods = self.cl.instantiate_static_methods(self.typenames)
+        self.assertEqual(len(static_methods), 1)
+        self.assertEqual(static_methods[0].name, "staticMethodChar")
+        self.assertEqual(static_methods[0].args.list()[0].ctype.get_typename(),
+                         "char")
+        self.assertEqual(static_methods[0].return_type.type1.get_typename(),
+                         "string")
 
     def test_instantiate_methods(self):
-        pass
+        """Test instantiate_methods method."""
+        methods = self.cl.instantiate_methods(self.typenames)
+        self.assertEqual(len(methods), 1)
+        self.assertEqual(methods[0].name, "methodDouble")
+        self.assertEqual(methods[0].args.list()[0].ctype.get_typename(),
+                         "double")
+        self.assertEqual(methods[0].return_type.type1.get_typename(), "string")
 
     def test_instantiate_operators(self):
-        pass
+        """Test instantiate_operators method."""
+        operators = self.cl.instantiate_operators(self.typenames)
+        self.assertEqual(len(operators), 1)
+        print(type(operators[0]))
+        self.assertEqual(operators[0].operator, "*")
+        self.assertEqual(operators[0].args.list()[0].ctype.get_typename(),
+                         "string")
+        self.assertEqual(operators[0].return_type.type1.get_typename(),
+                         "string")
 
     def test_instantiate_properties(self):
-        pass
+        """Test instantiate_properties method."""
+        properties = self.cl.instantiate_properties(self.typenames)
+        self.assertEqual(len(properties), 1)
+        self.assertEqual(properties[0].name, "prop")
+        self.assertEqual(properties[0].ctype.get_typename(), "string")
 
     def test_cpp_typename(self):
-        pass
+        """Test cpp_typename method."""
+        actual = self.cl.cpp_typename()
+        self.assertEqual(actual.name, "Foo<string>")
 
     def test_to_cpp(self):
-        pass
+        """Test to_cpp method."""
+        actual = self.cl.to_cpp()
+        self.assertEqual(actual, "Foo<string>")
 
 
 class TestInstantiatedDeclaration(unittest.TestCase):
