@@ -19,14 +19,16 @@ import unittest
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from gtwrap.interface_parser import (Argument, ArgumentList, Class,
-                                     Constructor, ForwardDeclaration, Include,
-                                     Method, Namespace, ReturnType,
-                                     StaticMethod, Typename)
+                                     Constructor, ForwardDeclaration,
+                                     GlobalFunction, Include, Method,
+                                     Namespace, ReturnType, StaticMethod,
+                                     Typename)
 from gtwrap.template_instantiator import (
     InstantiatedClass, InstantiatedConstructor, InstantiatedDeclaration,
-    InstantiatedMethod, InstantiatedStaticMethod, InstantiationHelper,
-    instantiate_args_list, instantiate_name, instantiate_namespace,
-    instantiate_return_type, instantiate_type, is_scoped_template)
+    InstantiatedGlobalFunction, InstantiatedMethod, InstantiatedStaticMethod,
+    InstantiationHelper, instantiate_args_list, instantiate_name,
+    instantiate_namespace, instantiate_return_type, instantiate_type,
+    is_scoped_template)
 
 
 class TestInstantiationHelper(unittest.TestCase):
@@ -50,12 +52,30 @@ class TestInstantiationHelper(unittest.TestCase):
 
 class TestInstantiatedGlobalFunction(unittest.TestCase):
     """Tests for the InstantiatedGlobalFunction class."""
+    def setUp(self):
+        original = GlobalFunction.rule.parseString("""
+            template<T={int}, R={double}>
+            R function(const T& x);
+        """)[0]
+        instantiations = [
+            Typename.rule.parseString("int")[0],
+            Typename.rule.parseString("double")[0]
+        ]
+        self.func = InstantiatedGlobalFunction(original, instantiations)
+
     def test_constructor(self):
         """Test constructor."""
-        pass
+        self.assertIsInstance(self.func, InstantiatedGlobalFunction)
+        self.assertIsInstance(self.func.original, GlobalFunction)
+        self.assertEqual(self.func.name, "functionIntDouble")
+        self.assertEqual(len(self.func.args.list()), 1)
+        self.assertEqual(self.func.args.list()[0].ctype.get_typename(), "int")
+        self.assertEqual(self.func.return_type.type1.get_typename(), "double")
 
     def test_to_cpp(self):
-        pass
+        """Test to_cpp method."""
+        actual = self.func.to_cpp()
+        self.assertEqual(actual, "function<int,double>")
 
 
 class TestInstantiatedConstructor(unittest.TestCase):
