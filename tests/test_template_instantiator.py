@@ -18,14 +18,15 @@ import unittest
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from gtwrap import template_instantiator
 from gtwrap.interface_parser import (Argument, ArgumentList, Class,
                                      Constructor, ForwardDeclaration, Include,
                                      Method, Namespace, ReturnType,
                                      StaticMethod, Typename)
-from gtwrap.template_instantiator import (InstantiatedClass,
-                                          InstantiatedDeclaration,
-                                          InstantiationHelper)
+from gtwrap.template_instantiator import (
+    InstantiatedClass, InstantiatedConstructor, InstantiatedDeclaration,
+    InstantiationHelper, instantiate_args_list, instantiate_name,
+    instantiate_namespace, instantiate_return_type, instantiate_type,
+    is_scoped_template)
 
 
 class TestInstantiationHelper(unittest.TestCase):
@@ -59,15 +60,57 @@ class TestInstantiatedGlobalFunction(unittest.TestCase):
 
 class TestInstantiatedConstructor(unittest.TestCase):
     """Tests for the InstantiatedConstructor class."""
+    def setUp(self):
+        constructor = Constructor.rule.parseString("""
+            template<U={double}>
+            Class(C x, const U& param);
+            """)[0]
+        instantiations = [
+            Typename.rule.parseString("double")[0],
+            Typename.rule.parseString("string")[0]
+        ]
+        self.constructor = InstantiatedConstructor(constructor, instantiations)
+
     def test_constructor(self):
         """Test constructor."""
-        pass
+        self.assertIsInstance(self.constructor, InstantiatedConstructor)
+        self.assertIsInstance(self.constructor.original, Constructor)
 
     def test_construct(self):
-        pass
+        """Test the construct classmethod."""
+        constructor = Constructor.rule.parseString("""
+            template<U={double}>
+            Class(C x, const U& param);
+            """)[0]
+        c = Class.rule.parseString("""
+            template<C={string}>
+            class Class {};
+        """)[0]
+        class_instantiations = [Typename.rule.parseString("double")[0]]
+        method_instantiations = [Typename.rule.parseString("string")[0]]
+        typenames = ['C', 'U']
+        parent = InstantiatedClass(c, class_instantiations)
+        instantiated_args = instantiate_args_list(
+            constructor.args.list(),
+            typenames, class_instantiations + method_instantiations,
+            parent.cpp_typename())
+
+        instantiated_constructor = InstantiatedConstructor.construct(
+            constructor, typenames, class_instantiations,
+            method_instantiations, instantiated_args, parent)
+        self.assertEqual(instantiated_constructor.name, "ClassDouble")
+        self.assertEqual(
+            instantiated_constructor.args.list()[0].ctype.get_typename(),
+            "double")
+        print(instantiated_constructor.args.list()[1].ctype.typename.name)
+        self.assertEqual(
+            instantiated_constructor.args.list()[1].ctype.get_typename(),
+            "string")
 
     def test_to_cpp(self):
-        pass
+        """Test the to_cpp method."""
+        actual = self.constructor.to_cpp()
+        self.assertEqual(actual, "Class<double,string>")
 
 
 class TestInstantiatedMethod(unittest.TestCase):
@@ -156,7 +199,7 @@ class TestTemplateInstantiator(unittest.TestCase):
         # Test if not scoped template.
         template_typenames = ['T']
         str_arg_typename = "double"
-        scoped_template, scoped_idx = template_instantiator.is_scoped_template(
+        scoped_template, scoped_idx = is_scoped_template(
             template_typenames, str_arg_typename)
         self.assertFalse(scoped_template)
         self.assertEqual(scoped_idx, -1)
@@ -164,7 +207,7 @@ class TestTemplateInstantiator(unittest.TestCase):
         # Check for correct template match.
         template_typenames = ['T']
         str_arg_typename = "gtsam::Matrix"
-        scoped_template, scoped_idx = template_instantiator.is_scoped_template(
+        scoped_template, scoped_idx = is_scoped_template(
             template_typenames, str_arg_typename)
         self.assertFalse(scoped_template)
         self.assertEqual(scoped_idx, -1)
@@ -172,14 +215,14 @@ class TestTemplateInstantiator(unittest.TestCase):
         # Test scoped templatte
         template_typenames = ['T']
         str_arg_typename = "T::Value"
-        scoped_template, scoped_idx = template_instantiator.is_scoped_template(
+        scoped_template, scoped_idx = is_scoped_template(
             template_typenames, str_arg_typename)
         self.assertEqual(scoped_template, "T")
         self.assertEqual(scoped_idx, 0)
 
         template_typenames = ['U', 'T']
         str_arg_typename = "T::Value"
-        scoped_template, scoped_idx = template_instantiator.is_scoped_template(
+        scoped_template, scoped_idx = is_scoped_template(
             template_typenames, str_arg_typename)
         self.assertEqual(scoped_template, "T")
         self.assertEqual(scoped_idx, 1)
@@ -190,12 +233,11 @@ class TestTemplateInstantiator(unittest.TestCase):
         template_typenames = ["T"]
         instantiations = [Typename.rule.parseString("double")[0]]
         cpp_typename = "ExampleClass"
-        new_type = template_instantiator.instantiate_type(
-            arg.ctype,
-            template_typenames,
-            instantiations=instantiations,
-            cpp_typename=cpp_typename,
-            instantiated_class=None)
+        new_type = instantiate_type(arg.ctype,
+                                    template_typenames,
+                                    instantiations=instantiations,
+                                    cpp_typename=cpp_typename,
+                                    instantiated_class=None)
 
         new_typename = new_type.typename
         self.assertEqual(new_typename.name, "double")
@@ -207,7 +249,7 @@ class TestTemplateInstantiator(unittest.TestCase):
         args_list = args.list()
         template_typenames = ['T']
         instantiations = [Typename.rule.parseString("double")[0]]
-        instantiated_args_list = template_instantiator.instantiate_args_list(
+        instantiated_args_list = instantiate_args_list(
             args_list,
             template_typenames,
             instantiations,
@@ -223,7 +265,7 @@ class TestTemplateInstantiator(unittest.TestCase):
             Typename.rule.parseString("double")[0],
             Typename.rule.parseString("Matrix")[0]
         ]
-        instantiated_args_list = template_instantiator.instantiate_args_list(
+        instantiated_args_list = instantiate_args_list(
             args_list,
             template_typenames,
             instantiations,
@@ -240,7 +282,7 @@ class TestTemplateInstantiator(unittest.TestCase):
             Typename.rule.parseString("double")[0],
             Typename.rule.parseString("Matrix")[0]
         ]
-        instantiated_args_list = template_instantiator.instantiate_args_list(
+        instantiated_args_list = instantiate_args_list(
             args_list,
             template_typenames,
             instantiations,
@@ -257,7 +299,7 @@ class TestTemplateInstantiator(unittest.TestCase):
         return_type = ReturnType.rule.parseString("T")[0]
         template_typenames = ['T']
         instantiations = [Typename.rule.parseString("double")[0]]
-        instantiated_return_type = template_instantiator.instantiate_return_type(
+        instantiated_return_type = instantiate_return_type(
             return_type,
             template_typenames,
             instantiations,
@@ -272,7 +314,7 @@ class TestTemplateInstantiator(unittest.TestCase):
             Typename.rule.parseString("double")[0],
             Typename.rule.parseString("char")[0],
         ]
-        instantiated_return_type = template_instantiator.instantiate_return_type(
+        instantiated_return_type = instantiate_return_type(
             return_type,
             template_typenames,
             instantiations,
@@ -285,8 +327,7 @@ class TestTemplateInstantiator(unittest.TestCase):
     def test_instantiate_name(self):
         """Test for instantiate_name."""
         instantiations = [Typename.rule.parseString("Man")[0]]
-        instantiated_name = template_instantiator.instantiate_name(
-            "Iron", instantiations)
+        instantiated_name = instantiate_name("Iron", instantiations)
         self.assertEqual(instantiated_name, "IronMan")
 
     def test_instantiate_namespace(self):
@@ -306,8 +347,7 @@ class TestTemplateInstantiator(unittest.TestCase):
                 };
             }
         """)[0]
-        instantiated_namespace = template_instantiator.instantiate_namespace(
-            namespace)
+        instantiated_namespace = instantiate_namespace(namespace)
 
         self.assertEqual(instantiated_namespace.name, "gtsam")
         self.assertEqual(instantiated_namespace.parent, "")
