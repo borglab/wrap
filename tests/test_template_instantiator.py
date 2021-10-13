@@ -24,9 +24,9 @@ from gtwrap.interface_parser import (Argument, ArgumentList, Class,
                                      StaticMethod, Typename)
 from gtwrap.template_instantiator import (
     InstantiatedClass, InstantiatedConstructor, InstantiatedDeclaration,
-    InstantiatedMethod, InstantiationHelper, instantiate_args_list,
-    instantiate_name, instantiate_namespace, instantiate_return_type,
-    instantiate_type, is_scoped_template)
+    InstantiatedMethod, InstantiatedStaticMethod, InstantiationHelper,
+    instantiate_args_list, instantiate_name, instantiate_namespace,
+    instantiate_return_type, instantiate_type, is_scoped_template)
 
 
 class TestInstantiationHelper(unittest.TestCase):
@@ -154,6 +154,8 @@ class TestInstantiatedMethod(unittest.TestCase):
         self.assertEqual(instantiated_method.name, "methodDouble")
         self.assertEqual(
             instantiated_method.args.list()[0].ctype.get_typename(), "double")
+        self.assertEqual(instantiated_method.return_type.type1.get_typename(),
+                         "string")
 
     def test_to_cpp(self):
         """Test the to_cpp method."""
@@ -163,15 +165,56 @@ class TestInstantiatedMethod(unittest.TestCase):
 
 class TestInstantiatedStaticMethod(unittest.TestCase):
     """Tests for the InstantiatedStaticMethod class."""
+    def setUp(self):
+        static_method = StaticMethod.rule.parseString("""
+            template<U={double}>
+            static T staticMethod(const U& param);
+            """)[0]
+        instantiations = [Typename.rule.parseString("double")[0]]
+        self.static_method = InstantiatedStaticMethod(static_method,
+                                                      instantiations)
+
     def test_constructor(self):
         """Test constructor."""
-        pass
+        self.assertIsInstance(self.static_method, InstantiatedStaticMethod)
+        self.assertIsInstance(self.static_method.original, StaticMethod)
+        self.assertEqual(self.static_method.name, "staticMethodDouble")
 
     def test_construct(self):
-        pass
+        """Test the construct classmethod."""
+        static_method = StaticMethod.rule.parseString("""
+            template<U={double}>
+            static T staticMethod(U& param);
+            """)[0]
+        method_instantiations = [Typename.rule.parseString("double")[0]]
+        c = Class.rule.parseString("""
+            template<T={string}>
+            class Class {};
+        """)[0]
+        class_instantiations = [Typename.rule.parseString("string")[0]]
+
+        typenames = ['T', 'U']
+        parent = InstantiatedClass(c, class_instantiations)
+        instantiated_args = instantiate_args_list(
+            static_method.args.list(),
+            typenames, class_instantiations + method_instantiations,
+            parent.cpp_typename())
+
+        instantiated_static_method = InstantiatedStaticMethod.construct(
+            static_method, typenames, class_instantiations,
+            method_instantiations, instantiated_args, parent)
+        self.assertEqual(instantiated_static_method.name, "staticMethodDouble")
+        self.assertEqual(
+            instantiated_static_method.args.list()[0].ctype.get_typename(),
+            "double")
+        self.assertEqual(
+            instantiated_static_method.return_type.type1.get_typename(),
+            "string")
 
     def test_to_cpp(self):
-        pass
+        """Test the to_cpp method."""
+        actual = self.static_method.to_cpp()
+        self.assertEqual(actual, "staticMethod<double>")
 
 
 class TestInstantiatedClass(unittest.TestCase):
