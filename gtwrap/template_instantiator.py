@@ -1,18 +1,27 @@
 """Code to help instantiate templated classes, methods and functions."""
 
-# pylint: disable=too-many-arguments, too-many-instance-attributes, no-self-use, no-else-return, too-many-arguments, unused-format-string-argument, unused-variable. unused-argument
+# pylint: disable=too-many-arguments, too-many-instance-attributes, no-self-use, no-else-return, too-many-arguments, unused-format-string-argument, unused-variable. unused-argument, too-many-branches
 
 import itertools
 from copy import deepcopy
-from typing import Iterable, List, Sequence
+from typing import Iterable, List, Sequence, Union
 
 import gtwrap.interface_parser as parser
 
+ClassMembers = Union[parser.Constructor, parser.Method, parser.StaticMethod,
+                     parser.GlobalFunction, parser.Operator, parser.Variable,
+                     parser.Enum]
+InstantiatedMembers = Union['InstantiatedConstructor', 'InstantiatedMethod',
+                            'InstantiatedStaticMethod',
+                            'InstantiatedGlobalFunction']
 
-def is_scoped_template(template_typenames, str_arg_typename):
+
+def is_scoped_template(template_typenames: Sequence[str],
+                       str_arg_typename: str):
     """
-    Check if the template given by `str_arg_typename` is a scoped template,
-    and if so, return what template and index matches the scoped template correctly.
+    Check if the template given by `str_arg_typename` is a scoped template e.g. T::Value,
+    and if so, return what template from `template_typenames` and
+    the corresponding index matches the scoped template correctly.
     """
     for idx, template in enumerate(template_typenames):
         if "::" in str_arg_typename and \
@@ -21,20 +30,28 @@ def is_scoped_template(template_typenames, str_arg_typename):
     return False, -1
 
 
-def instantiate_type(ctype: parser.Type,
-                     template_typenames: List[str],
-                     instantiations: List[parser.Typename],
-                     cpp_typename: parser.Typename,
-                     instantiated_class=None):
+def instantiate_type(
+        ctype: parser.Type,
+        template_typenames: Sequence[str],
+        instantiations: Sequence[parser.Typename],
+        cpp_typename: parser.Typename,
+        instantiated_class: 'InstantiatedClass' = None) -> parser.Type:
     """
     Instantiate template typename for `ctype`.
 
     Args:
-        instiated_class (InstantiatedClass):
+        ctype: The original argument type.
+        template_typenames: List of strings representing the templates.
+        instantiations: List of the instantiations of the templates in `template_typenames`.
+        cpp_typename: Full-namespace cpp class name of this instantiation
+            to replace for arguments of type named `This`.
+        instiated_class: The instantiated class which, if provided,
+            will be used for instantiating `This`.
 
-    @return If ctype's name is in the @p template_typenames, return the
-        corresponding type to replace in @p instantiations.
-        If ctype name is `This`, return the new typename @p `cpp_typename`.
+    Returns:
+        If `ctype`'s name is in the `template_typenames`, return the
+        corresponding type to replace in `instantiations`.
+        If ctype name is `This`, return the new typename `cpp_typename`.
         Otherwise, return the original ctype.
     """
     # make a deep copy so that there is no overwriting of original template params
@@ -119,8 +136,10 @@ def instantiate_type(ctype: parser.Type,
         return ctype
 
 
-def instantiate_args_list(args_list, template_typenames, instantiations,
-                          cpp_typename):
+def instantiate_args_list(
+        args_list: Sequence[parser.Argument],
+        template_typenames: Sequence[parser.template.Typename],
+        instantiations: Sequence, cpp_typename: parser.Typename):
     """
     Instantiate template typenames in an argument list.
     Type with name `This` will be replaced by @p `cpp_typename`.
@@ -146,11 +165,12 @@ def instantiate_args_list(args_list, template_typenames, instantiations,
     return instantiated_args
 
 
-def instantiate_return_type(return_type,
-                            template_typenames,
-                            instantiations,
-                            cpp_typename,
-                            instantiated_class=None):
+def instantiate_return_type(
+        return_type: parser.ReturnType,
+        template_typenames: Sequence[parser.template.Typename],
+        instantiations: Sequence[parser.Typename],
+        cpp_typename: parser.Typename,
+        instantiated_class: 'InstantiatedClass' = None):
     """Instantiate the return type."""
     new_type1 = instantiate_type(return_type.type1,
                                  template_typenames,
@@ -168,12 +188,14 @@ def instantiate_return_type(return_type,
     return parser.ReturnType(new_type1, new_type2)
 
 
-def instantiate_name(original_name, instantiations):
+def instantiate_name(original_name: str,
+                     instantiations: Sequence[parser.Typename]):
     """
-    Concatenate instantiated types with an @p original name to form a new
+    Concatenate instantiated types with `original_name` to form a new
     instantiated name.
-    TODO(duy): To avoid conflicts, we should include the instantiation's
-    namespaces, but I find that too verbose.
+
+    NOTE: To avoid conflicts, we should include the instantiation's
+    namespaces, but that is too verbose.
     """
     instantiated_names = []
     for inst in instantiations:
@@ -201,11 +223,14 @@ class InstantiationHelper:
                   parent=parent)
     ```
     """
-    def __init__(self, instantiation_type):
+    def __init__(self, instantiation_type: InstantiatedMembers):
         self.instantiation_type = instantiation_type
 
-    def instantiate(self, instantiated_methods, method, typenames,
-                    class_instantiations, method_instantiations, parent):
+    def instantiate(self, instantiated_methods: List[InstantiatedMembers],
+                    method: ClassMembers, typenames: Sequence[str],
+                    class_instantiations: Sequence[parser.Typename],
+                    method_instantiations: Sequence[parser.Typename],
+                    parent: 'InstantiatedClass'):
         """
         Instantiate both the class and method level templates.
         """
@@ -225,8 +250,17 @@ class InstantiationHelper:
 
         return instantiated_methods
 
-    def multilevel_instantiation(self, methods_list, typenames, parent):
-        """Helper to instantiate methods at both the class and method level."""
+    def multilevel_instantiation(self, methods_list: Sequence[ClassMembers],
+                                 typenames: Sequence[str],
+                                 parent: 'InstantiatedClass'):
+        """
+        Helper to instantiate methods at both the class and method level.
+
+        Args:
+            methods_list: The list of methods in the class to instantiated.
+            typenames: List of class level template parameters, e.g. ['T'].
+            parent: The instantiated class to which `methods_list` belongs.
+        """
         instantiated_methods = []
 
         for method in methods_list:
@@ -349,8 +383,11 @@ class InstantiatedConstructor(parser.Constructor):
                          parent=self.parent)
 
     @classmethod
-    def construct(cls, original, typenames, class_instantiations,
-                  method_instantiations, instantiated_args, parent):
+    def construct(cls, original: parser.Constructor, typenames: List[str],
+                  class_instantiations: List[parser.Typename],
+                  method_instantiations: List[parser.Typename],
+                  instantiated_args: List[parser.Argument],
+                  parent: 'InstantiatedClass'):
         """Class method to construct object as required by InstantiationHelper."""
         method = parser.Constructor(
             name=parent.name,

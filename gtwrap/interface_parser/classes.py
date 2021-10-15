@@ -228,8 +228,8 @@ class Class:
         Rule for all the members within a class.
         """
         rule = ZeroOrMore(Constructor.rule  #
-                          ^ StaticMethod.rule  #
                           ^ Method.rule  #
+                          ^ StaticMethod.rule  #
                           ^ Variable.rule  #
                           ^ Operator.rule  #
                           ^ Enum.rule  #
