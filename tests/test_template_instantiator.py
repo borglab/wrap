@@ -37,17 +37,80 @@ class TestInstantiationHelper(unittest.TestCase):
         """Test constructor."""
         helper = InstantiationHelper(InstantiatedClass)
         self.assertEqual(helper.instantiation_type, InstantiatedClass)
+        helper = InstantiationHelper(InstantiatedConstructor)
+        self.assertEqual(helper.instantiation_type, InstantiatedConstructor)
+        helper = InstantiationHelper(InstantiatedDeclaration)
+        self.assertEqual(helper.instantiation_type, InstantiatedDeclaration)
+        helper = InstantiationHelper(InstantiatedGlobalFunction)
+        self.assertEqual(helper.instantiation_type, InstantiatedGlobalFunction)
+        helper = InstantiationHelper(InstantiatedMethod)
+        self.assertEqual(helper.instantiation_type, InstantiatedMethod)
+        helper = InstantiationHelper(InstantiatedStaticMethod)
+        self.assertEqual(helper.instantiation_type, InstantiatedStaticMethod)
 
     def test_instantiate(self):
         """Test instantiate method."""
-        pass
+        method = Method.rule.parseString("""
+            template<U={double}>
+            double method(const T x, const U& param);
+            """)[0]
+        cls = Class.rule.parseString("""
+            template<T={string}>
+            class Foo {};
+        """)[0]
+        typenames = ['T', 'U']
+        class_instantiations = [Typename.rule.parseString("string")[0]]
+        method_instantiations = [Typename.rule.parseString("double")[0]]
+
+        parent = InstantiatedClass(cls, class_instantiations)
+
+        helper = InstantiationHelper(InstantiatedMethod)
+        instantiated_methods = helper.instantiate([], method, typenames,
+                                                  class_instantiations,
+                                                  method_instantiations,
+                                                  parent)
+
+        self.assertEqual(len(instantiated_methods), 1)
+        args_list = instantiated_methods[0].args.list()
+        self.assertEqual(args_list[0].ctype.get_typename(), 'string')
+        self.assertEqual(args_list[1].ctype.get_typename(), 'double')
 
     def test_multilevel_instantiation(self):
         """
         Test method for multilevel instantiation
         i.e. instantiation at both the class and method level.
         """
-        pass
+        cls = Class.rule.parseString("""
+            template<T={string}>
+            class Foo {
+                template<U={double}>
+                double method1(const T x, const U& param);
+
+                template<V={int}>
+                V method2(const T x);
+            };
+        """)[0]
+
+        typenames = ['T']
+        class_instantiations = [Typename.rule.parseString("string")[0]]
+        parent = InstantiatedClass(cls, class_instantiations)
+
+        helper = InstantiationHelper(InstantiatedMethod)
+
+        instantiated_methods = helper.multilevel_instantiation(
+            cls.methods, typenames, parent)
+        self.assertEqual(len(instantiated_methods), 2)
+        self.assertEqual(
+            instantiated_methods[0].args.list()[0].ctype.get_typename(),
+            'string')
+        self.assertEqual(
+            instantiated_methods[0].args.list()[1].ctype.get_typename(),
+            'double')
+        self.assertEqual(
+            instantiated_methods[1].args.list()[0].ctype.get_typename(),
+            'string')
+        self.assertEqual(
+            instantiated_methods[1].return_type.type1.get_typename(), 'int')
 
 
 class TestInstantiatedGlobalFunction(unittest.TestCase):
@@ -302,7 +365,6 @@ class TestInstantiatedClass(unittest.TestCase):
         """Test instantiate_operators method."""
         operators = self.cl.instantiate_operators(self.typenames)
         self.assertEqual(len(operators), 1)
-        print(type(operators[0]))
         self.assertEqual(operators[0].operator, "*")
         self.assertEqual(operators[0].args.list()[0].ctype.get_typename(),
                          "string")
