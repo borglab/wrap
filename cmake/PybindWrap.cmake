@@ -192,9 +192,9 @@ function(install_python_files source_files dest_directory)
 endfunction()
 
 # ~~~
-# https://stackoverflow.com/questions/13959434/cmake-out-of-source-build-python-files
+# Copy over the directory from source_folder to dest_foler
 # ~~~
-function(create_symlinks source_folder dest_folder)
+function(copy_directory source_folder dest_folder)
   if(${source_folder} STREQUAL ${dest_folder})
     return()
   endif()
@@ -215,7 +215,7 @@ function(create_symlinks source_folder dest_folder)
     # Create REAL folder
     file(MAKE_DIRECTORY "${dest_folder}")
 
-    # Delete symlink if it exists
+    # Delete if it exists
     file(REMOVE "${dest_folder}/${path_file}")
 
     # Get OS dependent path to use in `execute_process`
@@ -224,9 +224,9 @@ function(create_symlinks source_folder dest_folder)
 
     # cmake-format: off
     if(UNIX)
-      set(command ln -s ${target} ${link})
+      set(command cp -r ${target} ${link})
     else()
-      set(command cmd.exe /c mklink ${link} ${target})
+      set(command xcopy /e /k /h /i ${link} ${target})
     endif()
     # cmake-format: on
 
@@ -242,4 +242,4 @@ function(create_symlinks source_folder dest_folder)
     endif()
 
   endforeach(path_file)
-endfunction(create_symlinks)
+endfunction(copy_directory)
