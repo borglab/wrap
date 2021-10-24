@@ -222,24 +222,10 @@ function(copy_directory source_folder dest_folder)
     file(TO_NATIVE_PATH "${dest_folder}/${path_file}" link)
     file(TO_NATIVE_PATH "${source_folder}/${path_file}" target)
 
-    # cmake-format: off
-    if(UNIX)
-      set(command cp -r ${target} ${link})
-    else()
-      set(command xcopy /e /k /h /i ${link} ${target})
-    endif()
-    # cmake-format: on
+    # Get OS dependent path to use in copy
+    file(TO_NATIVE_PATH "${source_folder}/${path_file}" target)
 
-    execute_process(
-      COMMAND ${command}
-      RESULT_VARIABLE result
-      ERROR_VARIABLE output)
-
-    if(NOT ${result} EQUAL 0)
-      message(
-        FATAL_ERROR
-          "Could not create symbolic link for: ${target} --> ${output}")
-    endif()
+    file(COPY ${target} DESTINATION ${dest_folder})
 
   endforeach(path_file)
 endfunction(copy_directory)
