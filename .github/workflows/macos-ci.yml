@@ -5,7 +5,7 @@ on: [pull_request]
 jobs:
   build:
     name: Tests for 🐍 ${{ matrix.python-version }}
-    runs-on: macos-latest
+    runs-on: macos-10.15
 
     strategy:
       fail-fast: false
@@ -33,7 +33,6 @@ jobs:
         run: |
           # Build
           cmake .
-          cd tests
-          # Use Pytest to run all the tests.
-          pytest
+          # Run all the tests.
+          python3 -m unittest discover -s tests
 
