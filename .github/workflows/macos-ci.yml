@@ -27,6 +27,7 @@ jobs:
 
       - name: Python Dependencies
         run: |
+          pip3 install -U pip setuptools
           pip3 install -r requirements.txt
 
       - name: Build and Test
