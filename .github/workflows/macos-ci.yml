@@ -29,8 +29,11 @@ jobs:
         run: |
           pip3 install -r requirements.txt
 
-      - name: Run Tests
+      - name: Build and Test
         run: |
+          # Build
+          cmake .
+          cd tests
           # Use Pytest to run all the tests.
-          pytest tests
+          pytest
 
