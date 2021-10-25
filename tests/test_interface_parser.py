@@ -294,8 +294,8 @@ class TestInterfaceParser(unittest.TestCase):
             "pair<First ,Second*> create_MixedPtrs();")[0]
         self.assertEqual("create_MixedPtrs", ret.name)
         self.assertEqual(0, len(ret.args))
-        self.assertEqual("First", ret.return_type.type1.typename)
-        self.assertEqual("Second", ret.return_type.type2.typename)
+        self.assertEqual("First", ret.return_type.type1.typename.name)
+        self.assertEqual("Second", ret.return_type.type2.typename.name)
 
     def test_static_method(self):
         """Test for static methods."""
