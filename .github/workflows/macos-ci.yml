@@ -33,6 +33,7 @@ jobs:
         run: |
           # Build
           cmake .
-          # Run all the tests.
-          python3 -m unittest discover -s tests
+          cd tests
+          # Use Pytest to run all the tests.
+          pytest
 
