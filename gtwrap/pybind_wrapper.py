@@ -104,16 +104,10 @@ class PybindWrapper:
                      '.def("deserialize", []({class_inst} self, string serialized)' \
                      '{{ gtsam::deserialize(serialized, *self); }}, py::arg("serialized"))' \
                        .format(class_inst=cpp_class + '*')
-            return serialize_method + deserialize_method
-
-        if cpp_method == "pickle":
-            if not cpp_class in self._serializing_classes:
-                raise ValueError(
-                    "Cannot pickle a class which is not serializable")
             pickle_method = self.method_indent + \
                 ".def(py::pickle({indent}    [](const {cpp_class} &a){{ /* __getstate__: Returns a string that encodes the state of the object */ return py::make_tuple(gtsam::serialize(a)); }},{indent}    [](py::tuple t){{ /* __setstate__ */ {cpp_class} obj; gtsam::deserialize(t[0].cast<std::string>(), obj); return obj; }}))"
-            return pickle_method.format(cpp_class=cpp_class,
-                                        indent=self.method_indent)
+            return serialize_method + deserialize_method + \
+                pickle_method.format(cpp_class=cpp_class, indent=self.method_indent)
 
         # Add underscore to disambiguate if the method name matches a python keyword
         if py_method in self.python_keywords:
