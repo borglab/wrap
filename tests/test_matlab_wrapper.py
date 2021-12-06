@@ -92,10 +92,20 @@ class TestWrap(unittest.TestCase):
         wrapper.wrap([file], path=self.MATLAB_ACTUAL_DIR)
 
         files = [
-            'functions_wrapper.cpp', 'aGlobalFunction.m', 'load2D.m',
+            'functions_wrapper.cpp',
+            'aGlobalFunction.m',
+            'load2D.m',
             'MultiTemplatedFunctionDoubleSize_tDouble.m',
             'MultiTemplatedFunctionStringSize_tDouble.m',
-            'overloadedGlobalFunction.m', 'TemplatedFunctionRot3.m'
+            'overloadedGlobalFunction.m',
+            'TemplatedFunctionRot3.m',
+            '+gtsam/Values.m',
+            'DefaultFuncInt.m',
+            'DefaultFuncObj.m',
+            'DefaultFuncString.m',
+            'DefaultFuncVector.m',
+            'DefaultFuncZero.m',
+            'setPose.m',
         ]
 
         for file in files:
@@ -118,7 +128,8 @@ class TestWrap(unittest.TestCase):
             'class_wrapper.cpp', 'FunDouble.m', 'FunRange.m',
             'MultipleTemplatesIntDouble.m', 'MultipleTemplatesIntFloat.m',
             'MyFactorPosePoint2.m', 'MyVector3.m', 'MyVector12.m',
-            'PrimitiveRefDouble.m', 'Test.m'
+            'PrimitiveRefDouble.m', 'Test.m', 'ForwardKinematics.m',
+            'ForwardKinematicsFactor.m'
         ]
 
         for file in files:
@@ -137,7 +148,10 @@ class TestWrap(unittest.TestCase):
 
         wrapper.wrap([file], path=self.MATLAB_ACTUAL_DIR)
 
-        files = ['template_wrapper.cpp']
+        files = [
+            'template_wrapper.cpp', 'ScopedTemplateResult.m',
+            'TemplatedConstructor.m'
+        ]
 
         for file in files:
             actual = osp.join(self.MATLAB_ACTUAL_DIR, file)
@@ -203,8 +217,10 @@ class TestWrap(unittest.TestCase):
 
         files = [
             'special_cases_wrapper.cpp',
-            '+gtsam/PinholeCameraCal3Bundler.m',
+            '+gtsam/GeneralSFMFactorCal3Bundler.m',
             '+gtsam/NonlinearFactorGraph.m',
+            '+gtsam/PinholeCameraCal3Bundler.m',
+            '+gtsam/SfmTrack.m',
         ]
 
         for file in files:
