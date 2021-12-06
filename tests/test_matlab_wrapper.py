@@ -99,7 +99,6 @@ class TestWrap(unittest.TestCase):
             'MultiTemplatedFunctionStringSize_tDouble.m',
             'overloadedGlobalFunction.m',
             'TemplatedFunctionRot3.m',
-            '+gtsam/Values.m',
             'DefaultFuncInt.m',
             'DefaultFuncObj.m',
             'DefaultFuncString.m',
@@ -125,11 +124,17 @@ class TestWrap(unittest.TestCase):
         wrapper.wrap([file], path=self.MATLAB_ACTUAL_DIR)
 
         files = [
-            'class_wrapper.cpp', 'FunDouble.m', 'FunRange.m',
-            'MultipleTemplatesIntDouble.m', 'MultipleTemplatesIntFloat.m',
-            'MyFactorPosePoint2.m', 'MyVector3.m', 'MyVector12.m',
-            'PrimitiveRefDouble.m', 'Test.m', 'ForwardKinematics.m',
-            'ForwardKinematicsFactor.m'
+            'class_wrapper.cpp',
+            'FunDouble.m',
+            'FunRange.m',
+            'MultipleTemplatesIntDouble.m',
+            'MultipleTemplatesIntFloat.m',
+            'MyFactorPosePoint2.m',
+            'MyVector3.m',
+            'MyVector12.m',
+            'PrimitiveRefDouble.m',
+            'Test.m',
+            'ForwardKinematics.m',
         ]
 
         for file in files:
@@ -169,8 +174,11 @@ class TestWrap(unittest.TestCase):
         wrapper.wrap([file], path=self.MATLAB_ACTUAL_DIR)
 
         files = [
-            'inheritance_wrapper.cpp', 'MyBase.m', 'MyTemplateMatrix.m',
-            'MyTemplatePoint2.m'
+            'inheritance_wrapper.cpp',
+            'MyBase.m',
+            'MyTemplateMatrix.m',
+            'MyTemplatePoint2.m',
+            'ForwardKinematicsFactor.m',
         ]
 
         for file in files:
@@ -192,10 +200,17 @@ class TestWrap(unittest.TestCase):
         wrapper.wrap([file], path=self.MATLAB_ACTUAL_DIR)
 
         files = [
-            'namespaces_wrapper.cpp', '+ns1/aGlobalFunction.m',
-            '+ns1/ClassA.m', '+ns1/ClassB.m', '+ns2/+ns3/ClassB.m',
-            '+ns2/aGlobalFunction.m', '+ns2/ClassA.m', '+ns2/ClassC.m',
-            '+ns2/overloadedGlobalFunction.m', 'ClassD.m'
+            'namespaces_wrapper.cpp',
+            '+ns1/aGlobalFunction.m',
+            '+ns1/ClassA.m',
+            '+ns1/ClassB.m',
+            '+ns2/+ns3/ClassB.m',
+            '+ns2/aGlobalFunction.m',
+            '+ns2/ClassA.m',
+            '+ns2/ClassC.m',
+            '+ns2/overloadedGlobalFunction.m',
+            'ClassD.m',
+            '+gtsam/Values.m',
         ]
 
         for file in files:
