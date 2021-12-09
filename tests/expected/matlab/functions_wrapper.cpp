@@ -130,6 +130,17 @@ void DefaultFuncInt_8(int nargout, mxArray *out[], int nargin, const mxArray *in
   int b = unwrap< int >(in[1]);
   DefaultFuncInt(a,b);
 }
+void DefaultFuncInt_9(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+{
+  checkArguments("DefaultFuncInt",nargout,nargin,1);
+  int a = unwrap< int >(in[0]);
+  DefaultFuncInt(a);
+}
+void DefaultFuncInt_10(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+{
+  checkArguments("DefaultFuncInt",nargout,nargin,0);
+  DefaultFuncInt();
+}
 void DefaultFuncString_9(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   checkArguments("DefaultFuncString",nargout,nargin,2);
