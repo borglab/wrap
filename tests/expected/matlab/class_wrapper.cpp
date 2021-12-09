@@ -846,7 +846,7 @@ void MyFactorPosePoint2_print_70(int nargout, mxArray *out[], int nargin, const 
 {
   checkArguments("print",nargout,nargin-1,1);
   auto obj = unwrap_shared_ptr<MyFactor<gtsam::Pose2, gtsam::Matrix>>(in[0], "ptr_MyFactorPosePoint2");
-  gtsam::KeyFormatter& keyFormatter = *unwrap_shared_ptr< gtsam::KeyFormatter >(in[2], "ptr_gtsamKeyFormatter");
+  gtsam::KeyFormatter& keyFormatter = *unwrap_shared_ptr< gtsam::KeyFormatter >(in[1], "ptr_gtsamKeyFormatter");
   obj->print("factor: ",keyFormatter);
 }
 
@@ -1075,10 +1075,13 @@ void mexFunction(int nargout, mxArray *out[], int nargin, const mxArray *in[])
       break;
     case 68:
       MyFactorPosePoint2_print_68(nargout, out, nargin-1, in+1);
+      break;
     case 69:
       MyFactorPosePoint2_print_69(nargout, out, nargin-1, in+1);
+      break;
     case 70:
       MyFactorPosePoint2_print_70(nargout, out, nargin-1, in+1);
+      break;
     case 71:
       MyFactorPosePoint2_print_71(nargout, out, nargin-1, in+1);
       break;
