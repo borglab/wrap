@@ -13,6 +13,7 @@ from typing import Dict, Iterable, List, Union
 import copy
 
 import gtwrap.interface_parser as parser
+from gtwrap.interface_parser.function import ArgumentList
 import gtwrap.template_instantiator as instantiator
 from gtwrap.matlab_wrapper.mixins import CheckMixin, FormatMixin
 from gtwrap.matlab_wrapper.templates import WrapperTemplate
@@ -144,13 +145,20 @@ class MatlabWrapper(CheckMixin, FormatMixin):
         We create "overload" functions with fewer arguments, but since we have to "remember" what
         the default arguments are for later, we make a backup.
         """
+        def args_copy(args):
+            return ArgumentList([copy.copy(arg) for arg in args.list()])
+        def method_copy(method):
+            method2 = copy.copy(method)
+            method2.args = args_copy(method.args)
+            method2.args.backup = method.args.backup
+            return method2
         if save_backup:
-            method.args.backup = copy.deepcopy(method.args)
-            method = copy.deepcopy(method)
+            method.args.backup = args_copy(method.args)
+        method = method_copy(method)
         for arg in method.args.list():
             if arg.default is not None:
                 arg.default = None
-                methodWithArg = copy.deepcopy(method)
+                methodWithArg = method_copy(method)
                 method.args.list().remove(arg)
                 return [
                     *MatlabWrapper._expand_default_arguments(methodWithArg, save_backup=False),
