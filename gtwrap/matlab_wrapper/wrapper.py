@@ -155,17 +155,19 @@ class MatlabWrapper(CheckMixin, FormatMixin):
         if save_backup:
             method.args.backup = args_copy(method.args)
         method = method_copy(method)
-        for arg in method.args.list():
+        for arg in reversed(method.args.list()):
             if arg.default is not None:
                 arg.default = None
                 methodWithArg = method_copy(method)
                 method.args.list().remove(arg)
                 return [
-                    *MatlabWrapper._expand_default_arguments(methodWithArg, save_backup=False),
-                    *MatlabWrapper._expand_default_arguments(
-                        method,
-                        save_backup=False)  # can not-expand this to disallow skipping arguments
+                    methodWithArg,
+                    *MatlabWrapper._expand_default_arguments(method, save_backup=False)
                 ]
+            break
+        assert all(arg.default is None for arg in method.args.list()), \
+            'In parsing method {:}: Arguments with default values cannot appear before ones ' \
+            'without default values.'.format(method.name)
         return [method]
 
     def _group_methods(self, methods):

@@ -45,16 +45,10 @@ classdef MyFactorPosePoint2 < handle
         class_wrapper(69, this, varargin{:});
         return
       end
-      % PRINT usage: print(KeyFormatter keyFormatter) : returns void
-      % Doxygen can be found at https://gtsam.org/doxygen/
-      if length(varargin) == 1 && isa(varargin{1},'gtsam.KeyFormatter')
-        class_wrapper(70, this, varargin{:});
-        return
-      end
       % PRINT usage: print() : returns void
       % Doxygen can be found at https://gtsam.org/doxygen/
       if length(varargin) == 0
-        class_wrapper(71, this, varargin{:});
+        class_wrapper(70, this, varargin{:});
         return
       end
       error('Arguments do not match any overload of function MyFactorPosePoint2.print');
