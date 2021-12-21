@@ -67,9 +67,8 @@ function(
   foreach(interface_file ${interface_files})
     # This block gets the interface file name and does the replacement
     get_filename_component(interface ${interface_file} NAME_WLE)
-    get_filename_component(dir ${interface_file} DIRECTORY)
     set(cpp_file "${interface}.cpp")
-    list(APPEND cpp_files "${interface}.cpp")
+    list(APPEND cpp_files ${cpp_file})
 
     # Wrap the specific interface header
     # This is done so that we can create CMake dependencies in such a way so that when changing a single .i file,
