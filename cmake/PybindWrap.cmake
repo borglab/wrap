@@ -55,15 +55,47 @@ function(
     set(GTWRAP_PATH_SEPARATOR ";")
   endif()
 
+  add_custom_target(pybind_wrap_${module_name})
+
+  # Create a copy of interface_headers so we can freely manipulate it
+  set(interface_files ${interface_headers})
+
+  # Pop the main interface file so that interface_files has only submodules.
+  LIST(POP_FRONT interface_files main_interface)
+
   # Convert .i file names to .cpp file names.
-  foreach(filepath ${interface_headers})
-    get_filename_component(interface ${filepath} NAME)
-    string(REPLACE ".i" ".cpp" cpp_file ${interface})
-    list(APPEND cpp_files ${cpp_file})
+  foreach(interface_file ${interface_files})
+    # This block gets the interface file name and does the replacement
+    get_filename_component(interface ${interface_file} NAME_WLE)
+    get_filename_component(dir ${interface_file} DIRECTORY)
+    set(cpp_file "${interface}.cpp")
+    list(APPEND cpp_files "${interface}.cpp")
+
+    # Wrap the specific interface header
+    # This is done so that we can create CMake dependencies in such a way so that when changing a single .i file,
+    # the others don't need to be regenerated.
+    add_custom_target("${interface}_target"
+      COMMAND
+        ${CMAKE_COMMAND} -E env
+        "PYTHONPATH=${GTWRAP_PACKAGE_DIR}${GTWRAP_PATH_SEPARATOR}$ENV{PYTHONPATH}"
+        ${PYTHON_EXECUTABLE} ${PYBIND_WRAP_SCRIPT} --src "${interface_file}"
+          --out "${generated_cpp}"  --module_name ${module_name}
+          --top_module_namespaces "${top_namespace}" --ignore ${ignore_classes}
+          --template ${module_template} --is_submodule ${_WRAP_BOOST_ARG}
+      DEPENDS "${interface_file}"
+      BYPRODUCTS "${cpp_file}"
+      SOURCES "${interface_file}"
+      COMMENT "${interface} -> ${cpp_file}"
+      VERBATIM)
+
+    add_dependencies(pybind_wrap_${module_name} "${interface}_target")
   endforeach()
 
-  add_custom_command(
-    OUTPUT ${cpp_files}
+  get_filename_component(main_interface_name ${main_interface} NAME)
+  string(REPLACE ".i" ".cpp" main_cpp_file ${main_interface_name})
+  list(PREPEND cpp_files ${main_cpp_file})
+
+  add_custom_target("${main_interface_name}_target"
     COMMAND
       ${CMAKE_COMMAND} -E env
       "PYTHONPATH=${GTWRAP_PACKAGE_DIR}${GTWRAP_PATH_SEPARATOR}$ENV{PYTHONPATH}"
@@ -71,23 +103,14 @@ function(
       --out "${generated_cpp}" --module_name ${module_name}
       --top_module_namespaces "${top_namespace}" --ignore ${ignore_classes}
       --template ${module_template} ${_WRAP_BOOST_ARG}
-    DEPENDS "${interface_headers}" ${module_template}
+    DEPENDS "${main_interface}"
+    BYPRODUCTS "${main_cpp_file}"
+    SOURCES "${main_interface}"
+    COMMENT "${main_interface_name} -> ${main_cpp_file}"
     VERBATIM)
 
-  add_custom_target(pybind_wrap_${module_name} ALL DEPENDS ${cpp_files})
+  add_dependencies(pybind_wrap_${module_name} "${main_interface_name}_target")
 
-  # Late dependency injection, to make sure this gets called whenever the
-  # interface header or the wrap library are updated.
-  # ~~~
-  # See: https://stackoverflow.com/questions/40032593/cmake-does-not-rebuild-dependent-after-prerequisite-changes
-  # ~~~
-  add_custom_command(
-    OUTPUT ${cpp_files}
-    DEPENDS ${interface_headers}
-    # @GTWRAP_SOURCE_DIR@/gtwrap/interface_parser.py
-    # @GTWRAP_SOURCE_DIR@/gtwrap/pybind_wrapper.py
-    # @GTWRAP_SOURCE_DIR@/gtwrap/template_instantiator.py
-    APPEND)
 
   pybind11_add_module(${target} "${cpp_files}")
 
