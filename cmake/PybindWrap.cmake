@@ -82,13 +82,13 @@ function(
           --out "${cpp_file}"  --module_name ${module_name}
           --top_module_namespaces "${top_namespace}" --ignore ${ignore_classes}
           --template ${module_template} --is_submodule ${_WRAP_BOOST_ARG}
-      DEPENDS "${interface_file}" ${module_template}
+      DEPENDS "${interface_file}" ${module_template} "${module_name}/specializations/${interface}.h" "${module_name}/preamble/${interface}.h"
       VERBATIM)
 
   endforeach()
 
-  get_filename_component(main_interface_name ${main_interface} NAME)
-  string(REPLACE ".i" ".cpp" main_cpp_file ${main_interface_name})
+  get_filename_component(main_interface_name ${main_interface} NAME_WLE)
+  set(main_cpp_file "${main_interface_name}.cpp")
   list(PREPEND cpp_files ${main_cpp_file})
 
   add_custom_command(
@@ -100,7 +100,7 @@ function(
       --out "${generated_cpp}" --module_name ${module_name}
       --top_module_namespaces "${top_namespace}" --ignore ${ignore_classes}
       --template ${module_template} ${_WRAP_BOOST_ARG}
-    DEPENDS "${main_interface}" ${module_template}
+    DEPENDS "${main_interface}" ${module_template} "${module_name}/specializations/${main_interface_name}.h" "${module_name}/specializations/${main_interface_name}.h"
     VERBATIM)
 
     add_custom_target(pybind_wrap_${module_name} DEPENDS ${cpp_files})
