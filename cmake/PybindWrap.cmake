@@ -59,7 +59,7 @@ function(
   set(interface_files ${interface_headers})
 
   # Pop the main interface file so that interface_files has only submodules.
-  LIST(POP_FRONT interface_files main_interface)
+  list(POP_FRONT interface_files main_interface)
 
   # Convert .i file names to .cpp file names.
   foreach(interface_file ${interface_files})
