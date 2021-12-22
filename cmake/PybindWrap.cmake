@@ -55,8 +55,6 @@ function(
     set(GTWRAP_PATH_SEPARATOR ";")
   endif()
 
-  add_custom_target(pybind_wrap_${module_name})
-
   # Create a copy of interface_headers so we can freely manipulate it
   set(interface_files ${interface_headers})
 
@@ -73,28 +71,28 @@ function(
     # Wrap the specific interface header
     # This is done so that we can create CMake dependencies in such a way so that when changing a single .i file,
     # the others don't need to be regenerated.
-    add_custom_target("${interface}_target"
+    # NOTE: We have to use `add_custom_command` so set the dependencies correctly.
+    # https://stackoverflow.com/questions/40032593/cmake-does-not-rebuild-dependent-after-prerequisite-changes
+    add_custom_command(
+      OUTPUT ${cpp_file}
       COMMAND
         ${CMAKE_COMMAND} -E env
         "PYTHONPATH=${GTWRAP_PACKAGE_DIR}${GTWRAP_PATH_SEPARATOR}$ENV{PYTHONPATH}"
         ${PYTHON_EXECUTABLE} ${PYBIND_WRAP_SCRIPT} --src "${interface_file}"
-          --out "${generated_cpp}"  --module_name ${module_name}
+          --out "${cpp_file}"  --module_name ${module_name}
           --top_module_namespaces "${top_namespace}" --ignore ${ignore_classes}
           --template ${module_template} --is_submodule ${_WRAP_BOOST_ARG}
-      DEPENDS "${interface_file}"
-      BYPRODUCTS "${cpp_file}"
-      SOURCES "${interface_file}"
-      COMMENT "${interface} -> ${cpp_file}"
+      DEPENDS "${interface_file}" ${module_template}
       VERBATIM)
 
-    add_dependencies(pybind_wrap_${module_name} "${interface}_target")
   endforeach()
 
   get_filename_component(main_interface_name ${main_interface} NAME)
   string(REPLACE ".i" ".cpp" main_cpp_file ${main_interface_name})
   list(PREPEND cpp_files ${main_cpp_file})
 
-  add_custom_target("${main_interface_name}_target"
+  add_custom_command(
+    OUTPUT ${main_cpp_file}
     COMMAND
       ${CMAKE_COMMAND} -E env
       "PYTHONPATH=${GTWRAP_PACKAGE_DIR}${GTWRAP_PATH_SEPARATOR}$ENV{PYTHONPATH}"
@@ -102,14 +100,10 @@ function(
       --out "${generated_cpp}" --module_name ${module_name}
       --top_module_namespaces "${top_namespace}" --ignore ${ignore_classes}
       --template ${module_template} ${_WRAP_BOOST_ARG}
-    DEPENDS "${main_interface}"
-    BYPRODUCTS "${main_cpp_file}"
-    SOURCES "${main_interface}"
-    COMMENT "${main_interface_name} -> ${main_cpp_file}"
+    DEPENDS "${main_interface}" ${module_template}
     VERBATIM)
 
-  add_dependencies(pybind_wrap_${module_name} "${main_interface_name}_target")
-
+    add_custom_target(pybind_wrap_${module_name} DEPENDS ${cpp_files})
 
   pybind11_add_module(${target} "${cpp_files}")
 
