@@ -112,32 +112,6 @@ class PybindWrapper:
         return serialize_method + deserialize_method + \
             pickle_method.format(cpp_class=cpp_class, indent=self.method_indent)
 
-    def _wrap_ipython_method(self, method: parser.Method, cpp_class: str,
-                             args_names: List[str], cpp_args: str,
-                             py_args: str):
-        """
-        Wrap special methods used by IPython/Jupyter notebooks.
-        The list of methods is defined in `_ipython_special_methods`.
-
-        Args:
-            method (parser.Method): The method to be wrapped.
-            cpp_class (str): The C++ name of the class to which the method belongs.
-            args_names (List[str]): List of argument variable names passed to the method.
-            cpp_args (str): The C++ version of the argument list.
-            py_args (str): The pybind11 formatted version of the argument list.
-
-        Returns:
-            str: Wrapped method as a string.
-        """
-        opt_comma = ', ' if args_names else ''
-        method_args = ", ".join(args_names) if args_names else ''
-
-        method = self.method_indent + \
-            f'.def("_repr_{method.name}_", []({cpp_class}* self{opt_comma}{cpp_args})' \
-                f'{{return self->{method.name}({method_args});}}' \
-                    f'{py_args})'
-        return method
-
     def _wrap_print(self, ret: str, method: parser.Method, cpp_class: str,
                     args_names: List[str], args_signature_with_names: str,
                     py_args_names: str, prefix: str, suffix: str):
@@ -209,9 +183,8 @@ class PybindWrapper:
         # Special handling of ipython specific methods
         # https://ipython.readthedocs.io/en/stable/config/integrating.html
         if cpp_method in self._ipython_special_methods:
-            return self._wrap_ipython_method(method, cpp_class, args_names,
-                                             args_signature_with_names,
-                                             py_args_names)
+            idx = self._ipython_special_methods.index(cpp_method)
+            py_method = f"_repr_{self._ipython_special_methods[idx]}_"
 
         # Add underscore to disambiguate if the method name matches a python keyword
         if py_method in self.python_keywords:
