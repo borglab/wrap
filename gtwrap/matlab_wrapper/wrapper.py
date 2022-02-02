@@ -345,23 +345,19 @@ class MatlabWrapper(CheckMixin, FormatMixin):
         for arg in args.list():
             ctype_camel = self._format_type_name(arg.ctype.typename,
                                                  separator='')
+            ctype_sep = self._format_type_name(arg.ctype.typename)
+
             if self.is_ref(arg.ctype):  # and not constructor:
-                arg_type = "{ctype}&".format(
-                    ctype=self._format_type_name(arg.ctype.typename))
+                arg_type = "{ctype}&".format(ctype=ctype_sep)
                 unwrap = '*unwrap_shared_ptr< {ctype} >(in[{id}], "ptr_{ctype_camel}");'.format(
-                    ctype=self._format_type_name(arg.ctype.typename),
-                    ctype_camel=ctype_camel,
-                    id=arg_id)
+                    ctype=ctype_sep, ctype_camel=ctype_camel, id=arg_id)
 
             elif self.is_ptr(arg.ctype) and \
                     arg.ctype.typename.name not in self.ignore_namespace:
 
-                arg_type = "{ctype_sep}*".format(
-                    ctype_sep=self._format_type_name(arg.ctype.typename))
+                arg_type = "{ctype_sep}*".format(ctype_sep=ctype_sep)
                 unwrap = 'unwrap_ptr< {ctype_sep} >(in[{id}], "ptr_{ctype}");'.format(
-                    ctype_sep=self._format_type_name(arg.ctype.typename),
-                    ctype=ctype_camel,
-                    id=arg_id)
+                    ctype_sep=ctype_sep, ctype=ctype_camel, id=arg_id)
 
             elif (self.is_shared_ptr(arg.ctype) or self.can_be_pointer(arg.ctype)) and \
                     arg.ctype.typename.name not in self.ignore_namespace:
@@ -369,11 +365,9 @@ class MatlabWrapper(CheckMixin, FormatMixin):
 
                 arg_type = "{std_boost}::shared_ptr<{ctype_sep}>".format(
                     std_boost='boost' if constructor else 'boost',
-                    ctype_sep=self._format_type_name(arg.ctype.typename))
+                    ctype_sep=ctype_sep)
                 unwrap = 'unwrap_shared_ptr< {ctype_sep} >(in[{id}], "ptr_{ctype}");'.format(
-                    ctype_sep=self._format_type_name(arg.ctype.typename),
-                    ctype=ctype_camel,
-                    id=arg_id)
+                    ctype_sep=ctype_sep, ctype=ctype_camel, id=arg_id)
 
             else:
                 arg_type = "{ctype}".format(ctype=arg.ctype.typename.name)
