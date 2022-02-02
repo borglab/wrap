@@ -26,6 +26,7 @@
 #include <gtsam/base/Matrix.h>
 #include <gtsam/geometry/Point2.h>
 #include <gtsam/geometry/Point3.h>
+#include <gtsam/base/utilities.h>
 
 using gtsam::Vector;
 using gtsam::Matrix;
@@ -474,6 +475,14 @@ boost::shared_ptr<Class> unwrap_shared_ptr(const mxArray* obj, const string& pro
 
   boost::shared_ptr<Class>* spp = *reinterpret_cast<boost::shared_ptr<Class>**> (mxGetData(mxh));
   return *spp;
+}
+
+template <typename Class>
+Class* unwrap_ptr(const mxArray* obj, const string& propertyName) {
+
+  mxArray* mxh = mxGetProperty(obj,0, propertyName.c_str());
+  Class* x = reinterpret_cast<Class*> (mxGetData(mxh));
+  return x;
 }
 
 //// throw an error if unwrap_shared_ptr is attempted for an Eigen Vector

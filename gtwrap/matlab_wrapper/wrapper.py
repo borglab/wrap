@@ -353,7 +353,17 @@ class MatlabWrapper(CheckMixin, FormatMixin):
                     ctype_camel=ctype_camel,
                     id=arg_id)
 
-            elif (self.is_shared_ptr(arg.ctype) or self.is_ptr(arg.ctype)) and \
+            elif self.is_ptr(arg.ctype) and \
+                    arg.ctype.typename.name not in self.ignore_namespace:
+
+                arg_type = "{ctype_sep}*".format(
+                    ctype_sep=self._format_type_name(arg.ctype.typename))
+                unwrap = 'unwrap_ptr< {ctype_sep} >(in[{id}], "ptr_{ctype}");'.format(
+                    ctype_sep=self._format_type_name(arg.ctype.typename),
+                    ctype=ctype_camel,
+                    id=arg_id)
+
+            elif (self.is_shared_ptr(arg.ctype) or self.can_be_pointer(arg.ctype)) and \
                     arg.ctype.typename.name not in self.ignore_namespace:
                 call_type = arg.ctype.is_shared_ptr
 
@@ -389,10 +399,9 @@ class MatlabWrapper(CheckMixin, FormatMixin):
                 params += arg.default
                 continue
 
-            if (not self.is_ref(arg.ctype)) and (self.is_shared_ptr(
-                    arg.ctype)) and (self.is_ptr(
-                        arg.ctype)) and (arg.ctype.typename.name
-                                         not in self.ignore_namespace):
+            if not self.is_ref(arg.ctype) and (self.is_shared_ptr(arg.ctype) or \
+                self.is_ptr(arg.ctype) or self.can_be_pointer(arg.ctype))and \
+                    arg.ctype.typename.name not in self.ignore_namespace:
                 if arg.ctype.is_shared_ptr:
                     call_type = arg.ctype.is_shared_ptr
                 else:
@@ -1084,7 +1093,8 @@ class MatlabWrapper(CheckMixin, FormatMixin):
         pair_value = 'first' if func_id == 0 else 'second'
         new_line = '\n' if func_id == 0 else ''
 
-        if self.is_shared_ptr(return_type) or self.is_ptr(return_type):
+        if self.is_shared_ptr(return_type) or self.is_ptr(return_type) or \
+            self.can_be_pointer(return_type):
             shared_obj = 'pairResult.' + pair_value
 
             if not (return_type.is_shared_ptr or return_type.is_ptr):
@@ -1150,7 +1160,8 @@ class MatlabWrapper(CheckMixin, FormatMixin):
 
         if return_1_name != 'void':
             if return_count == 1:
-                if self.is_shared_ptr(return_1) or self.is_ptr(return_1):
+                if self.is_shared_ptr(return_1) or self.is_ptr(return_1) or \
+                    self.can_be_pointer(return_1):
                     sep_method_name = partial(self._format_type_name,
                                               return_1.typename,
                                               include_namespace=True)
