@@ -41,28 +41,43 @@ class WrapperTemplate:
         ''')
 
     rtti_register = textwrap.dedent('''\
+            std::map<std::string, std::string> insert_types() {{
+              std::map<std::string, std::string> types;
+
+              {rtti_classes}
+
+              return types;
+            }}
+
             void _{module_name}_RTTIRegister() {{
               const mxArray *alreadyCreated = mexGetVariablePtr("global", "gtsam_{module_name}_rttiRegistry_created");
-              if(!alreadyCreated) {{
-                std::map<std::string, std::string> types;
 
-            {rtti_classes}
+              if(!alreadyCreated) {{
+                std::map<std::string, std::string> types = insert_types();
 
                 mxArray *registry = mexGetVariable("global", "gtsamwrap_rttiRegistry");
-                if(!registry)
+
+                if(!registry) {{
                   registry = mxCreateStructMatrix(1, 1, 0, NULL);
+                }}
+
                 typedef std::pair<std::string, std::string> StringPair;
+
                 for(const StringPair& rtti_matlab: types) {{
                   int fieldId = mxAddField(registry, rtti_matlab.first.c_str());
+
                   if(fieldId < 0) {{
                     mexErrMsgTxt("gtsam wrap:  Error indexing RTTI types, inheritance will not work correctly");
                   }}
+
                   mxArray *matlabName = mxCreateString(rtti_matlab.second.c_str());
                   mxSetFieldByNumber(registry, 0, fieldId, matlabName);
                 }}
+
                 if(mexPutVariable("global", "gtsamwrap_rttiRegistry", registry) != 0) {{
                   mexErrMsgTxt("gtsam wrap:  Error indexing RTTI types, inheritance will not work correctly");
                 }}
+
                 mxDestroyArray(registry);
 
                 mxArray *newAlreadyCreated = mxCreateNumericMatrix(0, 0, mxINT8_CLASS, mxREAL);
