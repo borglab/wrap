@@ -3,6 +3,7 @@
 import gtwrap.interface_parser as parser
 from gtwrap.template_instantiator.constructor import InstantiatedConstructor
 from gtwrap.template_instantiator.helpers import (InstantiationHelper,
+                                                  instantiate_type,
                                                   instantiate_args_list,
                                                   instantiate_name,
                                                   instantiate_return_type)
@@ -24,7 +25,6 @@ class InstantiatedClass(parser.Class):
 
         self.template = None
         self.is_virtual = original.is_virtual
-        self.parent_class = original.parent_class
         self.parent = original.parent
 
         # If the class is templated, check if the number of provided instantiations
@@ -42,7 +42,8 @@ class InstantiatedClass(parser.Class):
         # This will allow the `This` keyword to be used in both templated and non-templated classes.
         typenames = self.original.template.typenames if self.original.template else []
 
-        # Instantiate the constructors, static methods, properties, respectively.
+        # Instantiate the parent class, constructors, static methods, properties, respectively.
+        self.parent_class = self.instantiate_parent_class(typenames)
         self.ctors = self.instantiate_ctors(typenames)
         self.static_methods = self.instantiate_static_methods(typenames)
         self.properties = self.instantiate_properties(typenames)
@@ -82,6 +83,22 @@ class InstantiatedClass(parser.Class):
                 methods="\n".join([repr(m) for m in self.methods]),
                operators="\n".join([repr(op) for op in self.operators])
             )
+
+    def instantiate_parent_class(self, typenames):
+        """
+        Instantiate the inherited parent names.
+
+        Args:
+            typenames: List of template types to instantiate.
+
+        Return: List of constructors instantiated with provided template args.
+        """
+
+        if isinstance(self.original.parent_class, parser.type.TemplatedType):
+            return instantiate_type(self.original.parent_class, typenames, self.instantiations,
+                                    parser.Typename(self.namespaces())).typename
+        else:
+            return self.original.parent_class
 
     def instantiate_ctors(self, typenames):
         """
