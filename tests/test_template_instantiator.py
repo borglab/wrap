@@ -23,12 +23,18 @@ from gtwrap.interface_parser import (Argument, ArgumentList, Class,
                                      GlobalFunction, Include, Method,
                                      Namespace, ReturnType, StaticMethod,
                                      Typename)
-from gtwrap.template_instantiator import (
-    InstantiatedClass, InstantiatedConstructor, InstantiatedDeclaration,
-    InstantiatedGlobalFunction, InstantiatedMethod, InstantiatedStaticMethod,
-    InstantiationHelper, instantiate_args_list, instantiate_name,
-    instantiate_namespace, instantiate_return_type, instantiate_type,
-    is_scoped_template)
+from gtwrap.template_instantiator import (InstantiatedClass,
+                                          InstantiatedConstructor,
+                                          InstantiatedDeclaration,
+                                          InstantiatedGlobalFunction,
+                                          InstantiatedMethod,
+                                          InstantiatedStaticMethod,
+                                          InstantiationHelper,
+                                          instantiate_args_list,
+                                          instantiate_name,
+                                          instantiate_namespace,
+                                          instantiate_return_type,
+                                          instantiate_type, is_scoped_template)
 
 
 class TestInstantiationHelper(unittest.TestCase):
@@ -130,7 +136,7 @@ class TestInstantiatedGlobalFunction(unittest.TestCase):
         """Test constructor."""
         self.assertIsInstance(self.func, InstantiatedGlobalFunction)
         self.assertIsInstance(self.func.original, GlobalFunction)
-        self.assertEqual(self.func.name, "functionIntDouble")
+        self.assertEqual(self.func.name, "function")
         self.assertEqual(len(self.func.args.list()), 1)
         self.assertEqual(self.func.args.list()[0].ctype.get_typename(), "int")
         self.assertEqual(self.func.return_type.type1.get_typename(), "double")

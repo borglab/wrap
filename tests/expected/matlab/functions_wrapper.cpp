@@ -109,68 +109,80 @@ void overloadedGlobalFunction_5(int nargout, mxArray *out[], int nargin, const m
   double b = unwrap< double >(in[1]);
   out[0] = wrap< Vector >(overloadedGlobalFunction(a,b));
 }
-void MultiTemplatedFunctionStringSize_tDouble_6(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void TemplatedFunction_6(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
-  checkArguments("MultiTemplatedFunctionStringSize_tDouble",nargout,nargin,2);
-  T& x = *unwrap_shared_ptr< T >(in[0], "ptr_T");
-  size_t y = unwrap< size_t >(in[1]);
-  out[0] = wrap< double >(MultiTemplatedFunctionStringSize_tDouble(x,y));
+  checkArguments("TemplatedFunction",nargout,nargin,1);
+  gtsam::Rot3& t = *unwrap_shared_ptr< gtsam::Rot3 >(in[0], "ptr_gtsamRot3");
+  TemplatedFunction(t);
 }
-void MultiTemplatedFunctionDoubleSize_tDouble_7(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void TemplatedFunction_7(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
-  checkArguments("MultiTemplatedFunctionDoubleSize_tDouble",nargout,nargin,2);
-  T& x = *unwrap_shared_ptr< T >(in[0], "ptr_T");
-  size_t y = unwrap< size_t >(in[1]);
-  out[0] = wrap< double >(MultiTemplatedFunctionDoubleSize_tDouble(x,y));
+  checkArguments("TemplatedFunction",nargout,nargin,1);
+  gtsam::Pose3& t = *unwrap_shared_ptr< gtsam::Pose3 >(in[0], "ptr_gtsamPose3");
+  TemplatedFunction(t);
 }
-void DefaultFuncInt_8(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void MultiTemplatedFunction_8(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+{
+  checkArguments("MultiTemplatedFunction",nargout,nargin,2);
+  string& x = *unwrap_shared_ptr< string >(in[0], "ptr_string");
+  size_t y = unwrap< size_t >(in[1]);
+  out[0] = wrap< double >(MultiTemplatedFunction(x,y));
+}
+void MultiTemplatedFunction_9(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+{
+  checkArguments("MultiTemplatedFunction",nargout,nargin,2);
+  double x = unwrap< double >(in[0]);
+  size_t y = unwrap< size_t >(in[1]);
+  out[0] = wrap< double >(MultiTemplatedFunction(x,y));
+}
+void DefaultFuncInt_10(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   checkArguments("DefaultFuncInt",nargout,nargin,2);
   int a = unwrap< int >(in[0]);
   int b = unwrap< int >(in[1]);
   DefaultFuncInt(a,b);
 }
-void DefaultFuncInt_9(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void DefaultFuncInt_11(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   checkArguments("DefaultFuncInt",nargout,nargin,1);
   int a = unwrap< int >(in[0]);
   DefaultFuncInt(a,0);
 }
-void DefaultFuncInt_10(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void DefaultFuncInt_12(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   checkArguments("DefaultFuncInt",nargout,nargin,0);
   DefaultFuncInt(123,0);
 }
-void DefaultFuncString_11(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void DefaultFuncString_13(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   checkArguments("DefaultFuncString",nargout,nargin,2);
   string& s = *unwrap_shared_ptr< string >(in[0], "ptr_string");
   string& name = *unwrap_shared_ptr< string >(in[1], "ptr_string");
   DefaultFuncString(s,name);
 }
-void DefaultFuncString_12(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void DefaultFuncString_14(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   checkArguments("DefaultFuncString",nargout,nargin,1);
   string& s = *unwrap_shared_ptr< string >(in[0], "ptr_string");
   DefaultFuncString(s,"");
 }
-void DefaultFuncString_13(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void DefaultFuncString_15(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   checkArguments("DefaultFuncString",nargout,nargin,0);
   DefaultFuncString("hello","");
 }
-void DefaultFuncObj_14(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void DefaultFuncObj_16(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   checkArguments("DefaultFuncObj",nargout,nargin,1);
   gtsam::KeyFormatter& keyFormatter = *unwrap_shared_ptr< gtsam::KeyFormatter >(in[0], "ptr_gtsamKeyFormatter");
   DefaultFuncObj(keyFormatter);
 }
-void DefaultFuncObj_15(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void DefaultFuncObj_17(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   checkArguments("DefaultFuncObj",nargout,nargin,0);
   DefaultFuncObj(gtsam::DefaultKeyFormatter);
 }
-void DefaultFuncZero_16(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void DefaultFuncZero_18(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   checkArguments("DefaultFuncZero",nargout,nargin,5);
   int a = unwrap< int >(in[0]);
@@ -180,7 +192,7 @@ void DefaultFuncZero_16(int nargout, mxArray *out[], int nargin, const mxArray *
   bool e = unwrap< bool >(in[4]);
   DefaultFuncZero(a,b,c,d,e);
 }
-void DefaultFuncZero_17(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void DefaultFuncZero_19(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   checkArguments("DefaultFuncZero",nargout,nargin,4);
   int a = unwrap< int >(in[0]);
@@ -189,7 +201,7 @@ void DefaultFuncZero_17(int nargout, mxArray *out[], int nargin, const mxArray *
   int d = unwrap< int >(in[3]);
   DefaultFuncZero(a,b,c,d,false);
 }
-void DefaultFuncZero_18(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void DefaultFuncZero_20(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   checkArguments("DefaultFuncZero",nargout,nargin,3);
   int a = unwrap< int >(in[0]);
@@ -197,43 +209,43 @@ void DefaultFuncZero_18(int nargout, mxArray *out[], int nargin, const mxArray *
   double c = unwrap< double >(in[2]);
   DefaultFuncZero(a,b,c,0,false);
 }
-void DefaultFuncZero_19(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void DefaultFuncZero_21(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   checkArguments("DefaultFuncZero",nargout,nargin,2);
   int a = unwrap< int >(in[0]);
   int b = unwrap< int >(in[1]);
   DefaultFuncZero(a,b,0.0,0,false);
 }
-void DefaultFuncVector_20(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void DefaultFuncVector_22(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   checkArguments("DefaultFuncVector",nargout,nargin,2);
   std::vector<int>& i = *unwrap_shared_ptr< std::vector<int> >(in[0], "ptr_stdvectorint");
   std::vector<string>& s = *unwrap_shared_ptr< std::vector<string> >(in[1], "ptr_stdvectorstring");
   DefaultFuncVector(i,s);
 }
-void DefaultFuncVector_21(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void DefaultFuncVector_23(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   checkArguments("DefaultFuncVector",nargout,nargin,1);
   std::vector<int>& i = *unwrap_shared_ptr< std::vector<int> >(in[0], "ptr_stdvectorint");
   DefaultFuncVector(i,{"borglab", "gtsam"});
 }
-void DefaultFuncVector_22(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void DefaultFuncVector_24(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   checkArguments("DefaultFuncVector",nargout,nargin,0);
   DefaultFuncVector({1, 2, 3},{"borglab", "gtsam"});
 }
-void setPose_23(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void setPose_25(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   checkArguments("setPose",nargout,nargin,1);
   gtsam::Pose3& pose = *unwrap_shared_ptr< gtsam::Pose3 >(in[0], "ptr_gtsamPose3");
   setPose(pose);
 }
-void setPose_24(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void setPose_26(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   checkArguments("setPose",nargout,nargin,0);
   setPose(gtsam::Pose3());
 }
-void TemplatedFunctionRot3_25(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void TemplatedFunctionRot3_27(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   checkArguments("TemplatedFunctionRot3",nargout,nargin,1);
   gtsam::Rot3& t = *unwrap_shared_ptr< gtsam::Rot3 >(in[0], "ptr_gtsamRot3");
@@ -270,40 +282,40 @@ void mexFunction(int nargout, mxArray *out[], int nargin, const mxArray *in[])
       overloadedGlobalFunction_5(nargout, out, nargin-1, in+1);
       break;
     case 6:
-      MultiTemplatedFunctionStringSize_tDouble_6(nargout, out, nargin-1, in+1);
+      TemplatedFunction_6(nargout, out, nargin-1, in+1);
       break;
     case 7:
-      MultiTemplatedFunctionDoubleSize_tDouble_7(nargout, out, nargin-1, in+1);
+      TemplatedFunction_7(nargout, out, nargin-1, in+1);
       break;
     case 8:
-      DefaultFuncInt_8(nargout, out, nargin-1, in+1);
+      MultiTemplatedFunction_8(nargout, out, nargin-1, in+1);
       break;
     case 9:
-      DefaultFuncInt_9(nargout, out, nargin-1, in+1);
+      MultiTemplatedFunction_9(nargout, out, nargin-1, in+1);
       break;
     case 10:
       DefaultFuncInt_10(nargout, out, nargin-1, in+1);
       break;
     case 11:
-      DefaultFuncString_11(nargout, out, nargin-1, in+1);
+      DefaultFuncInt_11(nargout, out, nargin-1, in+1);
       break;
     case 12:
-      DefaultFuncString_12(nargout, out, nargin-1, in+1);
+      DefaultFuncInt_12(nargout, out, nargin-1, in+1);
       break;
     case 13:
       DefaultFuncString_13(nargout, out, nargin-1, in+1);
       break;
     case 14:
-      DefaultFuncObj_14(nargout, out, nargin-1, in+1);
+      DefaultFuncString_14(nargout, out, nargin-1, in+1);
       break;
     case 15:
-      DefaultFuncObj_15(nargout, out, nargin-1, in+1);
+      DefaultFuncString_15(nargout, out, nargin-1, in+1);
       break;
     case 16:
-      DefaultFuncZero_16(nargout, out, nargin-1, in+1);
+      DefaultFuncObj_16(nargout, out, nargin-1, in+1);
       break;
     case 17:
-      DefaultFuncZero_17(nargout, out, nargin-1, in+1);
+      DefaultFuncObj_17(nargout, out, nargin-1, in+1);
       break;
     case 18:
       DefaultFuncZero_18(nargout, out, nargin-1, in+1);
@@ -312,22 +324,28 @@ void mexFunction(int nargout, mxArray *out[], int nargin, const mxArray *in[])
       DefaultFuncZero_19(nargout, out, nargin-1, in+1);
       break;
     case 20:
-      DefaultFuncVector_20(nargout, out, nargin-1, in+1);
+      DefaultFuncZero_20(nargout, out, nargin-1, in+1);
       break;
     case 21:
-      DefaultFuncVector_21(nargout, out, nargin-1, in+1);
+      DefaultFuncZero_21(nargout, out, nargin-1, in+1);
       break;
     case 22:
       DefaultFuncVector_22(nargout, out, nargin-1, in+1);
       break;
     case 23:
-      setPose_23(nargout, out, nargin-1, in+1);
+      DefaultFuncVector_23(nargout, out, nargin-1, in+1);
       break;
     case 24:
-      setPose_24(nargout, out, nargin-1, in+1);
+      DefaultFuncVector_24(nargout, out, nargin-1, in+1);
       break;
     case 25:
-      TemplatedFunctionRot3_25(nargout, out, nargin-1, in+1);
+      setPose_25(nargout, out, nargin-1, in+1);
+      break;
+    case 26:
+      setPose_26(nargout, out, nargin-1, in+1);
+      break;
+    case 27:
+      TemplatedFunctionRot3_27(nargout, out, nargin-1, in+1);
       break;
     }
   } catch(const std::exception& e) {
