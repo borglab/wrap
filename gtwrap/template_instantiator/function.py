@@ -25,8 +25,8 @@ class InstantiatedGlobalFunction(parser.GlobalFunction):
             self.return_type = original.return_type
             self.args = original.args
         else:
-            self.name = instantiate_name(
-                original.name, instantiations) if not new_name else new_name
+            # Don't append template type to function name
+            self.name = original.name if not new_name else new_name
             self.return_type = instantiate_return_type(
                 original.return_type,
                 self.original.template.typenames,

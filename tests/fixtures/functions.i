@@ -17,15 +17,20 @@ Vector aGlobalFunction();
 Vector overloadedGlobalFunction(int a);
 Vector overloadedGlobalFunction(int a, double b);
 
-// A templated free/global function. Multiple templates supported.
+// A templated free/global function.
+template<T = {gtsam::Rot3, gtsam::Pose3}>
+void TemplatedFunction(const T& t);
+
+// Multiple templates supported.
 template<T1 = {string, double}, T2 = {size_t}, R = {double}>
-R MultiTemplatedFunction(const T& x, T2 y);
+R MultiTemplatedFunction(const T1& x, T2 y);
 
 // Check if we can typedef the templated function
 template<T>
-void TemplatedFunction(const T& t);
+void TemplatedFunction2(const T& t);
 
-typedef TemplatedFunction<gtsam::Rot3> TemplatedFunctionRot3;
+typedef TemplatedFunction2<gtsam::Rot3> TemplatedFunctionRot3;
+
 
 // Check default arguments
 void DefaultFuncInt(int a = 123, int b = 0);
