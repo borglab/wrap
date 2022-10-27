@@ -3,7 +3,7 @@ Code to use the parsed results and convert it to a format
 that Matlab's MEX compiler can use.
 """
 
-# pylint: disable=too-many-lines, no-self-use, too-many-arguments, too-many-branches, too-many-statements
+# pylint: disable=too-many-lines, no-self-use, too-many-arguments, too-many-branches, too-many-statements, consider-using-f-string, unspecified-encoding
 
 import copy
 import os
