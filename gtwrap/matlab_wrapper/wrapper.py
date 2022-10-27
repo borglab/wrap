@@ -116,6 +116,7 @@ class MatlabWrapper(CheckMixin, FormatMixin):
         if collector_function is not None:
             is_instantiated_class = isinstance(collector_function[1],
                                                instantiator.InstantiatedClass)
+
             if function_name is None:
                 if is_instantiated_class:
                     function_name = collector_function[0] + \
@@ -338,6 +339,38 @@ class MatlabWrapper(CheckMixin, FormatMixin):
 
         return check_statement
 
+    def _unwrap_argument(self, arg, arg_id=0, constructor=False):
+        ctype_camel = self._format_type_name(arg.ctype.typename, separator='')
+        ctype_sep = self._format_type_name(arg.ctype.typename)
+
+        if self.is_ref(arg.ctype):  # and not constructor:
+            arg_type = "{ctype}&".format(ctype=ctype_sep)
+            unwrap = '*unwrap_shared_ptr< {ctype} >(in[{id}], "ptr_{ctype_camel}");'.format(
+                ctype=ctype_sep, ctype_camel=ctype_camel, id=arg_id)
+
+        elif self.is_ptr(arg.ctype) and \
+                arg.ctype.typename.name not in self.ignore_namespace:
+
+            arg_type = "{ctype_sep}*".format(ctype_sep=ctype_sep)
+            unwrap = 'unwrap_ptr< {ctype_sep} >(in[{id}], "ptr_{ctype}");'.format(
+                ctype_sep=ctype_sep, ctype=ctype_camel, id=arg_id)
+
+        elif (self.is_shared_ptr(arg.ctype) or self.can_be_pointer(arg.ctype)) and \
+                arg.ctype.typename.name not in self.ignore_namespace:
+
+            arg_type = "{std_boost}::shared_ptr<{ctype_sep}>".format(
+                std_boost='boost' if constructor else 'boost',
+                ctype_sep=ctype_sep)
+            unwrap = 'unwrap_shared_ptr< {ctype_sep} >(in[{id}], "ptr_{ctype}");'.format(
+                ctype_sep=ctype_sep, ctype=ctype_camel, id=arg_id)
+
+        else:
+            arg_type = "{ctype}".format(ctype=arg.ctype.typename.name)
+            unwrap = 'unwrap< {ctype} >(in[{id}]);'.format(
+                ctype=arg.ctype.typename.name, id=arg_id)
+
+        return arg_type, unwrap
+
     def _wrapper_unwrap_arguments(self, args, arg_id=0, constructor=False):
         """Format the interface_parser.Arguments.
 
@@ -349,36 +382,7 @@ class MatlabWrapper(CheckMixin, FormatMixin):
         body_args = ''
 
         for arg in args.list():
-            ctype_camel = self._format_type_name(arg.ctype.typename,
-                                                 separator='')
-            ctype_sep = self._format_type_name(arg.ctype.typename)
-
-            if self.is_ref(arg.ctype):  # and not constructor:
-                arg_type = "{ctype}&".format(ctype=ctype_sep)
-                unwrap = '*unwrap_shared_ptr< {ctype} >(in[{id}], "ptr_{ctype_camel}");'.format(
-                    ctype=ctype_sep, ctype_camel=ctype_camel, id=arg_id)
-
-            elif self.is_ptr(arg.ctype) and \
-                    arg.ctype.typename.name not in self.ignore_namespace:
-
-                arg_type = "{ctype_sep}*".format(ctype_sep=ctype_sep)
-                unwrap = 'unwrap_ptr< {ctype_sep} >(in[{id}], "ptr_{ctype}");'.format(
-                    ctype_sep=ctype_sep, ctype=ctype_camel, id=arg_id)
-
-            elif (self.is_shared_ptr(arg.ctype) or self.can_be_pointer(arg.ctype)) and \
-                    arg.ctype.typename.name not in self.ignore_namespace:
-                call_type = arg.ctype.is_shared_ptr
-
-                arg_type = "{std_boost}::shared_ptr<{ctype_sep}>".format(
-                    std_boost='boost' if constructor else 'boost',
-                    ctype_sep=ctype_sep)
-                unwrap = 'unwrap_shared_ptr< {ctype_sep} >(in[{id}], "ptr_{ctype}");'.format(
-                    ctype_sep=ctype_sep, ctype=ctype_camel, id=arg_id)
-
-            else:
-                arg_type = "{ctype}".format(ctype=arg.ctype.typename.name)
-                unwrap = 'unwrap< {ctype} >(in[{id}]);'.format(
-                    ctype=arg.ctype.typename.name, id=arg_id)
+            arg_type, unwrap = self._unwrap_argument(arg, arg_id, constructor)
 
             body_args += textwrap.indent(textwrap.dedent('''\
                     {arg_type} {name} = {unwrap}
@@ -1003,7 +1007,9 @@ class MatlabWrapper(CheckMixin, FormatMixin):
 
         return method_text
 
-    def wrap_instantiated_class(self, instantiated_class, namespace_name=''):
+    def wrap_instantiated_class(self,
+                                instantiated_class,
+                                namespace_name: str = ''):
         """Generate comments and code for given class.
 
         Args:
@@ -1205,6 +1211,41 @@ class MatlabWrapper(CheckMixin, FormatMixin):
 
         return return_type_text
 
+    def _collector_return(self, obj: str, ctype: parser.Type):
+        """Helper method to get the final statement before the return in the collector function."""
+        expanded = ''
+        if self.is_shared_ptr(ctype) or self.is_ptr(ctype) or \
+            self.can_be_pointer(ctype):
+            sep_method_name = partial(self._format_type_name,
+                                      ctype.typename,
+                                      include_namespace=True)
+
+            if ctype.typename.name in self.ignore_namespace:
+                expanded += self.wrap_collector_function_shared_return(
+                    ctype.typename, obj, 0, new_line=False)
+
+            if ctype.is_shared_ptr or ctype.is_ptr:
+                shared_obj = '{obj},"{method_name_sep}"'.format(
+                    obj=obj, method_name_sep=sep_method_name('.'))
+            else:
+                method_name_sep_dot = sep_method_name('.')
+                shared_obj_template = 'boost::make_shared<{method_name_sep_col}>({obj}),' \
+                                        '"{method_name_sep_dot}"'
+                shared_obj = shared_obj_template \
+                    .format(method_name_sep_col=sep_method_name(),
+                            method_name_sep_dot=method_name_sep_dot,
+                            obj=obj)
+
+            if ctype.typename.name not in self.ignore_namespace:
+                expanded += textwrap.indent(
+                    'out[0] = wrap_shared_ptr({}, false);'.format(shared_obj),
+                    prefix='  ')
+        else:
+            expanded += '  out[0] = wrap< {} >({});'.format(
+                ctype.typename.name, obj)
+
+        return expanded
+
     def wrap_collector_function_return(self, method):
         """
         Wrap the complete return type of the function.
@@ -1247,36 +1288,8 @@ class MatlabWrapper(CheckMixin, FormatMixin):
 
         if return_1_name != 'void':
             if return_count == 1:
-                if self.is_shared_ptr(return_1) or self.is_ptr(return_1) or \
-                    self.can_be_pointer(return_1):
-                    sep_method_name = partial(self._format_type_name,
-                                              return_1.typename,
-                                              include_namespace=True)
+                expanded += self._collector_return(obj, return_1)
 
-                    if return_1.typename.name in self.ignore_namespace:
-                        expanded += self.wrap_collector_function_shared_return(
-                            return_1.typename, obj, 0, new_line=False)
-
-                    if return_1.is_shared_ptr or return_1.is_ptr:
-                        shared_obj = '{obj},"{method_name_sep}"'.format(
-                            obj=obj, method_name_sep=sep_method_name('.'))
-                    else:
-                        method_name_sep_dot = sep_method_name('.')
-                        shared_obj_template = 'boost::make_shared<{method_name_sep_col}>({obj}),' \
-                                              '"{method_name_sep_dot}"'
-                        shared_obj = shared_obj_template \
-                            .format(method_name_sep_col=sep_method_name(),
-                                    method_name_sep_dot=method_name_sep_dot,
-                                    obj=obj)
-
-                    if return_1.typename.name not in self.ignore_namespace:
-                        expanded += textwrap.indent(
-                            'out[0] = wrap_shared_ptr({}, false);'.format(
-                                shared_obj),
-                            prefix='  ')
-                else:
-                    expanded += '  out[0] = wrap< {} >({});'.format(
-                        return_1.typename.name, obj)
             elif return_count == 2:
                 return_2 = method.return_type.type2
 
@@ -1300,7 +1313,10 @@ class MatlabWrapper(CheckMixin, FormatMixin):
 
     def generate_collector_function(self, func_id):
         """
-        Generate the complete collector function.
+        Generate the complete collector function that goes into the wrapper.cpp file.
+
+        A collector function is the Mex function used to interact between
+        the C++ object and the Matlab .m files.
         """
         collector_func = self.wrapper_map.get(func_id)
 
@@ -1339,6 +1355,7 @@ class MatlabWrapper(CheckMixin, FormatMixin):
                         *reinterpret_cast<SharedBase**>(mxGetData(out[0])) = new SharedBase(*self);
                     ''').format(collector_func[1].parent_class),
                                             prefix='  ')
+
             elif collector_func[2] == 'constructor':
                 base = ''
                 params, body_args = self._wrapper_unwrap_arguments(
@@ -1364,6 +1381,7 @@ class MatlabWrapper(CheckMixin, FormatMixin):
                                       params=params,
                                       class_name=class_name,
                                       base=base)
+
             elif collector_func[2] == 'deconstructor':
                 body += textwrap.indent(textwrap.dedent('''\
                     typedef boost::shared_ptr<{class_name_sep}> Shared;
@@ -1378,16 +1396,19 @@ class MatlabWrapper(CheckMixin, FormatMixin):
                 ''').format(class_name_sep=class_name_separated,
                             class_name=class_name),
                                         prefix='  ')
+
             elif extra == 'serialize':
                 body += self.wrap_collector_function_serialize(
                     collector_func[1].name,
                     full_name=collector_func[1].to_cpp(),
                     namespace=collector_func[0])
+
             elif extra == 'deserialize':
                 body += self.wrap_collector_function_deserialize(
                     collector_func[1].name,
                     full_name=collector_func[1].to_cpp(),
                     namespace=collector_func[0])
+
             elif is_method or is_static_method:
                 method_name = ''
 
@@ -1396,12 +1417,9 @@ class MatlabWrapper(CheckMixin, FormatMixin):
 
                 method_name += extra.name
 
-                # return_type = extra.return_type
-                # return_count = self._return_count(return_type)
-
-                return_body = self.wrap_collector_function_return(extra)
-                params, body_args = self._wrapper_unwrap_arguments(
+                _, body_args = self._wrapper_unwrap_arguments(
                     extra.args, arg_id=1 if is_method else 0)
+                return_body = self.wrap_collector_function_return(extra)
 
                 shared_obj = ''
 
