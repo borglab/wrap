@@ -147,10 +147,17 @@ void gtsamSfmTrack_deconstructor_4(int nargout, mxArray *out[], int nargin, cons
 
 void gtsamSfmTrack_get_measurements_5(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
+  checkArguments("measurements",nargout,nargin-1,0);
+  auto obj = unwrap_shared_ptr<gtsam::SfmTrack>(in[0], "ptr_gtsamSfmTrack");
+  out[0] = wrap_shared_ptr(boost::make_shared<std::vector<std::pair<size_t,Point2>>>(obj->measurements),"std.vectorpairsize_tPoint2", false);
 }
 
 void gtsamSfmTrack_set_measurements_6(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
+  checkArguments("measurements",nargout,nargin-1,1);
+  auto obj = unwrap_shared_ptr<gtsam::SfmTrack>(in[0], "ptr_gtsamSfmTrack");
+  boost::shared_ptr<std::vector<std::pair<size_t,Point2>>> measurements = unwrap_shared_ptr< std::vector<std::pair<size_t,Point2>> >(in[1], "ptr_stdvectorpairsize_tPoint2");
+  obj->measurements = *measurements;
 }
 
 void gtsamPinholeCameraCal3Bundler_collectorInsertAndMakeBase_7(int nargout, mxArray *out[], int nargin, const mxArray *in[])

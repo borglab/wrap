@@ -533,10 +533,17 @@ void Test_set_container_42(int nargout, mxArray *out[], int nargin, const mxArra
 
 void Test_get_model_ptr_43(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
+  checkArguments("model_ptr",nargout,nargin-1,0);
+  auto obj = unwrap_shared_ptr<Test>(in[0], "ptr_Test");
+  out[0] = wrap_shared_ptr(obj->model_ptr,"gtsam.noiseModel.Base", false);
 }
 
 void Test_set_model_ptr_44(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
+  checkArguments("model_ptr",nargout,nargin-1,1);
+  auto obj = unwrap_shared_ptr<Test>(in[0], "ptr_Test");
+  boost::shared_ptr<gtsam::noiseModel::Base> model_ptr = unwrap_shared_ptr< gtsam::noiseModel::Base >(in[1], "ptr_gtsamnoiseModelBase");
+  obj->model_ptr = *model_ptr;
 }
 
 void PrimitiveRefDouble_collectorInsertAndMakeBase_45(int nargout, mxArray *out[], int nargin, const mxArray *in[])
