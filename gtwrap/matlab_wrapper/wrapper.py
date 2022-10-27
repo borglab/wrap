@@ -1303,6 +1303,14 @@ class MatlabWrapper(CheckMixin, FormatMixin):
 
         return expanded
 
+    def wrap_collector_property_return(self, class_property: parser.Variable):
+        """Get the last collector function statement before return for a property."""
+        property_name = class_property.name
+        obj = 'obj->{}'.format(property_name)
+        property_type = class_property.ctype
+
+        return self._collector_return(obj, property_type)
+
     def wrap_collector_function_upcast_from_void(self, class_name, func_id,
                                                  cpp_name):
         """
@@ -1337,6 +1345,7 @@ class MatlabWrapper(CheckMixin, FormatMixin):
             class_name_separated = collector_func[1].to_cpp()
             is_method = isinstance(extra, parser.Method)
             is_static_method = isinstance(extra, parser.StaticMethod)
+            is_property = isinstance(extra, parser.Variable)
 
             if collector_func[2] == 'collectorInsertAndMakeBase':
                 body += textwrap.indent(textwrap.dedent('''\
@@ -1440,6 +1449,57 @@ class MatlabWrapper(CheckMixin, FormatMixin):
                     num_args=len(extra.args.list()),
                     body_args=body_args,
                     return_body=return_body)
+
+            elif is_property:
+                shared_obj = '  auto obj = unwrap_shared_ptr<{class_name_sep}>' \
+                            '(in[0], "ptr_{class_name}");\n'.format(
+                                class_name_sep=class_name_separated,
+                                class_name=class_name)
+
+                # Unpack the property from mxArray
+                property_type, unwrap = self._unwrap_argument(extra, arg_id=1)
+                unpack_property = textwrap.indent(textwrap.dedent('''\
+                    {arg_type} {name} = {unwrap}
+                    '''.format(arg_type=property_type,
+                               name=extra.name,
+                               unwrap=unwrap)),
+                                                  prefix='  ')
+
+                # Getter
+                if "_get_" in method_name:
+                    return_body = self.wrap_collector_property_return(extra)
+
+                    getter = '  checkArguments("{property_name}",nargout,nargin{min1},' \
+                            '{num_args});\n' \
+                            '{shared_obj}' \
+                            '{return_body}\n'.format(
+                        property_name=extra.name,
+                        min1='-1',
+                        num_args=0,
+                        shared_obj=shared_obj,
+                        return_body=return_body)
+
+                    body += getter
+
+                # Setter
+                if "_set_" in method_name:
+                    is_ptr_type = self.can_be_pointer(extra.ctype)
+                    return_body = '  obj->{0} = {1}{0};'.format(
+                        extra.name, '*' if is_ptr_type else '')
+
+                    setter = '  checkArguments("{property_name}",nargout,nargin{min1},' \
+                            '{num_args});\n' \
+                            '{shared_obj}' \
+                            '{unpack_property}' \
+                            '{return_body}\n'.format(
+                        property_name=extra.name,
+                        min1='-1',
+                        num_args=1,
+                        shared_obj=shared_obj,
+                        unpack_property=unpack_property,
+                        return_body=return_body)
+
+                    body += setter
 
             body += '}\n'
 
