@@ -595,12 +595,13 @@ class MatlabWrapper(CheckMixin, FormatMixin):
         param_wrap += textwrap.indent(textwrap.dedent('''\
             else
               error('Arguments do not match any overload of function {func_name}');
-        ''').format(func_name=function_name),
+            end''').format(func_name=function_name),
                                       prefix='      ')
 
         global_function = textwrap.indent(textwrap.dedent('''\
             function varargout = {m_method}(varargin)
-            {statements}      end
+            {statements}
+            end
         ''').format(m_method=function_name, statements=param_wrap),
                                           prefix='')
 
