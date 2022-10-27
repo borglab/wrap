@@ -39,6 +39,7 @@
 classdef Test < handle
   properties
     ptr_Test = 0
+    model_ptr
   end
   methods
     function obj = Test(varargin)
@@ -317,6 +318,16 @@ classdef Test < handle
       error('Arguments do not match any overload of function Test.set_container');
     end
 
+
+    function varargout = get.model_ptr(this)
+        varargout{1} = class_wrapper(43, this);
+        this.model_ptr = varargout{1};
+    end
+
+    function set.model_ptr(this, value)
+        obj.model_ptr = value;
+        class_wrapper(44, this, value);
+    end
   end
 
   methods(Static = true)

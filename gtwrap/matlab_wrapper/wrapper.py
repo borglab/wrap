@@ -96,16 +96,19 @@ class MatlabWrapper(CheckMixin, FormatMixin):
             self.classes_elems[instantiated_class] = 0
             self.classes.append(instantiated_class)
 
-    def _update_wrapper_id(self, collector_function=None, id_diff=0):
+    def _update_wrapper_id(self,
+                           collector_function=None,
+                           id_diff=0,
+                           function_name: str = None):
         """
         Get and define wrapper ids.
         Generates the map of id -> collector function.
 
         Args:
             collector_function: tuple storing info about the wrapper function
-                (namespace, class instance, function type, function name,
-                extra)
+                (namespace, class instance, function name, function object)
             id_diff: constant to add to the id in the map
+            function_name: Optional custom function_name.
 
         Returns:
             the current wrapper id
@@ -113,12 +116,12 @@ class MatlabWrapper(CheckMixin, FormatMixin):
         if collector_function is not None:
             is_instantiated_class = isinstance(collector_function[1],
                                                instantiator.InstantiatedClass)
-
-            if is_instantiated_class:
-                function_name = collector_function[0] + \
-                                collector_function[1].name + '_' + collector_function[2]
-            else:
-                function_name = collector_function[1].name
+            if function_name is None:
+                if is_instantiated_class:
+                    function_name = collector_function[0] + \
+                                    collector_function[1].name + '_' + collector_function[2]
+                else:
+                    function_name = collector_function[1].name
 
             self.wrapper_map[self.wrapper_id] = (
                 collector_function[0], collector_function[1],
@@ -703,13 +706,82 @@ class MatlabWrapper(CheckMixin, FormatMixin):
 
         return methods_wrap
 
-    def wrap_class_properties(self, class_name):
-        """Generate properties of class."""
-        return textwrap.dedent('''\
+    def wrap_properties_block(self, class_name, inst_class):
+        """Generate Matlab properties block of the class.
+
+        E.g.
+        ```
+        properties
+            ptr_gtsamISAM2Params = 0
+            relinearizeSkip
+        end
+        ```
+
+        Args:
+            class_name: Class name with namespace to assign unique pointer.
+            inst_class: The instantiated class whose properties we want to wrap.
+
+        Returns:
+            str: The `properties` block in a Matlab `classdef`.
+        """
+        # Get the property names and make into newline separated block
+        class_pointer = "  ptr_{class_name} = 0".format(class_name=class_name)
+
+        if len(inst_class.properties) > 0:
+            properties = '\n' + "".join(
+                ["  {}".format(p.name) for p in inst_class.properties])
+        else:
+            properties = ''
+
+        properties = class_pointer + properties
+        properties_block = textwrap.dedent('''\
             properties
-              ptr_{} = 0
+            {properties}
             end
-        ''').format(class_name)
+        ''').format(properties=properties)
+        return properties_block
+
+    def wrap_class_properties(self, namespace_name: str,
+                              inst_class: InstantiatedClass):
+        """Generate wrappers for the setters & getters of class properties.
+
+        Args:
+            inst_class: The instantiated class whose properties we wish to wrap.
+        """
+        properties = []
+        for property in inst_class.properties:
+            # These are the setters and getters in the .m file
+            function_name = namespace_name + inst_class.name + '_get_' + property.name
+            getter = """
+            function varargout = get.{name}(this)
+                {varargout} = {wrapper}({num}, this);
+                this.{name} = {varargout};
+            end
+            """.format(
+                name=property.name,
+                varargout='varargout{1}',
+                wrapper=self._wrapper_name(),
+                num=self._update_wrapper_id(
+                    (namespace_name, inst_class, property.name, property),
+                    function_name=function_name))
+            properties.append(getter)
+
+            # Setter doesn't need varargin since it needs just one input.
+            function_name = namespace_name + inst_class.name + '_set_' + property.name
+            setter = """
+            function set.{name}(this, value)
+                obj.{name} = value;
+                {wrapper}({num}, this, value);
+            end
+            """.format(
+                name=property.name,
+                wrapper=self._wrapper_name(),
+                num=self._update_wrapper_id(
+                    (namespace_name, inst_class, property.name, property),
+                    function_name=function_name))
+            properties.append(setter)
+
+        return properties
 
     def wrap_class_deconstructor(self, namespace_name, inst_class):
         """Generate the delete function for the Matlab class."""
@@ -965,8 +1037,8 @@ class MatlabWrapper(CheckMixin, FormatMixin):
         # Class properties
         content_text += '  ' + reduce(
             self._insert_spaces,
-            self.wrap_class_properties(
-                namespace_file_name).splitlines()) + '\n'
+            self.wrap_properties_block(namespace_file_name,
+                                       instantiated_class).splitlines()) + '\n'
 
         # Class constructor
         content_text += '  ' + reduce(
@@ -1006,14 +1078,25 @@ class MatlabWrapper(CheckMixin, FormatMixin):
                     lambda x, y: x + '\n' + ('' if y == '' else '    ') + y,
                     class_methods_wrapped) + '\n'
 
+        # Class properties
+        if len(instantiated_class.properties) != 0:
+            property_accessors = self.wrap_class_properties(
+                namespace_name, instantiated_class)
+            content_text += textwrap.indent(textwrap.dedent(
+                "".join(property_accessors)),
+                                            prefix='    ')
+
+        content_text += '  end'  # End the `methods` block
+
         # Static class methods
-        content_text += '  end\n\n  ' + reduce(
+        content_text += '\n\n  ' + reduce(
             self._insert_spaces,
             self.wrap_static_methods(namespace_name, instantiated_class,
-                                     serialize[0]).splitlines()) + '\n'
+                                     serialize[0]).splitlines()) + '\n' + \
+        '  end\n'
 
+        # Close the classdef
         content_text += textwrap.dedent('''\
-              end
             end
         ''')
 
