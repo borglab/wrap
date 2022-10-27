@@ -17,6 +17,7 @@ import gtwrap.template_instantiator as instantiator
 from gtwrap.interface_parser.function import ArgumentList
 from gtwrap.matlab_wrapper.mixins import CheckMixin, FormatMixin
 from gtwrap.matlab_wrapper.templates import WrapperTemplate
+from gtwrap.template_instantiator.classes import InstantiatedClass
 
 
 class MatlabWrapper(CheckMixin, FormatMixin):
@@ -28,6 +29,7 @@ class MatlabWrapper(CheckMixin, FormatMixin):
         top_module_namespace: C++ namespace for the top module (default '')
         ignore_classes: A list of classes to ignore (default [])
     """
+
     def __init__(self,
                  module_name,
                  top_module_namespace='',
@@ -145,6 +147,7 @@ class MatlabWrapper(CheckMixin, FormatMixin):
         We create "overload" functions with fewer arguments, but since we have to "remember" what
         the default arguments are for later, we make a backup.
         """
+
         def args_copy(args):
             return ArgumentList([copy.copy(arg) for arg in args.list()])
 
@@ -452,6 +455,7 @@ class MatlabWrapper(CheckMixin, FormatMixin):
         """
         class_name = instantiated_class.name
         ctors = instantiated_class.ctors
+        properties = instantiated_class.properties
         methods = instantiated_class.methods
         static_methods = instantiated_class.static_methods
 
@@ -468,6 +472,12 @@ class MatlabWrapper(CheckMixin, FormatMixin):
             comment += '%{ctor_name}({args})\n'.format(ctor_name=ctor.name,
                                                        args=self._wrap_args(
                                                            ctor.args))
+
+        if len(properties) != 0:
+            comment += '%\n' \
+                       '%-------Properties-------\n'
+            for property in properties:
+                comment += '%{}\n'.format(property.name)
 
         if len(methods) != 0:
             comment += '%\n' \

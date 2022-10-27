@@ -5,6 +5,9 @@
 %Test()
 %Test(double a, Matrix b)
 %
+%-------Properties-------
+%model_ptr
+%
 %-------Methods-------
 %arg_EigenConstRef(Matrix value) : returns void
 %create_MixedPtrs() : returns pair< Test, Test >
