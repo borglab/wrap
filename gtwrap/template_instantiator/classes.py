@@ -3,10 +3,10 @@
 import gtwrap.interface_parser as parser
 from gtwrap.template_instantiator.constructor import InstantiatedConstructor
 from gtwrap.template_instantiator.helpers import (InstantiationHelper,
-                                                  instantiate_type,
                                                   instantiate_args_list,
                                                   instantiate_name,
-                                                  instantiate_return_type)
+                                                  instantiate_return_type,
+                                                  instantiate_type)
 from gtwrap.template_instantiator.method import (InstantiatedMethod,
                                                  InstantiatedStaticMethod)
 
@@ -15,6 +15,7 @@ class InstantiatedClass(parser.Class):
     """
     Instantiate the class defined in the interface file.
     """
+
     def __init__(self, original: parser.Class, instantiations=(), new_name=''):
         """
         Template <T, U>
@@ -95,8 +96,9 @@ class InstantiatedClass(parser.Class):
         """
 
         if isinstance(self.original.parent_class, parser.type.TemplatedType):
-            return instantiate_type(self.original.parent_class, typenames, self.instantiations,
-                                    parser.Typename(self.namespaces())).typename
+            return instantiate_type(
+                self.original.parent_class, typenames, self.instantiations,
+                parser.Typename(self.namespaces())).typename
         else:
             return self.original.parent_class
 
@@ -195,12 +197,18 @@ class InstantiatedClass(parser.Class):
 
         Return: List of properties instantiated with provided template args.
         """
-        instantiated_properties = instantiate_args_list(
+        instantiated_ = instantiate_args_list(
             self.original.properties,
             typenames,
             self.instantiations,
             self.cpp_typename(),
         )
+        # Convert to type Variable
+        instantiated_properties = [
+            parser.Variable(ctype=[arg.ctype],
+                            name=arg.name,
+                            default=arg.default) for arg in instantiated_
+        ]
         return instantiated_properties
 
     def cpp_typename(self):
