@@ -1,5 +1,3 @@
-
-
 #include <pybind11/eigen.h>
 #include <pybind11/stl_bind.h>
 #include <pybind11/pybind11.h>
@@ -14,8 +12,6 @@
 
 BOOST_CLASS_EXPORT(gtsam::Point2)
 BOOST_CLASS_EXPORT(gtsam::Point3)
-
-
 
 
 using namespace std;
