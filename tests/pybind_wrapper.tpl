@@ -5,8 +5,6 @@
 #include "gtsam/nonlinear/utilities.h"  // for RedirectCout.
 
 {includes}
-#include "wrap/serialization.h"
-#include <boost/serialization/export.hpp>
 
 {boost_class_export}
 

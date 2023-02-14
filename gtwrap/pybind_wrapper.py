@@ -606,6 +606,7 @@ class PybindWrapper:
                 prefix='\n' + ' ' * 4 + module_var,
                 suffix=';',
             )
+
         return wrapped, includes
 
     def wrap_file(self, content, module_name=None, submodules=None):
@@ -624,18 +625,23 @@ class PybindWrapper:
 
         wrapped_namespace, includes = self.wrap_namespace(module)
 
-        # Export classes for serialization.
-        boost_class_export = ""
-        for cpp_class in self._serializing_classes:
-            new_name = cpp_class
-            # The boost's macro doesn't like commas, so we have to typedef.
-            if ',' in cpp_class:
-                new_name = re.sub("[,:<> ]", "", cpp_class)
-                boost_class_export += "typedef {cpp_class} {new_name};\n".format(  # noqa
-                    cpp_class=cpp_class, new_name=new_name)
+        if self.use_boost_serialization:
+            includes += "#include <boost/serialization/export.hpp>"
 
-            boost_class_export += "BOOST_CLASS_EXPORT({new_name})\n".format(
-                new_name=new_name, )
+            # Export classes for serialization.
+            boost_class_export = ""
+            for cpp_class in self._serializing_classes:
+                new_name = cpp_class
+                # The boost's macro doesn't like commas, so we have to typedef.
+                if ',' in cpp_class:
+                    new_name = re.sub("[,:<> ]", "", cpp_class)
+                    boost_class_export += "typedef {cpp_class} {new_name};\n".format(  # noqa
+                        cpp_class=cpp_class, new_name=new_name)
+
+                boost_class_export += "BOOST_CLASS_EXPORT({new_name})\n".format(
+                    new_name=new_name, )
+        else:
+            boost_class_export = ""
 
         # Reset the serializing classes list
         self._serializing_classes = []

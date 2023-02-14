@@ -6,8 +6,6 @@
 
 #include "gtsam/geometry/Point2.h"
 #include "gtsam/geometry/Point3.h"
-
-#include "wrap/serialization.h"
 #include <boost/serialization/export.hpp>
 
 BOOST_CLASS_EXPORT(gtsam::Point2)

@@ -6,8 +6,6 @@
 
 #include "gtsam/geometry/Pose3.h"
 
-#include "wrap/serialization.h"
-#include <boost/serialization/export.hpp>
 
 
 
