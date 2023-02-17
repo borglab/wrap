@@ -1231,6 +1231,17 @@ class MatlabWrapper(CheckMixin, FormatMixin):
                     obj=obj, method_name_sep=sep_method_name('.'))
             else:
                 method_name_sep_dot = sep_method_name('.')
+
+                # Specialize for std::optional so we access the underlying member
+                #TODO(Varun) How do we handle std::optional as a Mex type?
+                if isinstance(ctype, parser.TemplatedType) and \
+                    "std::optional" == str(ctype.typename)[:13]:
+                    obj = f"*{obj}"
+                    type_name = ctype.template_params[0].typename
+                    method_name_sep_dot = ".".join(
+                        type_name.namespaces) + f".{type_name.name}"
+
+
                 shared_obj_template = 'std::make_shared<{method_name_sep_col}>({obj}),' \
                                         '"{method_name_sep_dot}"'
                 shared_obj = shared_obj_template \
