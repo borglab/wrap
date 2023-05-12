@@ -141,6 +141,36 @@ class TestWrap(unittest.TestCase):
             actual = osp.join(self.MATLAB_ACTUAL_DIR, file)
             self.compare_and_diff(file, actual)
 
+    def test_enum(self):
+        """Test interface file with only enum info."""
+        file = osp.join(self.INTERFACE_DIR, 'enum.i')
+
+        wrapper = MatlabWrapper(
+            module_name='enum',
+            top_module_namespace=['gtsam'],
+            ignore_classes=[''],
+        )
+
+        wrapper.wrap([file], path=self.MATLAB_ACTUAL_DIR)
+
+        # files = [
+        #     'class_wrapper.cpp',
+        #     'FunDouble.m',
+        #     'FunRange.m',
+        #     'MultipleTemplatesIntDouble.m',
+        #     'MultipleTemplatesIntFloat.m',
+        #     'MyFactorPosePoint2.m',
+        #     'MyVector3.m',
+        #     'MyVector12.m',
+        #     'PrimitiveRefDouble.m',
+        #     'Test.m',
+        #     'ForwardKinematics.m',
+        # ]
+
+        # for file in files:
+        #     actual = osp.join(self.MATLAB_ACTUAL_DIR, file)
+        #     self.compare_and_diff(file, actual)
+
     def test_templates(self):
         """Test interface file with template info."""
         file = osp.join(self.INTERFACE_DIR, 'templates.i')
