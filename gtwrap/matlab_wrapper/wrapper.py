@@ -535,7 +535,7 @@ class MatlabWrapper(CheckMixin, FormatMixin):
 
     def wrap_methods(self, methods, global_funcs=False, global_ns=None):
         """
-        Wrap a sequence of methods. Groups methods with the same names
+        Wrap a sequence of methods/functions. Groups methods with the same names
         together.
         If global_funcs is True then output every method into its own file.
         """
@@ -1110,29 +1110,60 @@ class MatlabWrapper(CheckMixin, FormatMixin):
 
         return file_name + '.m', content_text
 
-    def wrap_namespace(self, namespace):
+    def wrap_enum(self, enum):
+        """
+        Wrap an enum definition.
+
+        Args:
+            enum: The interface_parser.Enum instance
+        """
+        file_name = enum.name + '.m'
+        enum_template = textwrap.dedent("""\
+        classdef {0} < uint32
+            enumeration
+                {1}
+            end
+        end
+        """)
+        enumerators = "\n        ".join([
+            f"{enumerator.name}({idx})"
+            for idx, enumerator in enumerate(enum.enumerators)
+        ])
+
+        content = enum_template.format(enum.name, enumerators)
+        return file_name, content
+
+    def wrap_namespace(self, namespace, add_mex_file=True):
         """Wrap a namespace by wrapping all of its components.
 
         Args:
             namespace: the interface_parser.namespace instance of the namespace
-            parent: parent namespace
+            add_cpp_file: Flag indicating whether the mex file should be added
         """
         namespaces = namespace.full_namespaces()
         inner_namespace = namespace.name != ''
         wrapped = []
 
-        cpp_filename = self._wrapper_name() + '.cpp'
-        self.content.append((cpp_filename, self.wrapper_file_headers))
-
-        current_scope = []
-        namespace_scope = []
+        top_level_scope = []
+        inner_namespace_scope = []
 
         for element in namespace.content:
             if isinstance(element, parser.Include):
                 self.includes.append(element)
 
             elif isinstance(element, parser.Namespace):
-                self.wrap_namespace(element)
+                self.wrap_namespace(element, False)
+
+            elif isinstance(element, parser.Enum):
+                file, content = self.wrap_enum(element)
+                if inner_namespace:
+                    module = "".join([
+                            '+' + x + '/'
+                            for x in namespace.full_namespaces()[1:]
+                        ])[:-1]
+                    inner_namespace_scope.append((module, [(file, content)]))
+                else:
+                    top_level_scope.append((file, content))
 
             elif isinstance(element, instantiator.InstantiatedClass):
                 self.add_class(element)
@@ -1142,18 +1173,22 @@ class MatlabWrapper(CheckMixin, FormatMixin):
                         element, "".join(namespace.full_namespaces()))
 
                     if not class_text is None:
-                        namespace_scope.append(("".join([
+                        inner_namespace_scope.append(("".join([
                             '+' + x + '/'
                             for x in namespace.full_namespaces()[1:]
                         ])[:-1], [(class_text[0], class_text[1])]))
                 else:
                     class_text = self.wrap_instantiated_class(element)
-                    current_scope.append((class_text[0], class_text[1]))
+                    top_level_scope.append((class_text[0], class_text[1]))
 
-        self.content.extend(current_scope)
+        self.content.extend(top_level_scope)
 
         if inner_namespace:
-            self.content.append(namespace_scope)
+            self.content.append(inner_namespace_scope)
+
+        if add_mex_file:
+            cpp_filename = self._wrapper_name() + '.cpp'
+            self.content.append((cpp_filename, self.wrapper_file_headers))
 
         # Global functions
         all_funcs = [

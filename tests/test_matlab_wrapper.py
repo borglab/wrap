@@ -153,23 +153,15 @@ class TestWrap(unittest.TestCase):
 
         wrapper.wrap([file], path=self.MATLAB_ACTUAL_DIR)
 
-        # files = [
-        #     'class_wrapper.cpp',
-        #     'FunDouble.m',
-        #     'FunRange.m',
-        #     'MultipleTemplatesIntDouble.m',
-        #     'MultipleTemplatesIntFloat.m',
-        #     'MyFactorPosePoint2.m',
-        #     'MyVector3.m',
-        #     'MyVector12.m',
-        #     'PrimitiveRefDouble.m',
-        #     'Test.m',
-        #     'ForwardKinematics.m',
-        # ]
+        files = [
+        #     'enum_wrapper.cpp',
+            'Color.m',
+            '+gtsam/VerbosityLM.m',
+        ]
 
-        # for file in files:
-        #     actual = osp.join(self.MATLAB_ACTUAL_DIR, file)
-        #     self.compare_and_diff(file, actual)
+        for file in files:
+            actual = osp.join(self.MATLAB_ACTUAL_DIR, file)
+            self.compare_and_diff(file, actual)
 
     def test_templates(self):
         """Test interface file with template info."""
