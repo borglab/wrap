@@ -159,7 +159,8 @@ class TestWrap(unittest.TestCase):
             '+Pet/Kind.m',
             '+gtsam/VerbosityLM.m',
             '+gtsam/+MCU/Avengers.m',
-            '+gtsam/+MCU/GotG.m'
+            '+gtsam/+MCU/GotG.m',
+            '+gtsam/+OptimizerGaussNewtonParams/Verbosity.m',
         ]
 
         for file in files:
