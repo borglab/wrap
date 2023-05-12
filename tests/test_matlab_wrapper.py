@@ -154,7 +154,7 @@ class TestWrap(unittest.TestCase):
         wrapper.wrap([file], path=self.MATLAB_ACTUAL_DIR)
 
         files = [
-        #     'enum_wrapper.cpp',
+            'enum_wrapper.cpp',
             'Color.m',
             '+Pet/Kind.m',
             '+gtsam/VerbosityLM.m',

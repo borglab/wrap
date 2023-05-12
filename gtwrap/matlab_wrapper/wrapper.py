@@ -1518,6 +1518,11 @@ class MatlabWrapper(CheckMixin, FormatMixin):
                                 class_name=class_name)
 
                 # Unpack the property from mxArray
+                print(extra.ctype, extra.ctype.typename, str(extra.ctype), type(str(extra.ctype)))
+                class_enums = [enum.name for enum in collector_func[1].enums]
+                print(class_enums, type(extra.ctype.typename))
+                print(str(extra.ctype) in class_enums)
+                print("\n\n")
                 property_type, unwrap = self._unwrap_argument(extra, arg_id=1)
                 unpack_property = textwrap.indent(textwrap.dedent('''\
                     {arg_type} {name} = {unwrap}
