@@ -156,7 +156,10 @@ class TestWrap(unittest.TestCase):
         files = [
         #     'enum_wrapper.cpp',
             'Color.m',
+            '+Pet/Kind.m',
             '+gtsam/VerbosityLM.m',
+            '+gtsam/+MCU/Avengers.m',
+            '+gtsam/+MCU/GotG.m'
         ]
 
         for file in files:

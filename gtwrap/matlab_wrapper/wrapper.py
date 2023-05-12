@@ -1027,7 +1027,7 @@ class MatlabWrapper(CheckMixin, FormatMixin):
         if uninstantiated_name in self.ignore_classes:
             return None
 
-        # Class comment
+        # Class docstring/comment
         content_text = self.class_comment(instantiated_class)
         content_text += self.wrap_methods(instantiated_class.methods)
 
@@ -1108,6 +1108,18 @@ class MatlabWrapper(CheckMixin, FormatMixin):
             end
         ''')
 
+        # Enums
+        # Place enums into the correct submodule so we can access them
+        # e.g. gtsam.Class.Enum.A
+        for enum in instantiated_class.enums:
+            enum_text = self.wrap_enum(enum)
+            if namespace_name != '':
+                submodule = f"+{namespace_name}/"
+            else:
+                submodule = ""
+            submodule += f"+{instantiated_class.name}"
+            self.content.append((submodule, [enum_text]))
+
         return file_name + '.m', content_text
 
     def wrap_enum(self, enum):
@@ -1158,9 +1170,8 @@ class MatlabWrapper(CheckMixin, FormatMixin):
                 file, content = self.wrap_enum(element)
                 if inner_namespace:
                     module = "".join([
-                            '+' + x + '/'
-                            for x in namespace.full_namespaces()[1:]
-                        ])[:-1]
+                        '+' + x + '/' for x in namespace.full_namespaces()[1:]
+                    ])[:-1]
                     inner_namespace_scope.append((module, [(file, content)]))
                 else:
                     top_level_scope.append((file, content))
