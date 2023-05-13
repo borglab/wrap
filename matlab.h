@@ -255,7 +255,7 @@ T unwrap(const mxArray* array) {
 }
 
 template <typename T>
-T unwrap_enum(const mxArray* array) {
+shared_ptr<T> unwrap_enum(const mxArray* array) {
   // Make duplicate to remove const-ness
   mxArray* a = mxDuplicateArray(array);
   std::cout << "unwrap enum type: " << typeid(array).name() << std::endl;
@@ -267,7 +267,7 @@ T unwrap_enum(const mxArray* array) {
   // Get the value in the input array
   int32_T* value = (int32_T*)mxGetData(a_int32);
   // cast int32 to enum type
-  return static_cast<T>(*value);
+  return std::make_shared<T>(static_cast<T>(*value));
 }
 
 // specialization to string
