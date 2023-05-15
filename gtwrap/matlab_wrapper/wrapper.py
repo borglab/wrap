@@ -1284,13 +1284,14 @@ class MatlabWrapper(CheckMixin, FormatMixin):
 
     def _collector_return(self,
                           obj: str,
-                          class_property: parser.Variable,
+                          ctype: parser.Type,
+                          class_property: parser.Variable = None,
                           instantiated_class: InstantiatedClass = None):
         """Helper method to get the final statement before the return in the collector function."""
         expanded = ''
-        ctype = class_property.ctype
 
-        if self.is_class_enum(class_property, instantiated_class):
+        if class_property and instantiated_class and \
+            self.is_class_enum(class_property, instantiated_class):
             enum_type = f"{instantiated_class.name}.{ctype}"
             expanded = textwrap.indent(
                 f'out[0] = wrap_enum({obj},\"{enum_type}\");', prefix='  ')
@@ -1403,7 +1404,11 @@ class MatlabWrapper(CheckMixin, FormatMixin):
         property_name = class_property.name
         obj = 'obj->{}'.format(property_name)
 
-        return self._collector_return(obj, class_property, instantiated_class)
+        ctype = class_property.ctype
+        return self._collector_return(obj,
+                                      ctype,
+                                      class_property=class_property,
+                                      instantiated_class=instantiated_class)
 
     def wrap_collector_function_upcast_from_void(self, class_name, func_id,
                                                  cpp_name):
@@ -1923,4 +1928,5 @@ class MatlabWrapper(CheckMixin, FormatMixin):
             # Generate the corresponding .m and .cpp files
             self.generate_content(self.content, path)
 
+        return self.content
         return self.content
