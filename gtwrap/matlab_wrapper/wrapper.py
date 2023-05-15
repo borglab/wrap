@@ -1292,7 +1292,8 @@ class MatlabWrapper(CheckMixin, FormatMixin):
 
         if class_property and instantiated_class and \
             self.is_class_enum(class_property, instantiated_class):
-            enum_type = f"{instantiated_class.name}.{ctype}"
+            class_name = ".".join(instantiated_class.namespaces()[1:] + [instantiated_class.name])
+            enum_type = f"{class_name}.{ctype.typename.name}"
             expanded = textwrap.indent(
                 f'out[0] = wrap_enum({obj},\"{enum_type}\");', prefix='  ')
 
@@ -1929,4 +1930,4 @@ class MatlabWrapper(CheckMixin, FormatMixin):
             self.generate_content(self.content, path)
 
         return self.content
-        return self.content
+
