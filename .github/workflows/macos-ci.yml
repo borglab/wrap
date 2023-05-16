@@ -5,7 +5,7 @@ on: [pull_request]
 jobs:
   build:
     name: Tests for 🐍 ${{ matrix.python-version }}
-    runs-on: macos-10.15
+    runs-on: macos-12
 
     strategy:
       fail-fast: false
