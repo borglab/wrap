@@ -228,6 +228,10 @@ mxArray* wrap<gtsam::Matrix >(const gtsam::Matrix& A) {
   return wrap_Matrix(A);
 }
 
+/// @brief Wrap the C++ enum to Matlab mxArray
+/// @tparam T The C++ enum type
+/// @param x C++ enum
+/// @param classname Matlab enum classdef used to call Matlab constructor
 template <typename T>
 mxArray* wrap_enum(const T x, const std::string& classname) {
   // create double array to store value in
@@ -254,11 +258,13 @@ T unwrap(const mxArray* array) {
   return T();
 }
 
+/// @brief Unwrap from matlab array to C++ enum type
+/// @tparam T The C++ enum type
+/// @param array Matlab mxArray
 template <typename T>
 shared_ptr<T> unwrap_enum(const mxArray* array) {
   // Make duplicate to remove const-ness
   mxArray* a = mxDuplicateArray(array);
-  std::cout << "unwrap enum type: " << typeid(array).name() << std::endl;
 
   // convert void* to int32* array
   mxArray* a_int32;
