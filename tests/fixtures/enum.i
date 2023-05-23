@@ -54,6 +54,8 @@ class Optimizer {
     VERBOSE
   };
 
+  Optimizer(const This::Verbosity& verbosity);
+
   void setVerbosity(const This::Verbosity value);
 };
 

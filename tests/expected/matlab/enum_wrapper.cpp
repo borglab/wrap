@@ -200,7 +200,19 @@ void gtsamOptimizerGaussNewtonParams_collectorInsertAndMakeBase_12(int nargout, 
   collector_gtsamOptimizerGaussNewtonParams.insert(self);
 }
 
-void gtsamOptimizerGaussNewtonParams_deconstructor_13(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void gtsamOptimizerGaussNewtonParams_constructor_13(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+{
+  mexAtExit(&_deleteAllObjects);
+  typedef std::shared_ptr<gtsam::Optimizer<gtsam::GaussNewtonParams>> Shared;
+
+  std::shared_ptr<Optimizer<gtsam::GaussNewtonParams>::Verbosity> verbosity = unwrap_enum<Optimizer<gtsam::GaussNewtonParams>::Verbosity>(in[0]);
+  Shared *self = new Shared(new gtsam::Optimizer<gtsam::GaussNewtonParams>(verbosity));
+  collector_gtsamOptimizerGaussNewtonParams.insert(self);
+  out[0] = mxCreateNumericMatrix(1, 1, mxUINT32OR64_CLASS, mxREAL);
+  *reinterpret_cast<Shared**> (mxGetData(out[0])) = self;
+}
+
+void gtsamOptimizerGaussNewtonParams_deconstructor_14(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   typedef std::shared_ptr<gtsam::Optimizer<gtsam::GaussNewtonParams>> Shared;
   checkArguments("delete_gtsamOptimizerGaussNewtonParams",nargout,nargin,1);
@@ -213,7 +225,7 @@ void gtsamOptimizerGaussNewtonParams_deconstructor_13(int nargout, mxArray *out[
   delete self;
 }
 
-void gtsamOptimizerGaussNewtonParams_setVerbosity_14(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void gtsamOptimizerGaussNewtonParams_setVerbosity_15(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   checkArguments("setVerbosity",nargout,nargin-1,1);
   auto obj = unwrap_shared_ptr<gtsam::Optimizer<gtsam::GaussNewtonParams>>(in[0], "ptr_gtsamOptimizerGaussNewtonParams");
@@ -273,10 +285,13 @@ void mexFunction(int nargout, mxArray *out[], int nargin, const mxArray *in[])
       gtsamOptimizerGaussNewtonParams_collectorInsertAndMakeBase_12(nargout, out, nargin-1, in+1);
       break;
     case 13:
-      gtsamOptimizerGaussNewtonParams_deconstructor_13(nargout, out, nargin-1, in+1);
+      gtsamOptimizerGaussNewtonParams_constructor_13(nargout, out, nargin-1, in+1);
       break;
     case 14:
-      gtsamOptimizerGaussNewtonParams_setVerbosity_14(nargout, out, nargin-1, in+1);
+      gtsamOptimizerGaussNewtonParams_deconstructor_14(nargout, out, nargin-1, in+1);
+      break;
+    case 15:
+      gtsamOptimizerGaussNewtonParams_setVerbosity_15(nargout, out, nargin-1, in+1);
       break;
     }
   } catch(const std::exception& e) {

@@ -355,7 +355,7 @@ class MatlabWrapper(CheckMixin, FormatMixin):
             if instantiated_class.original.template:
                 enum_type = f"{arg.ctype.typename}"
             else:
-                enum_type = f"{instantiated_class.name}::{arg.ctype}"
+                enum_type = f"{arg.ctype}"
 
             arg_type = f"std::shared_ptr<{enum_type}>"
             unwrap = f'unwrap_enum<{enum_type}>(in[{arg_id}]);'
@@ -1147,7 +1147,7 @@ class MatlabWrapper(CheckMixin, FormatMixin):
 
     def wrap_enum(self, enum):
         """
-        Wrap an enum definition.
+        Wrap an enum definition as a Matlab class.
 
         Args:
             enum: The interface_parser.Enum instance
