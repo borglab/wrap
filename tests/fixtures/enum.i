@@ -12,6 +12,7 @@ class Pet {
 };
 
 namespace gtsam {
+// Test global enums
 enum VerbosityLM {
   SILENT,
   SUMMARY,
@@ -23,6 +24,7 @@ enum VerbosityLM {
   TRYDELTA
 };
 
+// Test multiple enums in a classs
 class MCU {
   MCU();
 
