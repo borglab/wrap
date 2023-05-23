@@ -93,8 +93,8 @@ void Pet_constructor_1(int nargout, mxArray *out[], int nargin, const mxArray *i
   typedef std::shared_ptr<Pet> Shared;
 
   string& name = *unwrap_shared_ptr< string >(in[0], "ptr_string");
-  std::shared_ptr<Pet::Kind> type = unwrap_enum<Pet::Kind>(in[1]);
-  Shared *self = new Shared(new Pet(name,*type));
+  Pet::Kind type = unwrap_enum<Pet::Kind>(in[1]);
+  Shared *self = new Shared(new Pet(name,type));
   collector_Pet.insert(self);
   out[0] = mxCreateNumericMatrix(1, 1, mxUINT32OR64_CLASS, mxREAL);
   *reinterpret_cast<Shared**> (mxGetData(out[0])) = self;
@@ -117,15 +117,15 @@ void Pet_getColor_3(int nargout, mxArray *out[], int nargin, const mxArray *in[]
 {
   checkArguments("getColor",nargout,nargin-1,0);
   auto obj = unwrap_shared_ptr<Pet>(in[0], "ptr_Pet");
-  out[0] = wrap_enum(obj->getColor(),"Pet.Color");
+  out[0] = wrap_enum(obj->getColor(),"Color");
 }
 
 void Pet_setColor_4(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   checkArguments("setColor",nargout,nargin-1,1);
   auto obj = unwrap_shared_ptr<Pet>(in[0], "ptr_Pet");
-  std::shared_ptr<Color> color = unwrap_enum<Color>(in[1]);
-  obj->setColor(*color);
+  Color color = unwrap_enum<Color>(in[1]);
+  obj->setColor(color);
 }
 
 void Pet_get_name_5(int nargout, mxArray *out[], int nargin, const mxArray *in[])
@@ -154,8 +154,8 @@ void Pet_set_type_8(int nargout, mxArray *out[], int nargin, const mxArray *in[]
 {
   checkArguments("type",nargout,nargin-1,1);
   auto obj = unwrap_shared_ptr<Pet>(in[0], "ptr_Pet");
-  std::shared_ptr<Pet::Kind> type = unwrap_enum<Pet::Kind>(in[1]);
-  obj->type = *type;
+  Pet::Kind type = unwrap_enum<Pet::Kind>(in[1]);
+  obj->type = type;
 }
 
 void gtsamMCU_collectorInsertAndMakeBase_9(int nargout, mxArray *out[], int nargin, const mxArray *in[])
@@ -205,7 +205,7 @@ void gtsamOptimizerGaussNewtonParams_constructor_13(int nargout, mxArray *out[],
   mexAtExit(&_deleteAllObjects);
   typedef std::shared_ptr<gtsam::Optimizer<gtsam::GaussNewtonParams>> Shared;
 
-  std::shared_ptr<Optimizer<gtsam::GaussNewtonParams>::Verbosity> verbosity = unwrap_enum<Optimizer<gtsam::GaussNewtonParams>::Verbosity>(in[0]);
+  Optimizer<gtsam::GaussNewtonParams>::Verbosity verbosity = unwrap_enum<Optimizer<gtsam::GaussNewtonParams>::Verbosity>(in[0]);
   Shared *self = new Shared(new gtsam::Optimizer<gtsam::GaussNewtonParams>(verbosity));
   collector_gtsamOptimizerGaussNewtonParams.insert(self);
   out[0] = mxCreateNumericMatrix(1, 1, mxUINT32OR64_CLASS, mxREAL);
@@ -229,8 +229,8 @@ void gtsamOptimizerGaussNewtonParams_setVerbosity_15(int nargout, mxArray *out[]
 {
   checkArguments("setVerbosity",nargout,nargin-1,1);
   auto obj = unwrap_shared_ptr<gtsam::Optimizer<gtsam::GaussNewtonParams>>(in[0], "ptr_gtsamOptimizerGaussNewtonParams");
-  std::shared_ptr<Optimizer<gtsam::GaussNewtonParams>::Verbosity> value = unwrap_enum<Optimizer<gtsam::GaussNewtonParams>::Verbosity>(in[1]);
-  obj->setVerbosity(*value);
+  Optimizer<gtsam::GaussNewtonParams>::Verbosity value = unwrap_enum<Optimizer<gtsam::GaussNewtonParams>::Verbosity>(in[1]);
+  obj->setVerbosity(value);
 }
 
 
