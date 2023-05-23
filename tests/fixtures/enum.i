@@ -4,6 +4,8 @@ class Pet {
   enum Kind { Dog, Cat };
 
   Pet(const string &name, Kind type);
+  void setColor(const Color& color);
+  Color getColor() const;
 
   string name;
   Kind type;
