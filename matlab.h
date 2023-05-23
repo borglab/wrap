@@ -118,10 +118,10 @@ void checkArguments(const string& name, int nargout, int nargin, int expected) {
 }
 
 //*****************************************************************************
-// wrapping C++ basis types in MATLAB arrays
+// wrapping C++ basic types in MATLAB arrays
 //*****************************************************************************
 
-// default wrapping throws an error: only basis types are allowed in wrap
+// default wrapping throws an error: only basic types are allowed in wrap
 template <typename Class>
 mxArray* wrap(const Class& value) {
   error("wrap internal error: attempted wrap of invalid type");
