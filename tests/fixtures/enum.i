@@ -3,12 +3,12 @@ enum Color { Red, Green, Blue };
 class Pet {
   enum Kind { Dog, Cat };
 
-  Pet(const string &name, Kind type);
+  Pet(const string &name, Pet::Kind type);
   void setColor(const Color& color);
   Color getColor() const;
 
   string name;
-  Kind type;
+  Pet::Kind type;
 };
 
 namespace gtsam {
