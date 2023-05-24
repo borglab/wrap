@@ -57,6 +57,9 @@ class Optimizer {
   Optimizer(const This::Verbosity& verbosity);
 
   void setVerbosity(const This::Verbosity value);
+
+  gtsam::Optimizer::Verbosity getVerbosity() const;
+  gtsam::VerbosityLM getVerbosity() const;
 };
 
 typedef gtsam::Optimizer<gtsam::GaussNewtonParams> OptimizerGaussNewtonParams;

@@ -225,7 +225,21 @@ void gtsamOptimizerGaussNewtonParams_deconstructor_14(int nargout, mxArray *out[
   delete self;
 }
 
-void gtsamOptimizerGaussNewtonParams_setVerbosity_15(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void gtsamOptimizerGaussNewtonParams_getVerbosity_15(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+{
+  checkArguments("getVerbosity",nargout,nargin-1,0);
+  auto obj = unwrap_shared_ptr<gtsam::Optimizer<gtsam::GaussNewtonParams>>(in[0], "ptr_gtsamOptimizerGaussNewtonParams");
+  out[0] = wrap_enum(obj->getVerbosity(),"gtsam.OptimizerGaussNewtonParams.Verbosity");
+}
+
+void gtsamOptimizerGaussNewtonParams_getVerbosity_16(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+{
+  checkArguments("getVerbosity",nargout,nargin-1,0);
+  auto obj = unwrap_shared_ptr<gtsam::Optimizer<gtsam::GaussNewtonParams>>(in[0], "ptr_gtsamOptimizerGaussNewtonParams");
+  out[0] = wrap_enum(obj->getVerbosity(),"gtsam.VerbosityLM");
+}
+
+void gtsamOptimizerGaussNewtonParams_setVerbosity_17(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   checkArguments("setVerbosity",nargout,nargin-1,1);
   auto obj = unwrap_shared_ptr<gtsam::Optimizer<gtsam::GaussNewtonParams>>(in[0], "ptr_gtsamOptimizerGaussNewtonParams");
@@ -291,7 +305,13 @@ void mexFunction(int nargout, mxArray *out[], int nargin, const mxArray *in[])
       gtsamOptimizerGaussNewtonParams_deconstructor_14(nargout, out, nargin-1, in+1);
       break;
     case 15:
-      gtsamOptimizerGaussNewtonParams_setVerbosity_15(nargout, out, nargin-1, in+1);
+      gtsamOptimizerGaussNewtonParams_getVerbosity_15(nargout, out, nargin-1, in+1);
+      break;
+    case 16:
+      gtsamOptimizerGaussNewtonParams_getVerbosity_16(nargout, out, nargin-1, in+1);
+      break;
+    case 17:
+      gtsamOptimizerGaussNewtonParams_setVerbosity_17(nargout, out, nargin-1, in+1);
       break;
     }
   } catch(const std::exception& e) {

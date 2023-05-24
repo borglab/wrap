@@ -1282,9 +1282,12 @@ class MatlabWrapper(CheckMixin, FormatMixin):
             if self.is_class_enum(ctype, instantiated_class):
                 class_name = ".".join(instantiated_class.namespaces()[1:] +
                                       [instantiated_class.name])
-                class_name += '.'
             else:
-                class_name = ""
+                # Get the full namespace
+                class_name = ".".join(instantiated_class.parent.full_namespaces()[1:])
+
+            if class_name != "":
+                class_name += '.'
 
             enum_type = f"{class_name}{ctype.typename.name}"
             expanded = textwrap.indent(
