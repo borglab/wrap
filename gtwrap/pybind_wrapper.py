@@ -177,9 +177,9 @@ class PybindWrapper:
         args_signature_with_names = self._method_args_signature(method.args)
 
         if method.name == 'len':
-            function_call = "return self->size();"
+            function_call = "return std::distance(self->begin(), self->end());"
         elif method.name == 'contains':
-            function_call = f"return self->find({method.args.args_list[0].name}) != self->end();"
+            function_call = f"return std::find(self->begin(), self->end(), {method.args.args_list[0].name}) != self->end();"
         elif method.name == 'iter':
             function_call = "return py::make_iterator(self->begin(), self->end());"
 
