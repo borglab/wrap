@@ -40,10 +40,3 @@ void setPose(const gtsam::Pose3& pose = gtsam::Pose3());
 std::pair<gtsam::DiscreteConditional*, gtsam::DecisionTreeFactor*>
 EliminateDiscrete(const gtsam::DiscreteFactorGraph& factors,
                   const gtsam::Ordering& frontalKeys);
-
-// template<Cal = {gtsam::Cal3_S2}>
-// gtsam::Point3 triangulatePoint3(const gtsam::Pose3Vector& poses,
-//                                 CAL* sharedCal,
-//                                 const gtsam::Point2Vector& measurements,
-//                                 double rank_tol, bool optimize,
-//                                 const gtsam::SharedNoiseModel& model = nullptr);
