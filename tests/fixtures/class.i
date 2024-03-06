@@ -155,3 +155,9 @@ class FastSet {
   __contains__(size_t key);
   __iter__();
 };
+
+virtual class HessianFactor : gtsam::GaussianFactor {
+  HessianFactor(const gtsam::KeyVector& js,
+                const std::vector<gtsam::Matrix>& Gs,
+                const std::vector<gtsam::Vector>& gs, double f);
+};
