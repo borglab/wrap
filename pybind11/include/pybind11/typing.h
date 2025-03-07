@@ -14,6 +14,15 @@
 #include "cast.h"
 #include "pytypes.h"
 
+#include <algorithm>
+
+#if defined(__cpp_nontype_template_args) && __cpp_nontype_template_args >= 201911L
+#    define PYBIND11_TYPING_H_HAS_STRING_LITERAL
+#    include <numeric>
+#    include <ranges>
+#    include <string_view>
+#endif
+
 PYBIND11_NAMESPACE_BEGIN(PYBIND11_NAMESPACE)
 PYBIND11_NAMESPACE_BEGIN(typing)
 
@@ -81,6 +90,18 @@ class Optional : public object {
 };
 
 template <typename T>
+class Final : public object {
+    PYBIND11_OBJECT_DEFAULT(Final, object, PyObject_Type)
+    using object::object;
+};
+
+template <typename T>
+class ClassVar : public object {
+    PYBIND11_OBJECT_DEFAULT(ClassVar, object, PyObject_Type)
+    using object::object;
+};
+
+template <typename T>
 class TypeGuard : public bool_ {
     using bool_::bool_;
 };
@@ -98,7 +119,7 @@ class Never : public none {
     using none::none;
 };
 
-#if defined(__cpp_nontype_template_parameter_class)
+#if defined(PYBIND11_TYPING_H_HAS_STRING_LITERAL)
 template <size_t N>
 struct StringLiteral {
     constexpr StringLiteral(const char (&str)[N]) { std::copy_n(str, N, name); }
@@ -173,16 +194,19 @@ template <typename Return, typename... Args>
 struct handle_type_name<typing::Callable<Return(Args...)>> {
     using retval_type = conditional_t<std::is_same<Return, void>::value, void_type, Return>;
     static constexpr auto name
-        = const_name("Callable[[") + ::pybind11::detail::concat(make_caster<Args>::name...)
-          + const_name("], ") + make_caster<retval_type>::name + const_name("]");
+        = const_name("Callable[[")
+          + ::pybind11::detail::concat(::pybind11::detail::arg_descr(make_caster<Args>::name)...)
+          + const_name("], ") + ::pybind11::detail::return_descr(make_caster<retval_type>::name)
+          + const_name("]");
 };
 
 template <typename Return>
 struct handle_type_name<typing::Callable<Return(ellipsis)>> {
     // PEP 484 specifies this syntax for defining only return types of callables
     using retval_type = conditional_t<std::is_same<Return, void>::value, void_type, Return>;
-    static constexpr auto name
-        = const_name("Callable[..., ") + make_caster<retval_type>::name + const_name("]");
+    static constexpr auto name = const_name("Callable[..., ")
+                                 + ::pybind11::detail::return_descr(make_caster<retval_type>::name)
+                                 + const_name("]");
 };
 
 template <typename T>
@@ -200,6 +224,16 @@ struct handle_type_name<typing::Union<Types...>> {
 template <typename T>
 struct handle_type_name<typing::Optional<T>> {
     static constexpr auto name = const_name("Optional[") + make_caster<T>::name + const_name("]");
+};
+
+template <typename T>
+struct handle_type_name<typing::Final<T>> {
+    static constexpr auto name = const_name("Final[") + make_caster<T>::name + const_name("]");
+};
+
+template <typename T>
+struct handle_type_name<typing::ClassVar<T>> {
+    static constexpr auto name = const_name("ClassVar[") + make_caster<T>::name + const_name("]");
 };
 
 template <typename T>
@@ -222,16 +256,36 @@ struct handle_type_name<typing::Never> {
     static constexpr auto name = const_name("Never");
 };
 
-#if defined(__cpp_nontype_template_parameter_class)
+#if defined(PYBIND11_TYPING_H_HAS_STRING_LITERAL)
+template <typing::StringLiteral StrLit>
+consteval auto sanitize_string_literal() {
+    constexpr std::string_view v(StrLit.name);
+    constexpr std::string_view special_chars("!@%{}-");
+    constexpr auto num_special_chars = std::accumulate(
+        special_chars.begin(), special_chars.end(), (size_t) 0, [&v](auto acc, const char &c) {
+            return std::move(acc) + std::ranges::count(v, c);
+        });
+    char result[v.size() + num_special_chars + 1];
+    size_t i = 0;
+    for (auto c : StrLit.name) {
+        if (special_chars.find(c) != std::string_view::npos) {
+            result[i++] = '!';
+        }
+        result[i++] = c;
+    }
+    return typing::StringLiteral(result);
+}
+
 template <typing::StringLiteral... Literals>
 struct handle_type_name<typing::Literal<Literals...>> {
-    static constexpr auto name = const_name("Literal[")
-                                 + pybind11::detail::concat(const_name(Literals.name)...)
-                                 + const_name("]");
+    static constexpr auto name
+        = const_name("Literal[")
+          + pybind11::detail::concat(const_name(sanitize_string_literal<Literals>().name)...)
+          + const_name("]");
 };
 template <typing::StringLiteral StrLit>
 struct handle_type_name<typing::TypeVar<StrLit>> {
-    static constexpr auto name = const_name(StrLit.name);
+    static constexpr auto name = const_name(sanitize_string_literal<StrLit>().name);
 };
 #endif
 
