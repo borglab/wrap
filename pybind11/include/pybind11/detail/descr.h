@@ -99,6 +99,13 @@ constexpr descr<1, Type> const_name() {
     return {'%'};
 }
 
+// Use a different name based on whether the parameter is used as input or output
+template <size_t N1, size_t N2>
+constexpr descr<N1 + N2 + 1> io_name(char const (&text1)[N1], char const (&text2)[N2]) {
+    return const_name("@") + const_name(text1) + const_name("@") + const_name(text2)
+           + const_name("@");
+}
+
 // If "_" is defined as a macro, py::detail::_ cannot be provided.
 // It is therefore best to use py::detail::const_name universally.
 // This block is for backward compatibility only.
@@ -156,9 +163,8 @@ constexpr auto concat(const descr<N, Ts...> &d, const Args &...args) {
 }
 #else
 template <size_t N, typename... Ts, typename... Args>
-constexpr auto concat(const descr<N, Ts...> &d,
-                      const Args &...args) -> decltype(std::declval<descr<N + 2, Ts...>>()
-                                                       + concat(args...)) {
+constexpr auto concat(const descr<N, Ts...> &d, const Args &...args)
+    -> decltype(std::declval<descr<N + 2, Ts...>>() + concat(args...)) {
     return d + const_name(", ") + concat(args...);
 }
 #endif
@@ -166,6 +172,16 @@ constexpr auto concat(const descr<N, Ts...> &d,
 template <size_t N, typename... Ts>
 constexpr descr<N + 2, Ts...> type_descr(const descr<N, Ts...> &descr) {
     return const_name("{") + descr + const_name("}");
+}
+
+template <size_t N, typename... Ts>
+constexpr descr<N + 4, Ts...> arg_descr(const descr<N, Ts...> &descr) {
+    return const_name("@^") + descr + const_name("@!");
+}
+
+template <size_t N, typename... Ts>
+constexpr descr<N + 4, Ts...> return_descr(const descr<N, Ts...> &descr) {
+    return const_name("@$") + descr + const_name("@!");
 }
 
 PYBIND11_NAMESPACE_END(detail)
