@@ -13,7 +13,7 @@ gtwrap_get_python_version(${WRAP_PYTHON_VERSION})
 message(STATUS "Setting Python version for wrapper")
 set(PYBIND11_PYTHON_VERSION ${WRAP_PYTHON_VERSION})
 
-if(GTWRAP_ADD_DOXYGEN_DOCSTRINGS)
+if(GTWRAP_ADD_DOCSTRINGS)
   set(GTWRAP_PYTHON_DOCS_SOURCE "${CMAKE_SOURCE_DIR}/xml")
   message(STATUS "Python docstring generation is on. XML source: '${GTWRAP_PYTHON_DOCS_SOURCE}'")
 else()
