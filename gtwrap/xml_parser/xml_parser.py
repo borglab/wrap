@@ -37,13 +37,42 @@ class XMLDocParser:
         Extract the docstrings for a C++ class's method from the Doxygen-generated XML.
     
         Args:
-            xml_folder: the path to the folder that contains all of the Doxygen-generated XML.
-            cpp_class: the name of the C++ class that contains the function whose docstring is to be extracted.
-            cpp_method: the name of the C++ method whose docstring is to be extracted.
-            method_args_names: a list of the names of the cpp_method's parameters.
+            xml_folder (str): The path to the folder that contains all of the Doxygen-generated XML.
+            cpp_class (str): The name of the C++ class that contains the function whose docstring is to be extracted.
+            cpp_method (str): The name of the C++ method whose docstring is to be extracted.
+            method_args_names (list): A list of the names of the cpp_method's parameters.
+        """
+        self.print_if_verbose(f"Extracting docs for {cpp_class}.{cpp_method}")
+
+        # Get all of the member definitions in cpp_class with name cpp_method
+        maybe_member_defs = self.get_member_defs(xml_folder, cpp_class,
+                                                 cpp_method)
+
+        # Filter member definitions which don't match the given argument names
+        member_defs, ignored_params = self.filter_member_defs(
+            maybe_member_defs, method_args_names)
+
+        # Find which member to get docs from, if there are multiple that match in name and args
+        documenting_index = self.determine_documenting_index(
+            cpp_class, cpp_method, method_args_names)
+
+        # Extract the docs for the function that matches cpp_class.cpp_method(*method_args_names).
+        return self.get_formatted_docstring(member_defs[documenting_index],
+                                            ignored_params)
+
+    def get_member_defs(self, xml_folder: str, cpp_class: str,
+                        cpp_method: str):
+        """Get all of the member definitions in cpp_class with name cpp_method.
+
+        Args:
+            xml_folder (str): The folder containing the Doxygen XML documentation.
+            cpp_class (str): The name of the C++ class that contains the function whose docstring is to be extracted.
+            cpp_method (str): The name of the C++ method whose docstring is to be extracted.
+
+        Returns:
+            list: All of the member definitions in cpp_class with name cpp_method.
         """
         xml_folder_path = Path(xml_folder)
-        self.print_if_verbose(f"Extracting docs for {cpp_class}.{cpp_method}")
 
         # Create the path to the Doxygen XML index file.
         xml_index_file = xml_folder_path / "index.xml"
@@ -76,10 +105,25 @@ class XMLDocParser:
 
         class_root = class_tree.getroot()
 
-        # Find the member in class with name == cpp_method
+        # Find the member(s) in cpp_class with name == cpp_method
         maybe_member_defs = class_root.findall(
             f"compounddef/sectiondef//*[name='{cpp_method}']")
 
+        return maybe_member_defs
+
+    def filter_member_defs(self, maybe_member_defs: list,
+                           method_args_names: list):
+        """
+        Remove member definitions which do not match the supplied argument names list.
+
+        Args:
+            maybe_member_defs (list): The list of all member definitions in the class which share the same name.
+            method_args_names (list): The list of argument names in the definition of the function whose documentation is desired.
+                Supplying the argument names allows for the filtering of overloaded functions with the same name but different arguments.
+
+        Returns:
+            tuple[list, list]: (the filtered member definitions, parameters which should be ignored because they are optional)
+        """
         member_defs = []
 
         # Optional parameters we should ignore if we encounter them in the docstring
@@ -94,8 +138,8 @@ class XMLDocParser:
             # Doxygen XML for this member_def
             params = maybe_member_def.findall("param")
             num_tot_params = len(params)
-            # Calculate required params by subtracting the number of optional params (where defval is
-            # set) from the number of total params
+            # Calculate required params by subtracting the number of optional params (params where defval is
+            # set--defval means default value) from the number of total params
             num_req_params = num_tot_params - sum([
                 1 if param.find("defval") is not None else 0
                 for param in params
@@ -144,8 +188,24 @@ class XMLDocParser:
             for i in range(len(method_args_names), num_tot_params):
                 ignored_params.append(params[i].find("declname").text)
 
-        docstring = ""
+        return member_defs, ignored_params
 
+    def determine_documenting_index(self, cpp_class: str, cpp_method: str,
+                                    method_args_names: list,
+                                    member_defs: list):
+        """
+        Determine which member definition to retrieve documentation from, if there are multiple.
+
+        Args:
+            cpp_class (str): The name of the C++ class that contains the function whose docstring is to be extracted.
+            cpp_method (str): The name of the C++ method whose docstring is to be extracted.
+            method_args_names (list): A list of the names of the cpp_method's parameters.
+            member_defs (list): All of the member definitions of cpp_class which match cpp_method in name 
+                and whose arguments have the same names as method_args_names.
+
+        Returns:
+            int: The index indicating which member definition to document.
+        """
         # If there are multiple member defs that match the method args names,
         # remember how many we've encountered already so that we can return
         # the docs for the first one we haven't yet extracted.
@@ -164,53 +224,58 @@ class XMLDocParser:
             else:
                 self._memory[function_key] = 0
 
-        # Extract the docs for the function that matches cpp_class.cpp_method(method_args_names).
-        # If there are multiple that match, pick the first one we haven't already returned, since
-        # Doxygen orders docs in the same way pybind11 orders wrapper function creation (both use
-        # the order the functions are defined in the file).
-        for i, member_def in enumerate(member_defs):
-            # If there are multiple functions that match what we're looking for, ignore all except
-            # for the one calculated by documenting_index.
-            if i != documenting_index:
-                continue
+        return documenting_index
 
-            brief_description = member_def.find(".//briefdescription")
-            detailed_description = member_def.find(".//detaileddescription")
+    def get_formatted_docstring(self,
+                                member_def: 'xml.etree.ElementTree.Element',
+                                ignored_params: list):
+        """Gets the formatted docstring for the supplied XML element representing a member definition.
 
-            # Add the brief description first, if it exists.
-            if brief_description is not None:
-                for para in brief_description.findall("para"):
-                    docstring += "".join(t for t in para.itertext()
-                                         if t.strip())
+        Args:
+            member_def (xml.etree.ElementTree.Element): The member definition to document.
+            ignored_params (list): The optional parameters which should be ignored, if any.
 
-            # Add the detailed description. This includes the parameter list and the return value.
-            if detailed_description is not None:
-                docstring += "\n"
-                # Add non-parameter detailed description
-                for element in list(detailed_description):
-                    if element.tag == "para" and "parameterlist" not in [
-                            e.tag for e in element
-                    ]:
-                        docstring += "".join(
-                            t for t in element.itertext() if t.strip()) + " "
+        Returns:
+            str: The formatted docstring.
+        """
+        docstring = ""
 
-                # Add parameter docs
-                parameter_list = detailed_description.find(".//parameterlist")
-                if parameter_list is not None:
-                    for i, parameter_item in enumerate(
-                            parameter_list.findall(".//parameteritem")):
-                        name = parameter_item.find(".//parametername").text
-                        desc = parameter_item.find(
-                            ".//parameterdescription/para").text
-                        if name not in ignored_params:
-                            docstring += f"{name.strip() if name else f'[Parameter {i}]'}: {desc.strip() if desc else 'No description provided'}\n"
+        brief_description = member_def.find(".//briefdescription")
+        detailed_description = member_def.find(".//detaileddescription")
 
-                # Add return value docs
-                return_sect = detailed_description.find(".//simplesect")
-                if return_sect is not None and return_sect.attrib[
-                        "kind"] == "return" and return_sect.find(
-                            "para").text is not None:
-                    docstring += f"Returns: {return_sect.find('para').text.strip()}"
+        # Add the brief description first, if it exists.
+        if brief_description is not None:
+            for para in brief_description.findall("para"):
+                docstring += "".join(t for t in para.itertext() if t.strip())
+
+        # Add the detailed description. This includes the parameter list and the return value.
+        if detailed_description is not None:
+            docstring += "\n"
+            # Add non-parameter detailed description
+            for element in list(detailed_description):
+                if element.tag == "para" and "parameterlist" not in [
+                        e.tag for e in element
+                ]:
+                    docstring += "".join(
+                        t for t in element.itertext() if t.strip()) + " "
+
+            # Add parameter docs
+            parameter_list = detailed_description.find(".//parameterlist")
+            if parameter_list is not None:
+                for i, parameter_item in enumerate(
+                        parameter_list.findall(".//parameteritem")):
+                    name = parameter_item.find(".//parametername").text
+                    desc = parameter_item.find(
+                        ".//parameterdescription/para").text
+                    if name not in ignored_params:
+                        docstring += f"{name.strip() if name else f'[Parameter {i}]'}: {desc.strip() if desc else 'No description provided'}\n"
+
+            # Add return value docs
+            return_sect = detailed_description.find(".//simplesect")
+            if return_sect is not None and return_sect.attrib[
+                    "kind"] == "return" and return_sect.find(
+                        "para").text is not None:
+                docstring += f"Returns: {return_sect.find('para').text.strip()}"
 
         return docstring.strip()
 
