@@ -15,7 +15,6 @@
 #    include <pybind11/gil.h>
 #endif
 
-#include <pybind11/conduit/pybind11_platform_abi_id.h>
 #include <pybind11/pytypes.h>
 
 #include <exception>
@@ -37,12 +36,18 @@
 /// further ABI-incompatible changes may be made before the ABI is officially
 /// changed to the new version.
 #ifndef PYBIND11_INTERNALS_VERSION
-#    define PYBIND11_INTERNALS_VERSION 7
+#    if PY_VERSION_HEX >= 0x030C0000 || defined(_MSC_VER)
+// Version bump for Python 3.12+, before first 3.12 beta release.
+// Version bump for MSVC piggy-backed on PR #4779. See comments there.
+#        define PYBIND11_INTERNALS_VERSION 5
+#    else
+#        define PYBIND11_INTERNALS_VERSION 4
+#    endif
 #endif
 
-#if PYBIND11_INTERNALS_VERSION < 7
-#    error "PYBIND11_INTERNALS_VERSION 7 is the minimum for all platforms for pybind11v3."
-#endif
+// This requirement is mainly to reduce the support burden (see PR #4570).
+static_assert(PY_VERSION_HEX < 0x030C0000 || PYBIND11_INTERNALS_VERSION >= 5,
+              "pybind11 ABI version 5 is the minimum for Python 3.12+");
 
 PYBIND11_NAMESPACE_BEGIN(PYBIND11_NAMESPACE)
 
@@ -61,29 +66,40 @@ inline PyObject *make_object_base_type(PyTypeObject *metaclass);
 // Thread Specific Storage (TSS) API.
 // Avoid unnecessary allocation of `Py_tss_t`, since we cannot use
 // `Py_LIMITED_API` anyway.
-#define PYBIND11_TLS_KEY_REF Py_tss_t &
-#if defined(__clang__)
-#    define PYBIND11_TLS_KEY_INIT(var)                                                            \
-        _Pragma("clang diagnostic push")                                         /**/             \
-            _Pragma("clang diagnostic ignored \"-Wmissing-field-initializers\"") /**/             \
-            Py_tss_t var                                                                          \
-            = Py_tss_NEEDS_INIT;                                                                  \
-        _Pragma("clang diagnostic pop")
-#elif defined(__GNUC__) && !defined(__INTEL_COMPILER)
-#    define PYBIND11_TLS_KEY_INIT(var)                                                            \
-        _Pragma("GCC diagnostic push")                                         /**/               \
-            _Pragma("GCC diagnostic ignored \"-Wmissing-field-initializers\"") /**/               \
-            Py_tss_t var                                                                          \
-            = Py_tss_NEEDS_INIT;                                                                  \
-        _Pragma("GCC diagnostic pop")
+#if PYBIND11_INTERNALS_VERSION > 4
+#    define PYBIND11_TLS_KEY_REF Py_tss_t &
+#    if defined(__clang__)
+#        define PYBIND11_TLS_KEY_INIT(var)                                                        \
+            _Pragma("clang diagnostic push")                                         /**/         \
+                _Pragma("clang diagnostic ignored \"-Wmissing-field-initializers\"") /**/         \
+                Py_tss_t var                                                                      \
+                = Py_tss_NEEDS_INIT;                                                              \
+            _Pragma("clang diagnostic pop")
+#    elif defined(__GNUC__) && !defined(__INTEL_COMPILER)
+#        define PYBIND11_TLS_KEY_INIT(var)                                                        \
+            _Pragma("GCC diagnostic push")                                         /**/           \
+                _Pragma("GCC diagnostic ignored \"-Wmissing-field-initializers\"") /**/           \
+                Py_tss_t var                                                                      \
+                = Py_tss_NEEDS_INIT;                                                              \
+            _Pragma("GCC diagnostic pop")
+#    else
+#        define PYBIND11_TLS_KEY_INIT(var) Py_tss_t var = Py_tss_NEEDS_INIT;
+#    endif
+#    define PYBIND11_TLS_KEY_CREATE(var) (PyThread_tss_create(&(var)) == 0)
+#    define PYBIND11_TLS_GET_VALUE(key) PyThread_tss_get(&(key))
+#    define PYBIND11_TLS_REPLACE_VALUE(key, value) PyThread_tss_set(&(key), (value))
+#    define PYBIND11_TLS_DELETE_VALUE(key) PyThread_tss_set(&(key), nullptr)
+#    define PYBIND11_TLS_FREE(key) PyThread_tss_delete(&(key))
 #else
-#    define PYBIND11_TLS_KEY_INIT(var) Py_tss_t var = Py_tss_NEEDS_INIT;
+#    define PYBIND11_TLS_KEY_REF Py_tss_t *
+#    define PYBIND11_TLS_KEY_INIT(var) Py_tss_t *var = nullptr;
+#    define PYBIND11_TLS_KEY_CREATE(var)                                                          \
+        (((var) = PyThread_tss_alloc()) != nullptr && (PyThread_tss_create((var)) == 0))
+#    define PYBIND11_TLS_GET_VALUE(key) PyThread_tss_get((key))
+#    define PYBIND11_TLS_REPLACE_VALUE(key, value) PyThread_tss_set((key), (value))
+#    define PYBIND11_TLS_DELETE_VALUE(key) PyThread_tss_set((key), nullptr)
+#    define PYBIND11_TLS_FREE(key) PyThread_tss_free(key)
 #endif
-#define PYBIND11_TLS_KEY_CREATE(var) (PyThread_tss_create(&(var)) == 0)
-#define PYBIND11_TLS_GET_VALUE(key) PyThread_tss_get(&(key))
-#define PYBIND11_TLS_REPLACE_VALUE(key, value) PyThread_tss_set(&(key), (value))
-#define PYBIND11_TLS_DELETE_VALUE(key) PyThread_tss_set(&(key), nullptr)
-#define PYBIND11_TLS_FREE(key) PyThread_tss_delete(&(key))
 
 // Python loads modules by default with dlopen with the RTLD_LOCAL flag; under libc++ and possibly
 // other STLs, this means `typeid(A)` from one module won't equal `typeid(A)` from another module
@@ -91,7 +107,8 @@ inline PyObject *make_object_base_type(PyTypeObject *metaclass);
 // libstdc++, this doesn't happen: equality and the type_index hash are based on the type name,
 // which works.  If not under a known-good stl, provide our own name-based hash and equality
 // functions that use the type name.
-#if !defined(_LIBCPP_VERSION)
+#if (PYBIND11_INTERNALS_VERSION <= 4 && defined(__GLIBCXX__))                                     \
+    || (PYBIND11_INTERNALS_VERSION >= 5 && !defined(_LIBCPP_VERSION))
 inline bool same_type(const std::type_info &lhs, const std::type_info &rhs) { return lhs == rhs; }
 using type_hash = std::hash<std::type_index>;
 using type_equal_to = std::equal_to<std::type_index>;
@@ -160,7 +177,6 @@ static_assert(sizeof(instance_map_shard) % 64 == 0,
 struct internals {
 #ifdef Py_GIL_DISABLED
     pymutex mutex;
-    pymutex exception_translator_mutex;
 #endif
     // std::type_index -> pybind11's type information
     type_map<type_info *> registered_types_cpp;
@@ -179,26 +195,35 @@ struct internals {
     std::forward_list<ExceptionTranslator> registered_exception_translators;
     std::unordered_map<std::string, void *> shared_data; // Custom data to be shared across
                                                          // extensions
-    std::forward_list<std::string> static_strings;       // Stores the std::strings backing
-                                                         // detail::c_str()
+#if PYBIND11_INTERNALS_VERSION == 4
+    std::vector<PyObject *> unused_loader_patient_stack_remove_at_v5;
+#endif
+    std::forward_list<std::string> static_strings; // Stores the std::strings backing
+                                                   // detail::c_str()
     PyTypeObject *static_property_type;
     PyTypeObject *default_metaclass;
     PyObject *instance_base;
     // Unused if PYBIND11_SIMPLE_GIL_MANAGEMENT is defined:
     PYBIND11_TLS_KEY_INIT(tstate)
+#if PYBIND11_INTERNALS_VERSION > 4
     PYBIND11_TLS_KEY_INIT(loader_life_support_tls_key)
+#endif // PYBIND11_INTERNALS_VERSION > 4
     // Unused if PYBIND11_SIMPLE_GIL_MANAGEMENT is defined:
     PyInterpreterState *istate = nullptr;
 
+#if PYBIND11_INTERNALS_VERSION > 4
     // Note that we have to use a std::string to allocate memory to ensure a unique address
     // We want unique addresses since we use pointer equality to compare function records
     std::string function_record_capsule_name = internals_function_record_capsule_name;
+#endif
 
     internals() = default;
     internals(const internals &other) = delete;
     internals &operator=(const internals &other) = delete;
     ~internals() {
+#if PYBIND11_INTERNALS_VERSION > 4
         PYBIND11_TLS_FREE(loader_life_support_tls_key);
+#endif // PYBIND11_INTERNALS_VERSION > 4
 
         // This destructor is called *after* Py_Finalize() in finalize_interpreter().
         // That *SHOULD BE* fine. The following details what happens when PyThread_tss_free is
@@ -209,17 +234,6 @@ struct internals {
         // that the `tstate` be allocated with the CPython allocator.
         PYBIND11_TLS_FREE(tstate);
     }
-};
-
-// For backwards compatibility (i.e. #ifdef guards):
-#define PYBIND11_HAS_INTERNALS_WITH_SMART_HOLDER_SUPPORT
-
-enum class holder_enum_t : uint8_t {
-    undefined,
-    std_unique_ptr, // Default, lacking interop with std::shared_ptr.
-    std_shared_ptr, // Lacking interop with std::unique_ptr.
-    smart_holder,   // Full std::unique_ptr / std::shared_ptr interop.
-    custom_holder,
 };
 
 /// Additional type information which does not fit into the PyTypeObject.
@@ -237,7 +251,6 @@ struct type_info {
     buffer_info *(*get_buffer)(PyObject *, void *) = nullptr;
     void *get_buffer_data = nullptr;
     void *(*module_local_load)(PyObject *, const type_info *) = nullptr;
-    holder_enum_t holder_enum_v = holder_enum_t::undefined;
     /* A simple type never occurs as a (direct or indirect) parent
      * of a class that makes use of multiple inheritance.
      * A type can be simple even if it has non-simple ancestors as long as it has no descendants.
@@ -245,17 +258,80 @@ struct type_info {
     bool simple_type : 1;
     /* True if there is no multiple inheritance in this type's inheritance tree */
     bool simple_ancestors : 1;
+    /* for base vs derived holder_type checks */
+    bool default_holder : 1;
     /* true if this is a type registered with py::module_local */
     bool module_local : 1;
 };
 
+/// On MSVC, debug and release builds are not ABI-compatible!
+#if defined(_MSC_VER) && defined(_DEBUG)
+#    define PYBIND11_BUILD_TYPE "_debug"
+#else
+#    define PYBIND11_BUILD_TYPE ""
+#endif
+
+/// Let's assume that different compilers are ABI-incompatible.
+/// A user can manually set this string if they know their
+/// compiler is compatible.
+#ifndef PYBIND11_COMPILER_TYPE
+#    if defined(_MSC_VER)
+#        define PYBIND11_COMPILER_TYPE "_msvc"
+#    elif defined(__INTEL_COMPILER)
+#        define PYBIND11_COMPILER_TYPE "_icc"
+#    elif defined(__clang__)
+#        define PYBIND11_COMPILER_TYPE "_clang"
+#    elif defined(__PGI)
+#        define PYBIND11_COMPILER_TYPE "_pgi"
+#    elif defined(__MINGW32__)
+#        define PYBIND11_COMPILER_TYPE "_mingw"
+#    elif defined(__CYGWIN__)
+#        define PYBIND11_COMPILER_TYPE "_gcc_cygwin"
+#    elif defined(__GNUC__)
+#        define PYBIND11_COMPILER_TYPE "_gcc"
+#    else
+#        define PYBIND11_COMPILER_TYPE "_unknown"
+#    endif
+#endif
+
+/// Also standard libs
+#ifndef PYBIND11_STDLIB
+#    if defined(_LIBCPP_VERSION)
+#        define PYBIND11_STDLIB "_libcpp"
+#    elif defined(__GLIBCXX__) || defined(__GLIBCPP__)
+#        define PYBIND11_STDLIB "_libstdcpp"
+#    else
+#        define PYBIND11_STDLIB ""
+#    endif
+#endif
+
+/// On Linux/OSX, changes in __GXX_ABI_VERSION__ indicate ABI incompatibility.
+/// On MSVC, changes in _MSC_VER may indicate ABI incompatibility (#2898).
+#ifndef PYBIND11_BUILD_ABI
+#    if defined(__GXX_ABI_VERSION)
+#        define PYBIND11_BUILD_ABI "_cxxabi" PYBIND11_TOSTRING(__GXX_ABI_VERSION)
+#    elif defined(_MSC_VER)
+#        define PYBIND11_BUILD_ABI "_mscver" PYBIND11_TOSTRING(_MSC_VER)
+#    else
+#        define PYBIND11_BUILD_ABI ""
+#    endif
+#endif
+
+#ifndef PYBIND11_INTERNALS_KIND
+#    define PYBIND11_INTERNALS_KIND ""
+#endif
+
+#define PYBIND11_PLATFORM_ABI_ID                                                                  \
+    PYBIND11_INTERNALS_KIND PYBIND11_COMPILER_TYPE PYBIND11_STDLIB PYBIND11_BUILD_ABI             \
+        PYBIND11_BUILD_TYPE
+
 #define PYBIND11_INTERNALS_ID                                                                     \
     "__pybind11_internals_v" PYBIND11_TOSTRING(PYBIND11_INTERNALS_VERSION)                        \
-        PYBIND11_COMPILER_TYPE_LEADING_UNDERSCORE PYBIND11_PLATFORM_ABI_ID "__"
+        PYBIND11_PLATFORM_ABI_ID "__"
 
 #define PYBIND11_MODULE_LOCAL_ID                                                                  \
     "__pybind11_module_local_v" PYBIND11_TOSTRING(PYBIND11_INTERNALS_VERSION)                     \
-        PYBIND11_COMPILER_TYPE_LEADING_UNDERSCORE PYBIND11_PLATFORM_ABI_ID "__"
+        PYBIND11_PLATFORM_ABI_ID "__"
 
 /// Each module locally stores a pointer to the `internals` data. The data
 /// itself is shared among modules with the same `PYBIND11_INTERNALS_ID`.
@@ -373,7 +449,7 @@ inline void translate_local_exception(std::exception_ptr p) {
 
 inline object get_python_state_dict() {
     object state_dict;
-#if defined(PYPY_VERSION) || defined(GRAALVM_PYTHON)
+#if PYBIND11_INTERNALS_VERSION <= 4 || PY_VERSION_HEX < 0x03080000 || defined(PYPY_VERSION)
     state_dict = reinterpret_borrow<object>(PyEval_GetBuiltins());
 #else
 #    if PY_VERSION_HEX < 0x03090000
@@ -471,12 +547,13 @@ PYBIND11_NOINLINE internals &get_internals() {
         }
         PYBIND11_TLS_REPLACE_VALUE(internals_ptr->tstate, tstate);
 
+#if PYBIND11_INTERNALS_VERSION > 4
         // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
         if (!PYBIND11_TLS_KEY_CREATE(internals_ptr->loader_life_support_tls_key)) {
             pybind11_fail("get_internals: could not successfully initialize the "
                           "loader_life_support TSS key!");
         }
-
+#endif
         internals_ptr->istate = tstate->interp;
         state_dict[PYBIND11_INTERNALS_ID] = capsule(reinterpret_cast<void *>(internals_pp));
         internals_ptr->registered_exception_translators.push_front(&translate_exception);
@@ -506,6 +583,40 @@ PYBIND11_NOINLINE internals &get_internals() {
 struct local_internals {
     type_map<type_info *> registered_types_cpp;
     std::forward_list<ExceptionTranslator> registered_exception_translators;
+#if PYBIND11_INTERNALS_VERSION == 4
+
+    // For ABI compatibility, we can't store the loader_life_support TLS key in
+    // the `internals` struct directly.  Instead, we store it in `shared_data` and
+    // cache a copy in `local_internals`.  If we allocated a separate TLS key for
+    // each instance of `local_internals`, we could end up allocating hundreds of
+    // TLS keys if hundreds of different pybind11 modules are loaded (which is a
+    // plausible number).
+    PYBIND11_TLS_KEY_INIT(loader_life_support_tls_key)
+
+    // Holds the shared TLS key for the loader_life_support stack.
+    struct shared_loader_life_support_data {
+        PYBIND11_TLS_KEY_INIT(loader_life_support_tls_key)
+        shared_loader_life_support_data() {
+            // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
+            if (!PYBIND11_TLS_KEY_CREATE(loader_life_support_tls_key)) {
+                pybind11_fail("local_internals: could not successfully initialize the "
+                              "loader_life_support TLS key!");
+            }
+        }
+        // We can't help but leak the TLS key, because Python never unloads extension modules.
+    };
+
+    local_internals() {
+        auto &internals = get_internals();
+        // Get or create the `loader_life_support_stack_key`.
+        auto &ptr = internals.shared_data["_life_support"];
+        if (!ptr) {
+            ptr = new shared_loader_life_support_data;
+        }
+        loader_life_support_tls_key
+            = static_cast<shared_loader_life_support_data *>(ptr)->loader_life_support_tls_key;
+    }
+#endif //  PYBIND11_INTERNALS_VERSION == 4
 };
 
 /// Works like `get_internals`, but for things which are locally registered.
@@ -532,19 +643,6 @@ inline auto with_internals(const F &cb) -> decltype(cb(get_internals())) {
     return cb(internals);
 }
 
-template <typename F>
-inline auto with_exception_translators(const F &cb)
-    -> decltype(cb(get_internals().registered_exception_translators,
-                   get_local_internals().registered_exception_translators)) {
-    auto &internals = get_internals();
-#ifdef Py_GIL_DISABLED
-    std::unique_lock<pymutex> lock((internals).exception_translator_mutex);
-#endif
-    auto &local_internals = get_local_internals();
-    return cb(internals.registered_exception_translators,
-              local_internals.registered_exception_translators);
-}
-
 inline std::uint64_t mix64(std::uint64_t z) {
     // David Stafford's variant 13 of the MurmurHash3 finalizer popularized
     // by the SplitMix PRNG.
@@ -555,8 +653,8 @@ inline std::uint64_t mix64(std::uint64_t z) {
 }
 
 template <typename F>
-inline auto with_instance_map(const void *ptr, const F &cb)
-    -> decltype(cb(std::declval<instance_map &>())) {
+inline auto with_instance_map(const void *ptr,
+                              const F &cb) -> decltype(cb(std::declval<instance_map &>())) {
     auto &internals = get_internals();
 
 #ifdef Py_GIL_DISABLED
@@ -611,8 +709,7 @@ const char *c_str(Args &&...args) {
 }
 
 inline const char *get_function_record_capsule_name() {
-    // On GraalPy, pointer equality of the names is currently not guaranteed
-#if !defined(GRAALVM_PYTHON)
+#if PYBIND11_INTERNALS_VERSION > 4
     return get_internals().function_record_capsule_name.c_str();
 #else
     return nullptr;

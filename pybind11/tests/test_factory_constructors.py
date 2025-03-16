@@ -4,13 +4,11 @@ import re
 
 import pytest
 
-import env  # noqa: F401
 from pybind11_tests import ConstructorStats
 from pybind11_tests import factory_constructors as m
 from pybind11_tests.factory_constructors import tag
 
 
-@pytest.mark.skipif("env.GRAALPY", reason="Cannot reliably trigger GC")
 def test_init_factory_basic():
     """Tests py::init_factory() wrapper around various ways of returning the object"""
 
@@ -104,7 +102,6 @@ def test_init_factory_signature(msg):
     )
 
 
-@pytest.mark.skipif("env.GRAALPY", reason="Cannot reliably trigger GC")
 def test_init_factory_casting():
     """Tests py::init_factory() wrapper with various upcasting and downcasting returns"""
 
@@ -153,7 +150,6 @@ def test_init_factory_casting():
     ]
 
 
-@pytest.mark.skipif("env.GRAALPY", reason="Cannot reliably trigger GC")
 def test_init_factory_alias():
     """Tests py::init_factory() wrapper with value conversions and alias types"""
 
@@ -224,7 +220,6 @@ def test_init_factory_alias():
     ]
 
 
-@pytest.mark.skipif("env.GRAALPY", reason="Cannot reliably trigger GC")
 def test_init_factory_dual():
     """Tests init factory functions with dual main/alias factory functions"""
     from pybind11_tests.factory_constructors import TestFactory7
@@ -307,7 +302,6 @@ def test_init_factory_dual():
     ]
 
 
-@pytest.mark.skipif("env.GRAALPY", reason="Cannot reliably trigger GC")
 def test_no_placement_new(capture):
     """Prior to 2.2, `py::init<...>` relied on the type supporting placement
     new; this tests a class without placement new support."""
@@ -356,7 +350,6 @@ def strip_comments(s):
     return re.sub(r"\s+#.*", "", s)
 
 
-@pytest.mark.skipif("env.GRAALPY", reason="Cannot reliably trigger GC")
 def test_reallocation_a(capture, msg):
     """When the constructor is overloaded, previous overloads can require a preallocated value.
     This test makes sure that such preallocated values only happen when they might be necessary,
@@ -379,7 +372,6 @@ def test_reallocation_a(capture, msg):
     )
 
 
-@pytest.mark.skipif("env.GRAALPY", reason="Cannot reliably trigger GC")
 def test_reallocation_b(capture, msg):
     with capture:
         create_and_destroy(1.5)
@@ -396,7 +388,6 @@ def test_reallocation_b(capture, msg):
     )
 
 
-@pytest.mark.skipif("env.GRAALPY", reason="Cannot reliably trigger GC")
 def test_reallocation_c(capture, msg):
     with capture:
         create_and_destroy(2, 3)
@@ -411,7 +402,6 @@ def test_reallocation_c(capture, msg):
     )
 
 
-@pytest.mark.skipif("env.GRAALPY", reason="Cannot reliably trigger GC")
 def test_reallocation_d(capture, msg):
     with capture:
         create_and_destroy(2.5, 3)
@@ -427,7 +417,6 @@ def test_reallocation_d(capture, msg):
     )
 
 
-@pytest.mark.skipif("env.GRAALPY", reason="Cannot reliably trigger GC")
 def test_reallocation_e(capture, msg):
     with capture:
         create_and_destroy(3.5, 4.5)
@@ -443,7 +432,6 @@ def test_reallocation_e(capture, msg):
     )
 
 
-@pytest.mark.skipif("env.GRAALPY", reason="Cannot reliably trigger GC")
 def test_reallocation_f(capture, msg):
     with capture:
         create_and_destroy(4, 0.5)
@@ -460,7 +448,6 @@ def test_reallocation_f(capture, msg):
     )
 
 
-@pytest.mark.skipif("env.GRAALPY", reason="Cannot reliably trigger GC")
 def test_reallocation_g(capture, msg):
     with capture:
         create_and_destroy(5, "hi")

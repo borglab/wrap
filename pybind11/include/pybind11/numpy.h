@@ -175,6 +175,7 @@ inline numpy_internals &get_numpy_internals() {
 PYBIND11_NOINLINE module_ import_numpy_core_submodule(const char *submodule_name) {
     module_ numpy = module_::import("numpy");
     str version_string = numpy.attr("__version__");
+
     module_ numpy_lib = module_::import("numpy.lib");
     object numpy_version = numpy_lib.attr("NumpyVersion")(version_string);
     int major_version = numpy_version.attr("major").cast<int>();
@@ -211,7 +212,6 @@ constexpr int platform_lookup(int I, Ints... Is) {
 }
 
 struct npy_api {
-    // If you change this code, please review `normalized_dtype_num` below.
     enum constants {
         NPY_ARRAY_C_CONTIGUOUS_ = 0x0001,
         NPY_ARRAY_F_CONTIGUOUS_ = 0x0002,
@@ -382,74 +382,6 @@ private:
 #undef DECL_NPY_API
         return api;
     }
-};
-
-// This table normalizes typenums by mapping NPY_INT_, NPY_LONG, ... to NPY_INT32_, NPY_INT64, ...
-// This is needed to correctly handle situations where multiple typenums map to the same type,
-// e.g. NPY_LONG_ may be equivalent to NPY_INT_ or NPY_LONGLONG_ despite having a different
-// typenum. The normalized typenum should always match the values used in npy_format_descriptor.
-// If you change this code, please review `enum constants` above.
-static constexpr int normalized_dtype_num[npy_api::NPY_VOID_ + 1] = {
-    // NPY_BOOL_ =>
-    npy_api::NPY_BOOL_,
-    // NPY_BYTE_ =>
-    npy_api::NPY_BYTE_,
-    // NPY_UBYTE_ =>
-    npy_api::NPY_UBYTE_,
-    // NPY_SHORT_ =>
-    npy_api::NPY_INT16_,
-    // NPY_USHORT_ =>
-    npy_api::NPY_UINT16_,
-    // NPY_INT_ =>
-    sizeof(int) == sizeof(std::int16_t)   ? npy_api::NPY_INT16_
-    : sizeof(int) == sizeof(std::int32_t) ? npy_api::NPY_INT32_
-    : sizeof(int) == sizeof(std::int64_t) ? npy_api::NPY_INT64_
-                                          : npy_api::NPY_INT_,
-    // NPY_UINT_ =>
-    sizeof(unsigned int) == sizeof(std::uint16_t)   ? npy_api::NPY_UINT16_
-    : sizeof(unsigned int) == sizeof(std::uint32_t) ? npy_api::NPY_UINT32_
-    : sizeof(unsigned int) == sizeof(std::uint64_t) ? npy_api::NPY_UINT64_
-                                                    : npy_api::NPY_UINT_,
-    // NPY_LONG_ =>
-    sizeof(long) == sizeof(std::int16_t)   ? npy_api::NPY_INT16_
-    : sizeof(long) == sizeof(std::int32_t) ? npy_api::NPY_INT32_
-    : sizeof(long) == sizeof(std::int64_t) ? npy_api::NPY_INT64_
-                                           : npy_api::NPY_LONG_,
-    // NPY_ULONG_ =>
-    sizeof(unsigned long) == sizeof(std::uint16_t)   ? npy_api::NPY_UINT16_
-    : sizeof(unsigned long) == sizeof(std::uint32_t) ? npy_api::NPY_UINT32_
-    : sizeof(unsigned long) == sizeof(std::uint64_t) ? npy_api::NPY_UINT64_
-                                                     : npy_api::NPY_ULONG_,
-    // NPY_LONGLONG_ =>
-    sizeof(long long) == sizeof(std::int16_t)   ? npy_api::NPY_INT16_
-    : sizeof(long long) == sizeof(std::int32_t) ? npy_api::NPY_INT32_
-    : sizeof(long long) == sizeof(std::int64_t) ? npy_api::NPY_INT64_
-                                                : npy_api::NPY_LONGLONG_,
-    // NPY_ULONGLONG_ =>
-    sizeof(unsigned long long) == sizeof(std::uint16_t)   ? npy_api::NPY_UINT16_
-    : sizeof(unsigned long long) == sizeof(std::uint32_t) ? npy_api::NPY_UINT32_
-    : sizeof(unsigned long long) == sizeof(std::uint64_t) ? npy_api::NPY_UINT64_
-                                                          : npy_api::NPY_ULONGLONG_,
-    // NPY_FLOAT_ =>
-    npy_api::NPY_FLOAT_,
-    // NPY_DOUBLE_ =>
-    npy_api::NPY_DOUBLE_,
-    // NPY_LONGDOUBLE_ =>
-    npy_api::NPY_LONGDOUBLE_,
-    // NPY_CFLOAT_ =>
-    npy_api::NPY_CFLOAT_,
-    // NPY_CDOUBLE_ =>
-    npy_api::NPY_CDOUBLE_,
-    // NPY_CLONGDOUBLE_ =>
-    npy_api::NPY_CLONGDOUBLE_,
-    // NPY_OBJECT_ =>
-    npy_api::NPY_OBJECT_,
-    // NPY_STRING_ =>
-    npy_api::NPY_STRING_,
-    // NPY_UNICODE_ =>
-    npy_api::NPY_UNICODE_,
-    // NPY_VOID_ =>
-    npy_api::NPY_VOID_,
 };
 
 inline PyArray_Proxy *array_proxy(void *ptr) { return reinterpret_cast<PyArray_Proxy *>(ptr); }
@@ -752,13 +684,6 @@ public:
         return detail::npy_format_descriptor<typename std::remove_cv<T>::type>::dtype();
     }
 
-    /// Return the type number associated with a C++ type.
-    /// This is the constexpr equivalent of `dtype::of<T>().num()`.
-    template <typename T>
-    static constexpr int num_of() {
-        return detail::npy_format_descriptor<typename std::remove_cv<T>::type>::value;
-    }
-
     /// Size of the data type in bytes.
 #ifdef PYBIND11_NUMPY_1_ONLY
     ssize_t itemsize() const { return detail::array_descriptor_proxy(m_ptr)->elsize; }
@@ -800,25 +725,12 @@ public:
         return detail::array_descriptor_proxy(m_ptr)->type;
     }
 
-    /// Type number of dtype. Note that different values may be returned for equivalent types,
-    /// e.g. even though ``long`` may be equivalent to ``int`` or ``long long``, they still have
-    /// different type numbers. Consider using `normalized_num` to avoid this.
+    /// type number of dtype.
     int num() const {
         // Note: The signature, `dtype::num` follows the naming of NumPy's public
         // Python API (i.e., ``dtype.num``), rather than its internal
         // C API (``PyArray_Descr::type_num``).
         return detail::array_descriptor_proxy(m_ptr)->type_num;
-    }
-
-    /// Type number of dtype, normalized to match the return value of `num_of` for equivalent
-    /// types. This function can be used to write switch statements that correctly handle
-    /// equivalent types with different type numbers.
-    int normalized_num() const {
-        int value = num();
-        if (value >= 0 && value <= detail::npy_api::NPY_VOID_) {
-            return detail::normalized_dtype_num[value];
-        }
-        return value;
     }
 
     /// Single character for byteorder
@@ -1516,11 +1428,7 @@ public:
 };
 
 template <typename T>
-struct npy_format_descriptor<
-    T,
-    enable_if_t<is_same_ignoring_cvref<T, PyObject *>::value
-                || ((std::is_same<T, handle>::value || std::is_same<T, object>::value)
-                    && sizeof(T) == sizeof(PyObject *))>> {
+struct npy_format_descriptor<T, enable_if_t<is_same_ignoring_cvref<T, PyObject *>::value>> {
     static constexpr auto name = const_name("object");
 
     static constexpr int value = npy_api::NPY_OBJECT_;
@@ -2182,8 +2090,7 @@ vectorize_helper<Func, Return, Args...> vectorize_extractor(const Func &f, Retur
 template <typename T, int Flags>
 struct handle_type_name<array_t<T, Flags>> {
     static constexpr auto name
-        = io_name("typing.Annotated[numpy.typing.ArrayLike, ", "numpy.typing.NDArray[")
-          + npy_format_descriptor<T>::name + const_name("]");
+        = const_name("numpy.ndarray[") + npy_format_descriptor<T>::name + const_name("]");
 };
 
 PYBIND11_NAMESPACE_END(detail)

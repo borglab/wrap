@@ -4,7 +4,7 @@ import sys
 
 import pytest
 
-import env
+import env  # noqa: F401
 
 m = pytest.importorskip("pybind11_tests.virtual_functions")
 from pybind11_tests import ConstructorStats  # noqa: E402
@@ -82,9 +82,6 @@ def test_override(capture, msg):
     """
     )
 
-    if env.GRAALPY:
-        pytest.skip("ConstructorStats is incompatible with GraalPy.")
-
     cstats = ConstructorStats.get(m.ExampleVirt)
     assert cstats.alive() == 3
     del ex12, ex12p, ex12p2
@@ -94,7 +91,6 @@ def test_override(capture, msg):
     assert cstats.move_constructions >= 0
 
 
-@pytest.mark.skipif("env.GRAALPY", reason="Cannot reliably trigger GC")
 def test_alias_delay_initialization1(capture):
     """`A` only initializes its trampoline class when we inherit from it
 
@@ -134,7 +130,6 @@ def test_alias_delay_initialization1(capture):
     )
 
 
-@pytest.mark.skipif("env.GRAALPY", reason="Cannot reliably trigger GC")
 def test_alias_delay_initialization2(capture):
     """`A2`, unlike the above, is configured to always initialize the alias
 
@@ -193,7 +188,7 @@ def test_alias_delay_initialization2(capture):
 
 # PyPy: Reference count > 1 causes call with noncopyable instance
 # to fail in ncv1.print_nc()
-@pytest.mark.xfail("env.PYPY or env.GRAALPY")
+@pytest.mark.xfail("env.PYPY")
 @pytest.mark.skipif(
     not hasattr(m, "NCVirt"), reason="NCVirt does not work on Intel/PGI/NVCC compilers"
 )

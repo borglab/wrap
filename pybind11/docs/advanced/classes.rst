@@ -64,7 +64,7 @@ helper class that is defined as follows:
 
 .. code-block:: cpp
 
-    class PyAnimal : public Animal, py::trampoline_self_life_support {
+    class PyAnimal : public Animal {
     public:
         /* Inherit the constructors */
         using Animal::Animal;
@@ -79,18 +79,6 @@ helper class that is defined as follows:
             );
         }
     };
-
-The ``py::trampoline_self_life_support`` base class is needed to ensure
-that a ``std::unique_ptr`` can safely be passed between Python and C++. To
-steer clear of notorious pitfalls (e.g. inheritance slicing), it is best
-practice to always use the base class, in combination with
-``py::smart_holder``.
-
-.. note::
-    For completeness, the base class has no effect if a holder other than
-    ``py::smart_holder`` used, including the default ``std::unique_ptr<T>``.
-    Please think twice, though, the pitfalls are very real, and the overhead
-    for using the safer ``py::smart_holder`` is very likely to be in the noise.
 
 The macro :c:macro:`PYBIND11_OVERRIDE_PURE` should be used for pure virtual
 functions, and :c:macro:`PYBIND11_OVERRIDE` should be used for functions which have
@@ -107,18 +95,18 @@ The binding code also needs a few minor adaptations (highlighted):
     :emphasize-lines: 2,3
 
     PYBIND11_MODULE(example, m) {
-        py::class_<Animal, PyAnimal /* <--- trampoline */, py::smart_holder>(m, "Animal")
+        py::class_<Animal, PyAnimal /* <--- trampoline*/>(m, "Animal")
             .def(py::init<>())
             .def("go", &Animal::go);
 
-        py::class_<Dog, Animal, py::smart_holder>(m, "Dog")
+        py::class_<Dog, Animal>(m, "Dog")
             .def(py::init<>());
 
         m.def("call_go", &call_go);
     }
 
 Importantly, pybind11 is made aware of the trampoline helper class by
-specifying it as an extra template argument to ``py::class_``. (This can also
+specifying it as an extra template argument to :class:`class_`. (This can also
 be combined with other template arguments such as a custom holder type; the
 order of template types does not matter).  Following this, we are able to
 define a constructor as usual.
@@ -128,9 +116,9 @@ Bindings should be made against the actual class, not the trampoline helper clas
 .. code-block:: cpp
     :emphasize-lines: 3
 
-    py::class_<Animal, PyAnimal /* <--- trampoline */, py::smart_holder>(m, "Animal");
+    py::class_<Animal, PyAnimal /* <--- trampoline*/>(m, "Animal");
         .def(py::init<>())
-        .def("go", &Animal::go); /* <--- DO NOT USE &PyAnimal::go HERE */
+        .def("go", &PyAnimal::go); /* <--- THIS IS WRONG, use &Animal::go */
 
 Note, however, that the above is sufficient for allowing python classes to
 extend ``Animal``, but not ``Dog``: see :ref:`virtual_and_inheritance` for the
@@ -256,13 +244,13 @@ override the ``name()`` method):
 
 .. code-block:: cpp
 
-    class PyAnimal : public Animal, py::trampoline_self_life_support {
+    class PyAnimal : public Animal {
     public:
         using Animal::Animal; // Inherit constructors
         std::string go(int n_times) override { PYBIND11_OVERRIDE_PURE(std::string, Animal, go, n_times); }
         std::string name() override { PYBIND11_OVERRIDE(std::string, Animal, name, ); }
     };
-    class PyDog : public Dog, py::trampoline_self_life_support {
+    class PyDog : public Dog {
     public:
         using Dog::Dog; // Inherit constructors
         std::string go(int n_times) override { PYBIND11_OVERRIDE(std::string, Dog, go, n_times); }
@@ -284,7 +272,7 @@ declare or override any virtual methods itself:
 .. code-block:: cpp
 
     class Husky : public Dog {};
-    class PyHusky : public Husky, py::trampoline_self_life_support {
+    class PyHusky : public Husky {
     public:
         using Husky::Husky; // Inherit constructors
         std::string go(int n_times) override { PYBIND11_OVERRIDE_PURE(std::string, Husky, go, n_times); }
@@ -299,15 +287,13 @@ follows:
 
 .. code-block:: cpp
 
-    template <class AnimalBase = Animal>
-    class PyAnimal : public AnimalBase, py::trampoline_self_life_support {
+    template <class AnimalBase = Animal> class PyAnimal : public AnimalBase {
     public:
         using AnimalBase::AnimalBase; // Inherit constructors
         std::string go(int n_times) override { PYBIND11_OVERRIDE_PURE(std::string, AnimalBase, go, n_times); }
         std::string name() override { PYBIND11_OVERRIDE(std::string, AnimalBase, name, ); }
     };
-    template <class DogBase = Dog>
-    class PyDog : public PyAnimal<DogBase>, py::trampoline_self_life_support {
+    template <class DogBase = Dog> class PyDog : public PyAnimal<DogBase> {
     public:
         using PyAnimal<DogBase>::PyAnimal; // Inherit constructors
         // Override PyAnimal's pure virtual go() with a non-pure one:
@@ -325,9 +311,9 @@ The classes are then registered with pybind11 using:
 
 .. code-block:: cpp
 
-    py::class_<Animal, PyAnimal<>, py::smart_holder> animal(m, "Animal");
-    py::class_<Dog, Animal, PyDog<>, py::smart_holder> dog(m, "Dog");
-    py::class_<Husky, Dog, PyDog<Husky>, py::smart_holder> husky(m, "Husky");
+    py::class_<Animal, PyAnimal<>> animal(m, "Animal");
+    py::class_<Dog, Animal, PyDog<>> dog(m, "Dog");
+    py::class_<Husky, Dog, PyDog<Husky>> husky(m, "Husky");
     // ... add animal, dog, husky definitions
 
 Note that ``Husky`` did not require a dedicated trampoline template class at
@@ -513,12 +499,12 @@ an alias:
         // ...
         virtual ~Example() = default;
     };
-    class PyExample : public Example, py::trampoline_self_life_support {
+    class PyExample : public Example {
     public:
         using Example::Example;
         PyExample(Example &&base) : Example(std::move(base)) {}
     };
-    py::class_<Example, PyExample, py::smart_holder>(m, "Example")
+    py::class_<Example, PyExample>(m, "Example")
         // Returns an Example pointer.  If a PyExample is needed, the Example
         // instance will be moved via the extra constructor in PyExample, above.
         .def(py::init([]() { return new Example(); }))
@@ -564,10 +550,9 @@ pybind11. The underlying issue is that the ``std::unique_ptr`` holder type that
 is responsible for managing the lifetime of instances will reference the
 destructor even if no deallocations ever take place. In order to expose classes
 with private or protected destructors, it is possible to override the holder
-type via a holder type argument to ``py::class_``. Pybind11 provides a helper
-class ``py::nodelete`` that disables any destructor invocations. In this case,
-it is crucial that instances are deallocated on the C++ side to avoid memory
-leaks.
+type via a holder type argument to ``class_``. Pybind11 provides a helper class
+``py::nodelete`` that disables any destructor invocations. In this case, it is
+crucial that instances are deallocated on the C++ side to avoid memory leaks.
 
 .. code-block:: cpp
 
@@ -841,7 +826,8 @@ An instance can now be pickled as follows:
     always use the latest available version. Beware: failure to follow these
     instructions will cause important pybind11 memory allocation routines to be
     skipped during unpickling, which will likely lead to memory corruption
-    and/or segmentation faults.
+    and/or segmentation faults. Python defaults to version 3 (Python 3-3.7) and
+    version 4 for Python 3.8+.
 
 .. seealso::
 
@@ -886,7 +872,7 @@ Multiple Inheritance
 
 pybind11 can create bindings for types that derive from multiple base types
 (aka. *multiple inheritance*). To do so, specify all bases in the template
-arguments of the ``py::class_`` declaration:
+arguments of the ``class_`` declaration:
 
 .. code-block:: cpp
 
@@ -961,11 +947,11 @@ because of conflicting definitions on the external type:
     // dogs.cpp
 
     // Binding for external library class:
-    py::class_<pets::Pet>(m, "Pet")
+    py::class<pets::Pet>(m, "Pet")
         .def("name", &pets::Pet::name);
 
     // Binding for local extension class:
-    py::class_<Dog, pets::Pet>(m, "Dog")
+    py::class<Dog, pets::Pet>(m, "Dog")
         .def(py::init<std::string>());
 
 .. code-block:: cpp
@@ -973,11 +959,11 @@ because of conflicting definitions on the external type:
     // cats.cpp, in a completely separate project from the above dogs.cpp.
 
     // Binding for external library class:
-    py::class_<pets::Pet>(m, "Pet")
+    py::class<pets::Pet>(m, "Pet")
         .def("get_name", &pets::Pet::name);
 
     // Binding for local extending class:
-    py::class_<Cat, pets::Pet>(m, "Cat")
+    py::class<Cat, pets::Pet>(m, "Cat")
         .def(py::init<std::string>());
 
 .. code-block:: pycon
@@ -995,13 +981,13 @@ the ``py::class_`` constructor:
 .. code-block:: cpp
 
     // Pet binding in dogs.cpp:
-    py::class_<pets::Pet>(m, "Pet", py::module_local())
+    py::class<pets::Pet>(m, "Pet", py::module_local())
         .def("name", &pets::Pet::name);
 
 .. code-block:: cpp
 
     // Pet binding in cats.cpp:
-    py::class_<pets::Pet>(m, "Pet", py::module_local())
+    py::class<pets::Pet>(m, "Pet", py::module_local())
         .def("get_name", &pets::Pet::name);
 
 This makes the Python-side ``dogs.Pet`` and ``cats.Pet`` into distinct classes,
@@ -1119,7 +1105,7 @@ described trampoline:
         virtual int foo() const { return 42; }
     };
 
-    class Trampoline : public A, py::trampoline_self_life_support {
+    class Trampoline : public A {
     public:
         int foo() const override { PYBIND11_OVERRIDE(int, A, foo, ); }
     };
@@ -1129,7 +1115,7 @@ described trampoline:
         using A::foo;
     };
 
-    py::class_<A, Trampoline, py::smart_holder>(m, "A") // <-- `Trampoline` here
+    py::class_<A, Trampoline>(m, "A") // <-- `Trampoline` here
         .def("foo", &Publicist::foo); // <-- `Publicist` here, not `Trampoline`!
 
 Binding final classes
@@ -1210,7 +1196,7 @@ but once again each instantiation must be explicitly specified:
         T fn(V v);
     };
 
-    py::class_<MyClass<int>>(m, "MyClassT")
+    py::class<MyClass<int>>(m, "MyClassT")
         .def("fn", &MyClass<int>::fn<std::string>);
 
 Custom automatic downcasters
