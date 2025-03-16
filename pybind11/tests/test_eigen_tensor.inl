@@ -147,39 +147,33 @@ void init_tensor_module(pybind11::module &m) {
 
     m.def(
         "take_fixed_tensor",
+
         []() {
             Eigen::aligned_allocator<
                 Eigen::TensorFixedSize<double, Eigen::Sizes<3, 5, 2>, Options>>
                 allocator;
-            static auto *obj = new (allocator.allocate(1))
+            return new (allocator.allocate(1))
                 Eigen::TensorFixedSize<double, Eigen::Sizes<3, 5, 2>, Options>(
                     get_fixed_tensor<Options>());
-            return obj; // take_ownership will fail.
         },
         py::return_value_policy::take_ownership);
 
     m.def(
         "take_tensor",
-        []() {
-            static auto *obj = new Eigen::Tensor<double, 3, Options>(get_tensor<Options>());
-            return obj; // take_ownership will fail.
-        },
+        []() { return new Eigen::Tensor<double, 3, Options>(get_tensor<Options>()); },
         py::return_value_policy::take_ownership);
 
     m.def(
         "take_const_tensor",
         []() -> const Eigen::Tensor<double, 3, Options> * {
-            static auto *obj = new Eigen::Tensor<double, 3, Options>(get_tensor<Options>());
-            return obj; // take_ownership will fail.
+            return new Eigen::Tensor<double, 3, Options>(get_tensor<Options>());
         },
         py::return_value_policy::take_ownership);
 
     m.def(
         "take_view_tensor",
         []() -> const Eigen::TensorMap<Eigen::Tensor<double, 3, Options>> * {
-            static auto *obj
-                = new Eigen::TensorMap<Eigen::Tensor<double, 3, Options>>(get_tensor<Options>());
-            return obj; // take_ownership will fail.
+            return new Eigen::TensorMap<Eigen::Tensor<double, 3, Options>>(get_tensor<Options>());
         },
         py::return_value_policy::take_ownership);
 

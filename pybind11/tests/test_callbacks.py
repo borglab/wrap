@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 import time
 from threading import Thread
 
@@ -90,7 +89,6 @@ def test_keyword_args_and_generalized_unpacking():
     )
 
 
-@pytest.mark.skipif("env.GRAALPY", reason="Cannot reliably trigger GC")
 def test_lambda_closure_cleanup():
     m.test_lambda_closure_cleanup()
     cstats = m.payload_cstats()
@@ -99,7 +97,6 @@ def test_lambda_closure_cleanup():
     assert cstats.move_constructions >= 1
 
 
-@pytest.mark.skipif("env.GRAALPY", reason="Cannot reliably trigger GC")
 def test_cpp_callable_cleanup():
     alive_counts = m.test_cpp_callable_cleanup()
     assert alive_counts == [0, 1, 2, 1, 2, 1, 0]
@@ -156,7 +153,6 @@ def test_python_builtins():
     assert m.test_sum_builtin(sum, []) == 0
 
 
-@pytest.mark.skipif(sys.platform.startswith("emscripten"), reason="Requires threads")
 def test_async_callbacks():
     # serves as state for async callback
     class Item:
@@ -180,7 +176,6 @@ def test_async_callbacks():
     assert sum(res) == sum(x + 3 for x in work)
 
 
-@pytest.mark.skipif(sys.platform.startswith("emscripten"), reason="Requires threads")
 def test_async_async_callbacks():
     t = Thread(target=test_async_callbacks)
     t.start()
@@ -217,7 +212,9 @@ def test_custom_func():
     assert m.roundtrip(m.custom_function)(4) == 36
 
 
-@pytest.mark.skipif("env.GRAALPY", reason="TODO debug segfault")
+@pytest.mark.skipif(
+    m.custom_function2 is None, reason="Current PYBIND11_INTERNALS_VERSION too low"
+)
 def test_custom_func2():
     assert m.custom_function2(3) == 27
     assert m.roundtrip(m.custom_function2)(3) == 27

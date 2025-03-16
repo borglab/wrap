@@ -1,10 +1,7 @@
 from __future__ import annotations
 
-import sys
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
-
-import pytest
 
 from pybind11_tests import iostream as m
 
@@ -273,7 +270,6 @@ def test_redirect_both(capfd):
     assert stream2.getvalue() == msg2
 
 
-@pytest.mark.skipif(sys.platform.startswith("emscripten"), reason="Requires threads")
 def test_threading():
     with m.ostream_redirect(stdout=True, stderr=False):
         # start some threads

@@ -28,9 +28,6 @@ struct IntStruct {
     int value;
 };
 
-struct EmptyStruct {};
-EmptyStruct SharedInstance;
-
 } // namespace
 
 TEST_SUBMODULE(thread, m) {
@@ -63,9 +60,6 @@ TEST_SUBMODULE(thread, m) {
             }
         },
         py::call_guard<py::gil_scoped_release>());
-
-    py::class_<EmptyStruct>(m, "EmptyStruct")
-        .def_readonly_static("SharedInstance", &SharedInstance);
 
     // NOTE: std::string_view also uses loader_life_support to ensure that
     // the string contents remain alive, but that's a C++ 17 feature.

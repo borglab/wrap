@@ -24,8 +24,7 @@ changes are that:
   function is not available anymore.
 
 Due to NumPy changes, you may experience difficulties updating to NumPy 2.
-Please see the `NumPy 2 migration guide <https://numpy.org/devdocs/numpy_2_0_migration_guide.html>`_
-for details.
+Please see the [NumPy 2 migration guide](https://numpy.org/devdocs/numpy_2_0_migration_guide.html) for details.
 For example, a more direct change could be that the default integer ``"int_"``
 (and ``"uint"``) is now ``ssize_t`` and not ``long`` (affects 64bit windows).
 

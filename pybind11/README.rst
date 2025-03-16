@@ -1,7 +1,7 @@
 .. figure:: https://github.com/pybind/pybind11/raw/master/docs/pybind11-logo.png
    :alt: pybind11 logo
 
-**pybind11 (v3)  — Seamless interoperability between C++ and Python**
+**pybind11 — Seamless operability between C++11 and Python**
 
 |Latest Documentation Status| |Stable Documentation Status| |Gitter chat| |GitHub Discussions| |CI| |Build status|
 
@@ -34,7 +34,7 @@ dependency.
 Think of this library as a tiny self-contained version of Boost.Python
 with everything stripped away that isn't relevant for binding
 generation. Without comments, the core header files only require ~4K
-lines of code and depend on Python (3.8+, or PyPy) and the C++
+lines of code and depend on Python (3.7+, or PyPy) and the C++
 standard library. This compact implementation was possible thanks to
 some C++11 language features (specifically: tuples, lambda functions and
 variadic templates). Since its creation, this library has grown beyond
@@ -79,7 +79,7 @@ Goodies
 In addition to the core functionality, pybind11 provides some extra
 goodies:
 
-- Python 3.8+, and PyPy3 7.3 are supported with an implementation-agnostic
+- Python 3.7+, and PyPy3 7.3 are supported with an implementation-agnostic
   interface (pybind11 2.9 was the last version to support Python 2 and 3.5).
 
 - It is possible to bind C++11 lambda functions with captured
@@ -134,34 +134,11 @@ About
 
 This project was created by `Wenzel
 Jakob <http://rgl.epfl.ch/people/wjakob>`_. Significant features and/or
-improvements to the code were contributed by
-Jonas Adler,
-Lori A. Burns,
-Sylvain Corlay,
-Eric Cousineau,
-Aaron Gokaslan,
-Ralf Grosse-Kunstleve,
-Trent Houliston,
-Axel Huebl,
-@hulucc,
-Yannick Jadoul,
-Sergey Lyskov,
-Johan Mabille,
-Tomasz Miąsko,
-Dean Moldovan,
-Ben Pritchard,
-Jason Rhinelander,
-Boris Schäling,
-Pim Schellart,
-Henry Schreiner,
-Ivan Smirnov,
-Dustin Spicuzza,
-Boris Staletic,
-Ethan Steinberg,
-Patrick Stewart,
-Ivor Wanders,
-and
-Xiaofei Wang.
+improvements to the code were contributed by Jonas Adler, Lori A. Burns,
+Sylvain Corlay, Eric Cousineau, Aaron Gokaslan, Ralf Grosse-Kunstleve, Trent Houliston, Axel
+Huebl, @hulucc, Yannick Jadoul, Sergey Lyskov, Johan Mabille, Tomasz Miąsko,
+Dean Moldovan, Ben Pritchard, Jason Rhinelander, Boris Schäling, Pim
+Schellart, Henry Schreiner, Ivan Smirnov, Boris Staletic, and Patrick Stewart.
 
 We thank Google for a generous financial contribution to the continuous
 integration infrastructure used by this project.

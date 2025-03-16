@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import sys
 import threading
-
-import pytest
 
 from pybind11_tests import thread as m
 
@@ -27,7 +24,6 @@ class Thread(threading.Thread):
             raise self.e
 
 
-@pytest.mark.skipif(sys.platform.startswith("emscripten"), reason="Requires threads")
 def test_implicit_conversion():
     a = Thread(m.test)
     b = Thread(m.test)
@@ -38,7 +34,6 @@ def test_implicit_conversion():
         x.join()
 
 
-@pytest.mark.skipif(sys.platform.startswith("emscripten"), reason="Requires threads")
 def test_implicit_conversion_no_gil():
     a = Thread(m.test_no_gil)
     b = Thread(m.test_no_gil)
@@ -47,22 +42,3 @@ def test_implicit_conversion_no_gil():
         x.start()
     for x in [c, b, a]:
         x.join()
-
-
-@pytest.mark.skipif(sys.platform.startswith("emscripten"), reason="Requires threads")
-def test_bind_shared_instance():
-    nb_threads = 4
-    b = threading.Barrier(nb_threads)
-
-    def access_shared_instance():
-        b.wait()
-        for _ in range(1000):
-            m.EmptyStruct.SharedInstance  # noqa: B018
-
-    threads = [
-        threading.Thread(target=access_shared_instance) for _ in range(nb_threads)
-    ]
-    for thread in threads:
-        thread.start()
-    for thread in threads:
-        thread.join()
