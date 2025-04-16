@@ -58,7 +58,7 @@ class XMLDocParser:
 
         # Extract the docs for the function that matches cpp_class.cpp_method(*method_args_names).
         return self.get_formatted_docstring(member_defs[documenting_index],
-                                            ignored_params)
+                                            ignored_params) if member_defs else ""
 
     def get_member_defs(self, xml_folder: str, cpp_class: str,
                         cpp_method: str):
@@ -95,7 +95,7 @@ class XMLDocParser:
             return ""
 
         # Create the path to the file with the documentation for cpp_class.
-        xml_class_file = xml_folder_path / class_index.attrib['refid'] + '.xml'
+        xml_class_file = xml_folder_path / f"{class_index.attrib['refid']}.xml"
 
         # Parse the class file
         class_tree = self.parse_xml(xml_class_file)
