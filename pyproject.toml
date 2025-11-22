@@ -45,6 +45,5 @@ build-backend = "hatchling.build"
 addopts = "--cov=gtwrap --cov-report html --cov-report term"
 norecursedirs = []
 
-
 [tool.uv.build-backend]
 module-name = "gtwrap"
