@@ -4,7 +4,10 @@ version = "2.0.0"
 description = "Library to wrap C++ with Python and Matlab"
 authors = [
     { name="Frank Dellaert", email="dellaert@gatech.edu" },
-    { name = "Varun Agrawal", email = "varunagrawal@gatech.edu" }
+    { name = "Varun Agrawal", email = "varunagrawal@gatech.edu" },
+    { name = "Duy Nguyen Ta", email = "duynguyen@gatech.edu" },
+    { name = "Fan Jiang", email = "i@fanjiang.me" },
+    { name = "Matthew Sklar", email = "matthewsklar227@gmail.com" }
 ]
 readme = "README.md"
 license = "BSD-3-Clause"
