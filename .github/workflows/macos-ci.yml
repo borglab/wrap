@@ -20,21 +20,17 @@ jobs:
         run: |
           brew install cmake ninja boost
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+      - name: Install uv and set the ${{ matrix.python-version }}
+        uses: astral-sh/setup-uv@v6
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Python Dependencies
-        run: |
-          pip3 install -U pip setuptools
-          pip3 install -r requirements.txt
+        run: uv sync --locked --all-extras --dev
 
       - name: Build and Test
         run: |
           # Build
           cmake .
-          cd tests
           # Use Pytest to run all the tests.
-          pytest
-
+          uv run pytest tests
