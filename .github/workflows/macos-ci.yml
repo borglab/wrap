@@ -18,7 +18,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          brew install cmake ninja boost
+          brew install cmake ninja
 
       - name: Install uv and set the ${{ matrix.python-version }}
         uses: astral-sh/setup-uv@v6

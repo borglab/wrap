@@ -19,7 +19,7 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get -y update
-          sudo apt install cmake build-essential pkg-config
+          sudo apt install cmake
 
       - name: Install uv and set the ${{ matrix.python-version }}
         uses: astral-sh/setup-uv@v6
