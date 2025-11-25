@@ -105,6 +105,12 @@ class TestWrap(unittest.TestCase):
             'DefaultFuncVector.m',
             'DefaultFuncZero.m',
             'setPose.m',
+            'EliminateDiscrete.m',
+            'triangulatePoint3Cal3_S2.m',
+            'FindKarcherMeanPoint3.m',
+            'FindKarcherMeanSO3.m',
+            'FindKarcherMeanSO4.m',
+            'FindKarcherMeanPose3.m',
         ]
 
         for file in files:
