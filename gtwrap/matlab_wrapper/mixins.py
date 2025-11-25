@@ -133,6 +133,9 @@ class FormatMixin:
                 if name not in self.ignore_namespace and namespace != '':
                     formatted_type_name += namespace + separator
 
+        # Get string representation so we can use as dict key.
+        name = str(name)
+
         if is_constructor:
             formatted_type_name += self.data_type.get(name) or name
         elif is_method:
