@@ -40,7 +40,6 @@ class Typename:
     """
 
     namespaces_name_rule = delimitedList(IDENT, "::")
-    instantiation_name_rule = delimitedList(IDENT, "::")
     rule = (
         namespaces_name_rule("namespaces_and_name")  #
     ).setParseAction(lambda t: Typename(t))
@@ -164,7 +163,7 @@ class Type:
     """
     rule = (
         Optional(CONST("is_const"))  #
-        + (BasicType.rule("basic") | CustomType.rule("qualified"))  # BR
+        + (BasicType.rule("basic") | CustomType.rule("custom"))  # BR
         + Optional(
             SHARED_POINTER("is_shared_ptr") | RAW_POINTER("is_ptr")
             | REF("is_ref"))  #
@@ -192,9 +191,9 @@ class Type:
                 is_ref=t.is_ref,
                 is_basic=True,
             )
-        elif t.qualified:
+        elif t.custom:
             return Type(
-                typename=t.qualified.typename,
+                typename=t.custom.typename,
                 is_const=t.is_const,
                 is_shared_ptr=t.is_shared_ptr,
                 is_ptr=t.is_ptr,
