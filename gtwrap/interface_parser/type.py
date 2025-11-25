@@ -212,6 +212,13 @@ class Type:
             is_const="const " if self.is_const else "",
             is_ptr_or_ref=" " + is_ptr_or_ref if is_ptr_or_ref else "")
 
+    def get_typename(self):
+        """
+        Get the typename of this type without any qualifiers.
+        E.g. for `const gtsam::Pose3& pose` this will return `gtsam::Pose3`.
+        """
+        return self.typename.to_cpp()
+
     def to_cpp(self) -> str:
         """
         Generate the C++ code for wrapping.
@@ -221,21 +228,17 @@ class Type:
 
         if self.is_shared_ptr:
             typename = "std::shared_ptr<{typename}>".format(
-                typename=self.typename.to_cpp())
+                typename=self.get_typename())
         elif self.is_ptr:
             typename = "{typename}*".format(typename=self.typename.to_cpp())
         elif self.is_ref:
             typename = typename = "{typename}&".format(
-                typename=self.typename.to_cpp())
+                typename=self.get_typename())
         else:
-            typename = self.typename.to_cpp()
+            typename = self.get_typename()
 
         return ("{const}{typename}".format(
             const="const " if self.is_const else "", typename=typename))
-
-    def get_typename(self):
-        """Convenience method to get the typename of this type."""
-        return self.typename.name
 
 
 class TemplatedType:
@@ -283,16 +286,21 @@ class TemplatedType:
         return "TemplatedType({typename.namespaces}::{typename.name})".format(
             typename=self.typename)
 
-    def to_cpp(self):
+    def get_typename(self):
         """
-        Generate the C++ code for wrapping.
+        Get the typename of this type without any qualifiers.
+        E.g. for `const std::vector<double>& indices` this will return `std::vector<double>`.
         """
         # Use Type.to_cpp to do the heavy lifting for the template parameters.
         template_args = ", ".join([t.to_cpp() for t in self.template_params])
 
-        typename = "{typename}<{template_args}>".format(
-            typename=self.typename.qualified_name(),
-            template_args=template_args)
+        return f"{self.typename.qualified_name()}<{template_args}>"
+
+    def to_cpp(self):
+        """
+        Generate the C++ code for wrapping.
+        """
+        typename = self.get_typename()
 
         if self.is_shared_ptr:
             typename = f"std::shared_ptr<{typename}>"
