@@ -108,7 +108,8 @@ class MatlabWrapper(CheckMixin, FormatMixin):
 
         Args:
             collector_function: tuple storing info about the wrapper function
-                (namespace, class instance, function name, function object)
+                (namespace, class/function instance,
+                type of collector function, method object if class instance)
             id_diff: constant to add to the id in the map
             function_name: Optional custom function_name.
 
@@ -578,6 +579,7 @@ class MatlabWrapper(CheckMixin, FormatMixin):
         # Get all combinations of parameters
         param_wrap = ''
 
+        # Iterate through possible overloads of the function
         for i, overload in enumerate(function):
             param_wrap += '      if' if i == 0 else '      elseif'
             param_wrap += ' length(varargin) == '
@@ -1218,7 +1220,7 @@ class MatlabWrapper(CheckMixin, FormatMixin):
             if isinstance(func, parser.GlobalFunction)
         ]
 
-        self.wrap_methods(all_funcs, True, global_ns=namespace)
+        self.wrap_methods(all_funcs, global_funcs=True, global_ns=namespace)
 
         return wrapped
 
@@ -1365,8 +1367,8 @@ class MatlabWrapper(CheckMixin, FormatMixin):
             method_name += method.original.name
 
         elif isinstance(method, parser.GlobalFunction):
-            method_name = self._format_global_function(method, '::')
-            method_name += method.name
+            namespace = self._format_global_function(method, '::')
+            method_name = namespace + method.to_cpp()
 
         else:
             if isinstance(method.parent, instantiator.InstantiatedClass):
@@ -1624,7 +1626,7 @@ class MatlabWrapper(CheckMixin, FormatMixin):
 
             body += self._wrapper_unwrap_arguments(collector_func[1].args)[1]
             body += self.wrap_collector_function_return(
-                collector_func[1]) + '\n}\n'
+                collector_func[1]) + "\n}\n"
 
             collector_function += body
 
