@@ -71,8 +71,17 @@ class Typename:
         return Typename(name, namespaces)
 
     def __repr__(self) -> str:
-        templates = f"<{self.get_template_args()}>" if self.get_template_args() else ""
-        return f"{'::'.join(self.namespaces)}::{self.name}{templates}"
+        if self.get_template_args():
+            templates = f"<{self.get_template_args()}>"
+        else:
+            templates = ""
+
+        if len(self.namespaces) > 0:
+            namespaces = "::".join(self.namespaces) + "::"
+        else:
+            namespaces = ""
+
+        return f"{namespaces}{self.name}{templates}"
 
     def get_template_args(self) -> str:
         """Return the template args as a string, e.g. <double, gtsam::Pose3>."""
