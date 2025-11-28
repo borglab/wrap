@@ -212,7 +212,7 @@ def instantiate_name(original_name: str,
         # Using `capitalize` on the complete name causes other caps to be lower case
         instantiated_names.append(name.replace(name[0], name[0].capitalize()))
 
-    return "{}{}".format(original_name, "".join(instantiated_names))
+    return f"{original_name}{''.join(instantiated_names)}"
 
 
 class InstantiationHelper:
