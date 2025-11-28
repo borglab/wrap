@@ -100,9 +100,11 @@ class InstantiatedClass(parser.Class):
         """
 
         if isinstance(self.original.parent_class, parser.type.TemplatedType):
-            return instantiate_type(
-                self.original.parent_class, typenames, self.instantiations,
-                parser.Typename(self.namespaces())).typename
+            namespaces = self.namespaces()
+            typename = parser.Typename(name=namespaces[-1],
+                                       namespaces=namespaces[:-1])
+            return instantiate_type(self.original.parent_class, typenames,
+                                    self.instantiations, typename).typename
         else:
             return self.original.parent_class
 
@@ -226,9 +228,8 @@ class InstantiatedClass(parser.Class):
                 ", ".join([inst.to_cpp() for inst in self.instantiations]))
         else:
             name = self.original.name
-        namespaces_name = self.namespaces()
-        namespaces_name.append(name)
-        return parser.Typename(namespaces_name)
+
+        return parser.Typename(name=name, namespaces=self.namespaces())
 
     def to_cpp(self):
         """Generate the C++ code for wrapping."""
