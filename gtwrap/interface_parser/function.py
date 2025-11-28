@@ -12,8 +12,7 @@ Author: Duy Nguyen Ta, Fan Jiang, Matthew Sklar, Varun Agrawal, and Frank Dellae
 
 from typing import Any, Iterable, List, Union
 
-from pyparsing import (Literal, Optional, ParseResults,  # type: ignore
-                       delimitedList)
+from pyparsing import Literal, Optional, ParseResults, delimitedList
 
 from .template import Template
 from .tokens import (COMMA, DEFAULT_ARG, EQUAL, IDENT, LOPBRACK, LPAREN, PAIR,
