@@ -252,18 +252,16 @@ class Type:
         """
 
         if self.is_shared_ptr:
-            typename = "std::shared_ptr<{typename}>".format(
-                typename=self.get_typename())
+            typename = f"std::shared_ptr<{self.get_typename()}>"
         elif self.is_ptr:
-            typename = "{typename}*".format(typename=self.typename.to_cpp())
+            typename = f"{self.typename.to_cpp()}*"
         elif self.is_ref:
-            typename = typename = "{typename}&".format(
-                typename=self.get_typename())
+            typename = f"{self.get_typename()}&"
         else:
             typename = self.get_typename()
 
-        return ("{const}{typename}".format(
-            const="const " if self.is_const else "", typename=typename))
+        const = "const " if self.is_const else ""
+        return f"{const}{typename}"
 
 
 class TemplatedType:
