@@ -71,13 +71,17 @@ class Typename:
         return Typename(name, namespaces)
 
     def __repr__(self) -> str:
-        return self.to_cpp()
+        templates = f"<{self.get_template_args()}>" if self.get_template_args() else ""
+        return f"{'::'.join(self.namespaces)}::{self.name}{templates}"
+
+    def get_template_args(self) -> str:
+        """Return the template args as a string, e.g. <double, gtsam::Pose3>."""
+        return ", ".join([inst.to_cpp() for inst in self.instantiations])
 
     def templated_name(self) -> str:
         """Return the name without namespace and with the template instantiations if any."""
         if self.instantiations:
-            templates = ", ".join(
-                [inst.to_cpp() for inst in self.instantiations])
+            templates = self.get_template_args()
             name = f"{self.name}<{templates}>"
         else:
             name = self.name
@@ -98,8 +102,7 @@ class Typename:
     def to_cpp(self) -> str:
         """Generate the C++ code for wrapping."""
         if self.instantiations:
-            cpp_name = self.name + "<{}>".format(", ".join(
-                [inst.to_cpp() for inst in self.instantiations]))
+            cpp_name = self.name + f"<{self.get_template_args()}>"
         else:
             cpp_name = self.name
         return '{}{}{}'.format(
@@ -292,8 +295,8 @@ class TemplatedType:
     @staticmethod
     def from_parse_result(t: ParseResults):
         """Get the TemplatedType from the parser results."""
-        return TemplatedType(t.typename, t.template_params.as_list(), t.is_const,
-                             t.is_shared_ptr, t.is_ptr, t.is_ref)
+        return TemplatedType(t.typename, t.template_params.as_list(),
+                             t.is_const, t.is_shared_ptr, t.is_ptr, t.is_ref)
 
     def __repr__(self):
         return "TemplatedType({typename.namespaces}::{typename.name}<{template_params}>)".format(
