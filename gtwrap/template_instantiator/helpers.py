@@ -235,11 +235,10 @@ class InstantiationHelper:
     def __init__(self, instantiation_type: InstantiatedMember):
         self.instantiation_type = instantiation_type
 
-    def instantiate(self, instantiated_methods: list[InstantiatedMember],
-                    method: ClassMember, typenames: Sequence[str],
+    def instantiate(self, method: ClassMember, typenames: Sequence[str],
                     class_instantiations: Sequence[parser.Typename],
                     method_instantiations: Sequence[parser.Typename],
-                    parent: 'InstantiatedClass'):
+                    parent: 'InstantiatedClass') -> InstantiatedMember:
         """
         Instantiate both the class and method level templates.
         """
@@ -249,19 +248,17 @@ class InstantiationHelper:
                                                   typenames, instantiations,
                                                   parent.cpp_typename())
 
-        instantiated_methods.append(
-            self.instantiation_type.construct(method,
-                                              typenames,
-                                              class_instantiations,
-                                              method_instantiations,
-                                              instantiated_args,
-                                              parent=parent))
+        return self.instantiation_type.construct(method,
+                                                 typenames,
+                                                 class_instantiations,
+                                                 method_instantiations,
+                                                 instantiated_args,
+                                                 parent=parent)
 
-        return instantiated_methods
-
-    def multilevel_instantiation(self, methods_list: Sequence[ClassMember],
-                                 typenames: Sequence[str],
-                                 parent: 'InstantiatedClass'):
+    def multilevel_instantiation(
+            self, methods_list: Sequence[ClassMember],
+            typenames: Sequence[str],
+            parent: 'InstantiatedClass') -> list[InstantiatedMember]:
         """
         Helper to instantiate methods at both the class and method level.
 
@@ -283,22 +280,22 @@ class InstantiationHelper:
                 for instantiations in itertools.product(
                         *method.template.instantiations):
 
-                    instantiated_methods = self.instantiate(
-                        instantiated_methods,
+                    instantiated_methods.append(
+                        self.instantiate(
+                            method,
+                            typenames=method_typenames,
+                            class_instantiations=parent.instantiations,
+                            method_instantiations=list(instantiations),
+                            parent=parent))
+
+            else:
+                # If no method level templates, just use the class templates
+                instantiated_methods.append(
+                    self.instantiate(
                         method,
                         typenames=method_typenames,
                         class_instantiations=parent.instantiations,
-                        method_instantiations=list(instantiations),
-                        parent=parent)
-
-            else:
-                # If no constructor level templates, just use the class templates
-                instantiated_methods = self.instantiate(
-                    instantiated_methods,
-                    method,
-                    typenames=method_typenames,
-                    class_instantiations=parent.instantiations,
-                    method_instantiations=[],
-                    parent=parent)
+                        method_instantiations=[],
+                        parent=parent))
 
         return instantiated_methods
