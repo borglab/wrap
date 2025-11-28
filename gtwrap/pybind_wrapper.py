@@ -18,8 +18,9 @@ from typing import List
 
 import gtwrap.interface_parser as parser
 import gtwrap.template_instantiator as instantiator
-
+from gtwrap.interface_parser.function import ArgumentList
 from gtwrap.xml_parser.xml_parser import XMLDocParser
+
 
 class PybindWrapper:
     """
@@ -30,7 +31,7 @@ class PybindWrapper:
                  module_name,
                  top_module_namespaces='',
                  use_boost_serialization=False,
-                 ignore_classes=(),                 
+                 ignore_classes=(),
                  module_template="",
                  xml_source=""):
         self.module_name = module_name
@@ -76,7 +77,7 @@ class PybindWrapper:
         else:
             return ''
 
-    def _method_args_signature(self, args):
+    def _method_args_signature(self, args: ArgumentList):
         """Generate the argument types and names as per the method signature."""
         cpp_types = args.to_cpp()
         names = args.names()
@@ -260,37 +261,42 @@ class PybindWrapper:
                              args_names=', '.join(args_names),
                          ))
 
-        ret = ('{prefix}.{cdef}("{py_method}",'
-               '[]({opt_self}{opt_comma}{args_signature_with_names}){{'
-               '{function_call}'
-               '}}'
-               '{py_args_names}{docstring}){suffix}'.format(
-                   prefix=prefix,
-                   cdef="def_static" if is_static else "def",
-                   py_method=py_method,
-                   opt_self="{cpp_class}* self".format(
-                       cpp_class=cpp_class) if is_method else "",
-                   opt_comma=', ' if is_method and args_names else '',
-                   args_signature_with_names=args_signature_with_names,
-                   function_call=function_call,
-                   py_args_names=py_args_names,
-                   suffix=suffix,
-                   # Try to get the function's docstring from the Doxygen XML.
-                   # If extract_docstring errors or fails to find a docstring, it just prints a warning.
-                   # The incantation repr(...)[1:-1].replace('"', r'\"') replaces newlines with \n 
-                   # and " with \" so that the docstring can be put into a C++ string on a single line.
-                   docstring=', "' + repr(self.xml_parser.extract_docstring(self.xml_source, cpp_class, cpp_method, method.args.names()))[1:-1].replace('"', r'\"') + '"' 
-                       if self.xml_source != "" else "",
-               ))
+        result = (
+            '{prefix}.{cdef}("{py_method}",'
+            '[]({opt_self}{opt_comma}{args_signature_with_names}){{'
+            '{function_call}'
+            '}}'
+            '{py_args_names}{docstring}){suffix}'.format(
+                prefix=prefix,
+                cdef="def_static" if is_static else "def",
+                py_method=py_method,
+                opt_self="{cpp_class}* self".format(
+                    cpp_class=cpp_class) if is_method else "",
+                opt_comma=', '
+                if is_method and args_signature_with_names else '',
+                args_signature_with_names=args_signature_with_names,
+                function_call=function_call,
+                py_args_names=py_args_names,
+                suffix=suffix,
+                # Try to get the function's docstring from the Doxygen XML.
+                # If extract_docstring errors or fails to find a docstring, it just prints a warning.
+                # The incantation repr(...)[1:-1].replace('"', r'\"') replaces newlines with \n
+                # and " with \" so that the docstring can be put into a C++ string on a single line.
+                docstring=', "' + repr(
+                    self.xml_parser.extract_docstring(
+                        self.xml_source, cpp_class, cpp_method,
+                        method.args.names()))[1:-1].replace('"', r'\"') +
+                '"' if self.xml_source != "" else "",
+            ))
 
         # Create __repr__ override
         # We allow all arguments to .print() and let the compiler handle type mismatches.
         if method.name == 'print':
-            ret = self._wrap_print(ret, method, cpp_class, args_names,
-                                   args_signature_with_names, py_args_names,
-                                   prefix, suffix)
+            result = self._wrap_print(result, method, cpp_class, args_names,
+                                      args_signature_with_names, py_args_names,
+                                      prefix, suffix)
 
-        return ret
+        return result
 
     def wrap_dunder_methods(self,
                             methods,
