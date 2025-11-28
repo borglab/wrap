@@ -9,8 +9,15 @@ import gtwrap.template_instantiator as instantiator
 class CheckMixin:
     """Mixin to provide various checks."""
     # Data types that are primitive types
-    not_ptr_type: Tuple = ('int', 'double', 'bool', 'char', 'unsigned char',
-                           'size_t')
+    not_ptr_type: Tuple = (
+        "int",
+        "double",
+        "bool",
+        "char",
+        "unsigned char",
+        "size_t",
+        "Key",  # This is an alias for a uint64_t
+    )
     # Ignore the namespace for these datatypes
     ignore_namespace: Tuple = ('Matrix', 'Vector', 'Point2', 'Point3')
     # Methods that should be ignored
@@ -111,6 +118,9 @@ class FormatMixin:
                           is_constructor: bool = False,
                           is_method: bool = False):
         """
+        Helper method to get the string version of `type_name` which can go into the wrapper generated C++ code.
+        This is specific to the semantics of Matlab.
+
         Args:
             type_name: an interface_parser.Typename to reformat
             separator: the statement to add between namespaces and typename

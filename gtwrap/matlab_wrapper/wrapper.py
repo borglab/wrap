@@ -53,6 +53,7 @@ class MatlabWrapper(CheckMixin, FormatMixin):
             'Matrix': 'double',
             'int': 'numeric',
             'size_t': 'numeric',
+            'Key': 'numeric',
             'bool': 'logical'
         }
         # Map the data type into the type used in Matlab methods.
@@ -68,6 +69,7 @@ class MatlabWrapper(CheckMixin, FormatMixin):
             'Point3': 'double',
             'Vector': 'double',
             'Matrix': 'double',
+            'Key': 'numeric',
             'bool': 'bool'
         }
         # The amount of times the wrapper has created a call to geometry_wrapper
@@ -373,9 +375,9 @@ class MatlabWrapper(CheckMixin, FormatMixin):
                 ctype_sep=ctype_sep, ctype=ctype_camel, id=arg_id)
 
         else:
-            arg_type = "{ctype}".format(ctype=arg.ctype.typename.name)
+            arg_type = "{ctype}".format(ctype=self._format_type_name(arg.ctype.typename))
             unwrap = 'unwrap< {ctype} >(in[{id}]);'.format(
-                ctype=arg.ctype.typename.name, id=arg_id)
+                ctype=self._format_type_name(arg.ctype.typename), id=arg_id)
 
         return arg_type, unwrap
 
@@ -1335,7 +1337,7 @@ class MatlabWrapper(CheckMixin, FormatMixin):
                     prefix='  ')
         else:
             expanded += '  out[0] = wrap< {0} >({1});'.format(
-                ctype.typename.name, obj)
+                self._format_type_name(ctype.typename), obj)
 
         return expanded
 
