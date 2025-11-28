@@ -9,6 +9,7 @@ typedef MyVector<3> MyVector3;
 typedef MyVector<12> MyVector12;
 typedef MultipleTemplates<int, double> MultipleTemplatesIntDouble;
 typedef MultipleTemplates<int, float> MultipleTemplatesIntFloat;
+typedef SmartProjectionRigFactor<gtsam::PinholeCamera<gtsam::Cal3_S2>> SmartProjectionRigFactorPinholeCameraCal3_S2;
 typedef MyFactor<gtsam::Pose2, gtsam::Matrix> MyFactorPosePoint2;
 
 typedef std::set<std::shared_ptr<FunRange>*> Collector_FunRange;
@@ -35,6 +36,8 @@ typedef std::set<std::shared_ptr<FastSet>*> Collector_FastSet;
 static Collector_FastSet collector_FastSet;
 typedef std::set<std::shared_ptr<HessianFactor>*> Collector_HessianFactor;
 static Collector_HessianFactor collector_HessianFactor;
+typedef std::set<std::shared_ptr<SmartProjectionRigFactorPinholeCameraCal3_S2>*> Collector_SmartProjectionRigFactorPinholeCameraCal3_S2;
+static Collector_SmartProjectionRigFactorPinholeCameraCal3_S2 collector_SmartProjectionRigFactorPinholeCameraCal3_S2;
 typedef std::set<std::shared_ptr<MyFactorPosePoint2>*> Collector_MyFactorPosePoint2;
 static Collector_MyFactorPosePoint2 collector_MyFactorPosePoint2;
 
@@ -115,6 +118,12 @@ void _deleteAllObjects()
       iter != collector_HessianFactor.end(); ) {
     delete *iter;
     collector_HessianFactor.erase(iter++);
+    anyDeleted = true;
+  } }
+  { for(Collector_SmartProjectionRigFactorPinholeCameraCal3_S2::iterator iter = collector_SmartProjectionRigFactorPinholeCameraCal3_S2.begin();
+      iter != collector_SmartProjectionRigFactorPinholeCameraCal3_S2.end(); ) {
+    delete *iter;
+    collector_SmartProjectionRigFactorPinholeCameraCal3_S2.erase(iter++);
     anyDeleted = true;
   } }
   { for(Collector_MyFactorPosePoint2::iterator iter = collector_MyFactorPosePoint2.begin();
@@ -972,7 +981,52 @@ void HessianFactor_deconstructor_82(int nargout, mxArray *out[], int nargin, con
   delete self;
 }
 
-void MyFactorPosePoint2_collectorInsertAndMakeBase_83(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void SmartProjectionRigFactorPinholeCameraCal3_S2_collectorInsertAndMakeBase_83(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+{
+  mexAtExit(&_deleteAllObjects);
+  typedef std::shared_ptr<SmartProjectionRigFactor<gtsam::PinholeCamera<gtsam::Cal3_S2>>> Shared;
+
+  Shared *self = *reinterpret_cast<Shared**> (mxGetData(in[0]));
+  collector_SmartProjectionRigFactorPinholeCameraCal3_S2.insert(self);
+
+  typedef std::shared_ptr<gtsam::SmartProjectionFactor<gtsam::PinholeCamera<gtsam::Cal3_S2>>> SharedBase;
+  out[0] = mxCreateNumericMatrix(1, 1, mxUINT32OR64_CLASS, mxREAL);
+  *reinterpret_cast<SharedBase**>(mxGetData(out[0])) = new SharedBase(*self);
+}
+
+void SmartProjectionRigFactorPinholeCameraCal3_S2_deconstructor_84(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+{
+  typedef std::shared_ptr<SmartProjectionRigFactor<gtsam::PinholeCamera<gtsam::Cal3_S2>>> Shared;
+  checkArguments("delete_SmartProjectionRigFactorPinholeCameraCal3_S2",nargout,nargin,1);
+  Shared *self = *reinterpret_cast<Shared**>(mxGetData(in[0]));
+  Collector_SmartProjectionRigFactorPinholeCameraCal3_S2::iterator item;
+  item = collector_SmartProjectionRigFactorPinholeCameraCal3_S2.find(self);
+  if(item != collector_SmartProjectionRigFactorPinholeCameraCal3_S2.end()) {
+    collector_SmartProjectionRigFactorPinholeCameraCal3_S2.erase(item);
+  }
+  delete self;
+}
+
+void SmartProjectionRigFactorPinholeCameraCal3_S2_add_85(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+{
+  checkArguments("add",nargout,nargin-1,3);
+  auto obj = unwrap_shared_ptr<SmartProjectionRigFactor<gtsam::PinholeCamera<gtsam::Cal3_S2>>>(in[0], "ptr_SmartProjectionRigFactorPinholeCameraCal3_S2");
+  gtsam::PinholeCamera<gtsam::Cal3_S2>::Measurement& measured = *unwrap_shared_ptr< gtsam::PinholeCamera<gtsam::Cal3_S2>::Measurement >(in[1], "ptr_gtsamPinholeCamera<gtsam::Cal3_S2>::Measurement");
+  gtsam::Key poseKey = unwrap< gtsam::Key >(in[2]);
+  size_t cameraId = unwrap< size_t >(in[3]);
+  obj->add(measured,poseKey,cameraId);
+}
+
+void SmartProjectionRigFactorPinholeCameraCal3_S2_add_86(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+{
+  checkArguments("add",nargout,nargin-1,2);
+  auto obj = unwrap_shared_ptr<SmartProjectionRigFactor<gtsam::PinholeCamera<gtsam::Cal3_S2>>>(in[0], "ptr_SmartProjectionRigFactorPinholeCameraCal3_S2");
+  gtsam::PinholeCamera<gtsam::Cal3_S2>::Measurement& measured = *unwrap_shared_ptr< gtsam::PinholeCamera<gtsam::Cal3_S2>::Measurement >(in[1], "ptr_gtsamPinholeCamera<gtsam::Cal3_S2>::Measurement");
+  gtsam::Key poseKey = unwrap< gtsam::Key >(in[2]);
+  obj->add(measured,poseKey,0);
+}
+
+void MyFactorPosePoint2_collectorInsertAndMakeBase_87(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   mexAtExit(&_deleteAllObjects);
   typedef std::shared_ptr<MyFactor<gtsam::Pose2, gtsam::Matrix>> Shared;
@@ -981,7 +1035,7 @@ void MyFactorPosePoint2_collectorInsertAndMakeBase_83(int nargout, mxArray *out[
   collector_MyFactorPosePoint2.insert(self);
 }
 
-void MyFactorPosePoint2_constructor_84(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void MyFactorPosePoint2_constructor_88(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   mexAtExit(&_deleteAllObjects);
   typedef std::shared_ptr<MyFactor<gtsam::Pose2, gtsam::Matrix>> Shared;
@@ -996,7 +1050,7 @@ void MyFactorPosePoint2_constructor_84(int nargout, mxArray *out[], int nargin, 
   *reinterpret_cast<Shared**> (mxGetData(out[0])) = self;
 }
 
-void MyFactorPosePoint2_deconstructor_85(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void MyFactorPosePoint2_deconstructor_89(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   typedef std::shared_ptr<MyFactor<gtsam::Pose2, gtsam::Matrix>> Shared;
   checkArguments("delete_MyFactorPosePoint2",nargout,nargin,1);
@@ -1009,7 +1063,7 @@ void MyFactorPosePoint2_deconstructor_85(int nargout, mxArray *out[], int nargin
   delete self;
 }
 
-void MyFactorPosePoint2_print_86(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void MyFactorPosePoint2_print_90(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   checkArguments("print",nargout,nargin-1,2);
   auto obj = unwrap_shared_ptr<MyFactor<gtsam::Pose2, gtsam::Matrix>>(in[0], "ptr_MyFactorPosePoint2");
@@ -1018,7 +1072,7 @@ void MyFactorPosePoint2_print_86(int nargout, mxArray *out[], int nargin, const 
   obj->print(s,keyFormatter);
 }
 
-void MyFactorPosePoint2_print_87(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void MyFactorPosePoint2_print_91(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   checkArguments("print",nargout,nargin-1,1);
   auto obj = unwrap_shared_ptr<MyFactor<gtsam::Pose2, gtsam::Matrix>>(in[0], "ptr_MyFactorPosePoint2");
@@ -1026,7 +1080,7 @@ void MyFactorPosePoint2_print_87(int nargout, mxArray *out[], int nargin, const 
   obj->print(s,gtsam::DefaultKeyFormatter);
 }
 
-void MyFactorPosePoint2_print_88(int nargout, mxArray *out[], int nargin, const mxArray *in[])
+void MyFactorPosePoint2_print_92(int nargout, mxArray *out[], int nargin, const mxArray *in[])
 {
   checkArguments("print",nargout,nargin-1,0);
   auto obj = unwrap_shared_ptr<MyFactor<gtsam::Pose2, gtsam::Matrix>>(in[0], "ptr_MyFactorPosePoint2");
@@ -1295,22 +1349,34 @@ void mexFunction(int nargout, mxArray *out[], int nargin, const mxArray *in[])
       HessianFactor_deconstructor_82(nargout, out, nargin-1, in+1);
       break;
     case 83:
-      MyFactorPosePoint2_collectorInsertAndMakeBase_83(nargout, out, nargin-1, in+1);
+      SmartProjectionRigFactorPinholeCameraCal3_S2_collectorInsertAndMakeBase_83(nargout, out, nargin-1, in+1);
       break;
     case 84:
-      MyFactorPosePoint2_constructor_84(nargout, out, nargin-1, in+1);
+      SmartProjectionRigFactorPinholeCameraCal3_S2_deconstructor_84(nargout, out, nargin-1, in+1);
       break;
     case 85:
-      MyFactorPosePoint2_deconstructor_85(nargout, out, nargin-1, in+1);
+      SmartProjectionRigFactorPinholeCameraCal3_S2_add_85(nargout, out, nargin-1, in+1);
       break;
     case 86:
-      MyFactorPosePoint2_print_86(nargout, out, nargin-1, in+1);
+      SmartProjectionRigFactorPinholeCameraCal3_S2_add_86(nargout, out, nargin-1, in+1);
       break;
     case 87:
-      MyFactorPosePoint2_print_87(nargout, out, nargin-1, in+1);
+      MyFactorPosePoint2_collectorInsertAndMakeBase_87(nargout, out, nargin-1, in+1);
       break;
     case 88:
-      MyFactorPosePoint2_print_88(nargout, out, nargin-1, in+1);
+      MyFactorPosePoint2_constructor_88(nargout, out, nargin-1, in+1);
+      break;
+    case 89:
+      MyFactorPosePoint2_deconstructor_89(nargout, out, nargin-1, in+1);
+      break;
+    case 90:
+      MyFactorPosePoint2_print_90(nargout, out, nargin-1, in+1);
+      break;
+    case 91:
+      MyFactorPosePoint2_print_91(nargout, out, nargin-1, in+1);
+      break;
+    case 92:
+      MyFactorPosePoint2_print_92(nargout, out, nargin-1, in+1);
       break;
     }
   } catch(const std::exception& e) {
