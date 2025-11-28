@@ -63,7 +63,6 @@ def instantiate_type(
                 ctype.typename.instantiations[idx].name =\
                     instantiations[template_idx]
 
-
     str_arg_typename = str(ctype.typename)
 
     # Check if template is a scoped template e.g. T::Value where T is the template
@@ -88,6 +87,7 @@ def instantiate_type(
             is_ref=ctype.is_ref,
             is_basic=ctype.is_basic,
         )
+
     # Check for exact template match.
     elif str_arg_typename in template_typenames:
         idx = template_typenames.index(str_arg_typename)
@@ -228,6 +228,7 @@ class InstantiationHelper:
                   parent=parent)
     ```
     """
+
     def __init__(self, instantiation_type: InstantiatedMembers):
         self.instantiation_type = instantiation_type
 

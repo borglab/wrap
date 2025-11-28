@@ -105,6 +105,12 @@ class TestWrap(unittest.TestCase):
             'DefaultFuncVector.m',
             'DefaultFuncZero.m',
             'setPose.m',
+            'EliminateDiscrete.m',
+            'triangulatePoint3Cal3_S2.m',
+            'FindKarcherMeanPoint3.m',
+            'FindKarcherMeanSO3.m',
+            'FindKarcherMeanSO4.m',
+            'FindKarcherMeanPose3.m',
         ]
 
         for file in files:
@@ -125,8 +131,10 @@ class TestWrap(unittest.TestCase):
 
         files = [
             'class_wrapper.cpp',
+            'ForwardKinematics.m',
             'FunDouble.m',
             'FunRange.m',
+            'HessianFactor.m',
             'MultipleTemplatesIntDouble.m',
             'MultipleTemplatesIntFloat.m',
             'MyFactorPosePoint2.m',
@@ -134,7 +142,6 @@ class TestWrap(unittest.TestCase):
             'MyVector12.m',
             'PrimitiveRefDouble.m',
             'Test.m',
-            'ForwardKinematics.m',
         ]
 
         for file in files:
@@ -156,6 +163,7 @@ class TestWrap(unittest.TestCase):
         files = [
             'enum_wrapper.cpp',
             'Color.m',
+            'Pet.m',
             '+Pet/Kind.m',
             '+gtsam/VerbosityLM.m',
             '+gtsam/+MCU/Avengers.m',
@@ -202,9 +210,11 @@ class TestWrap(unittest.TestCase):
         files = [
             'inheritance_wrapper.cpp',
             'MyBase.m',
+            'MyTemplateA.m',
             'MyTemplateMatrix.m',
             'MyTemplatePoint2.m',
             'ForwardKinematicsFactor.m',
+            'ParentHasTemplateDouble.m',
         ]
 
         for file in files:

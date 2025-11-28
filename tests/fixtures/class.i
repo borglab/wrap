@@ -61,7 +61,13 @@ class Test {
   gtsam::Matrix return_matrix1(const gtsam::Matrix& value) const;
   gtsam::Vector return_vector2(const gtsam::Vector& value) const;
   gtsam::Matrix return_matrix2(const gtsam::Matrix& value) const;
+  // Return types as const references
+  const gtsam::Vector& return_vector2(const gtsam::Vector& value) const;
+  const gtsam::Matrix& return_matrix2(const gtsam::Matrix& value) const;
   void arg_EigenConstRef(const gtsam::Matrix& value) const;
+
+  // Use gtsam::Key which is an alias for uint64_t which is a numeric in MATLAB
+  void push_back(gtsam::Key key);
 
   bool return_field(const Test& t) const;
 
