@@ -7,11 +7,11 @@ from typing import Sequence, Union
 import gtwrap.interface_parser as parser
 
 ClassMember = Union[parser.Constructor, parser.Method, parser.StaticMethod,
-                     parser.GlobalFunction, parser.Operator, parser.Variable,
-                     parser.Enum]
+                    parser.GlobalFunction, parser.Operator, parser.Variable,
+                    parser.Enum]
 InstantiatedMember = Union['InstantiatedConstructor', 'InstantiatedMethod',
-                            'InstantiatedStaticMethod',
-                            'InstantiatedGlobalFunction']
+                           'InstantiatedStaticMethod',
+                           'InstantiatedGlobalFunction']
 
 
 def is_scoped_template(template_typenames: Sequence[str],
@@ -78,12 +78,15 @@ def instantiate_type(
         instantiation = deepcopy(instantiations[scoped_idx])
 
         # Replace the part of the template with the instantiation
-        # We use .to_cpp so we get the full instantiated name.
-        instantiation.name = str_arg_typename.replace(scoped_template,
-                                                      instantiation.to_cpp())
+        # This new typename has the updated name, previous namespaces and no instantiations
+        new_typename = parser.type.Typename(
+            name=str_arg_typename.replace(scoped_template,
+                                          instantiation.templated_name()),
+            namespaces=instantiation.namespaces,
+        )
 
         return parser.Type(
-            typename=instantiation,
+            typename=new_typename,
             is_const=ctype.is_const,
             is_shared_ptr=ctype.is_shared_ptr,
             is_ptr=ctype.is_ptr,
@@ -108,11 +111,9 @@ def instantiate_type(
         # Check if the class is template instantiated
         # so we can replace it with the instantiated version.
         if instantiated_class:
-            name = instantiated_class.original.name
-            namespaces_name = instantiated_class.namespaces()
-            namespaces_name.append(name)
             cpp_typename = parser.Typename(
-                namespaces_name,
+                name=instantiated_class.original.name,
+                namespaces=instantiated_class.namespaces(),
                 instantiations=instantiated_class.instantiations)
 
         return parser.Type(
