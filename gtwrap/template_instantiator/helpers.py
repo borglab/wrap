@@ -6,10 +6,10 @@ from typing import Sequence, Union
 
 import gtwrap.interface_parser as parser
 
-ClassMembers = Union[parser.Constructor, parser.Method, parser.StaticMethod,
+ClassMember = Union[parser.Constructor, parser.Method, parser.StaticMethod,
                      parser.GlobalFunction, parser.Operator, parser.Variable,
                      parser.Enum]
-InstantiatedMembers = Union['InstantiatedConstructor', 'InstantiatedMethod',
+InstantiatedMember = Union['InstantiatedConstructor', 'InstantiatedMethod',
                             'InstantiatedStaticMethod',
                             'InstantiatedGlobalFunction']
 
@@ -232,11 +232,11 @@ class InstantiationHelper:
     ```
     """
 
-    def __init__(self, instantiation_type: InstantiatedMembers):
+    def __init__(self, instantiation_type: InstantiatedMember):
         self.instantiation_type = instantiation_type
 
-    def instantiate(self, instantiated_methods: List[InstantiatedMembers],
-                    method: ClassMembers, typenames: Sequence[str],
+    def instantiate(self, instantiated_methods: list[InstantiatedMember],
+                    method: ClassMember, typenames: Sequence[str],
                     class_instantiations: Sequence[parser.Typename],
                     method_instantiations: Sequence[parser.Typename],
                     parent: 'InstantiatedClass'):
@@ -259,7 +259,7 @@ class InstantiationHelper:
 
         return instantiated_methods
 
-    def multilevel_instantiation(self, methods_list: Sequence[ClassMembers],
+    def multilevel_instantiation(self, methods_list: Sequence[ClassMember],
                                  typenames: Sequence[str],
                                  parent: 'InstantiatedClass'):
         """
