@@ -2,7 +2,8 @@
 
 import gtwrap.interface_parser as parser
 from gtwrap.template_instantiator.constructor import InstantiatedConstructor
-from gtwrap.template_instantiator.helpers import (InstantiationHelper,
+from gtwrap.template_instantiator.helpers import (InstantiatedMember,
+                                                  InstantiationHelper,
                                                   instantiate_args_list,
                                                   instantiate_name,
                                                   instantiate_return_type,
@@ -57,7 +58,7 @@ class InstantiatedClass(parser.Class):
 
         # Instantiate all instance methods
         self.methods = self.instantiate_methods(typenames)
-        
+
         self.dunder_methods = original.dunder_methods
 
         super().__init__(
@@ -140,7 +141,7 @@ class InstantiatedClass(parser.Class):
 
         return instantiated_static_methods
 
-    def instantiate_methods(self, typenames):
+    def instantiate_methods(self, typenames) -> list[InstantiatedMember]:
         """
         Instantiate regular methods in the class.
 
