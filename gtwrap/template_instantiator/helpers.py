@@ -2,7 +2,7 @@
 
 import itertools
 from copy import deepcopy
-from typing import List, Sequence, Union
+from typing import Sequence, Union
 
 import gtwrap.interface_parser as parser
 
@@ -76,9 +76,12 @@ def instantiate_type(
     if scoped_template:
         # Create a copy of the instantiation so we can modify it.
         instantiation = deepcopy(instantiations[scoped_idx])
+
         # Replace the part of the template with the instantiation
+        # We use .to_cpp so we get the full instantiated name.
         instantiation.name = str_arg_typename.replace(scoped_template,
-                                                      instantiation.name)
+                                                      instantiation.to_cpp())
+
         return parser.Type(
             typename=instantiation,
             is_const=ctype.is_const,
