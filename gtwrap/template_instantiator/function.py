@@ -65,4 +65,4 @@ class InstantiatedGlobalFunction(parser.GlobalFunction):
         return ret
 
     def __repr__(self):
-        return f"Instantiated {super().__repr__}"
+        return f"Instantiated {super().__repr__()}"

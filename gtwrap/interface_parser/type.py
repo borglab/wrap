@@ -42,13 +42,14 @@ class Typename:
     namespaces_name_rule = delimitedList(IDENT, "::")
     rule = (
         namespaces_name_rule("namespaces_and_name")  #
-    ).setParseAction(lambda t: Typename(t))
+    ).setParseAction(lambda t: Typename.from_parse_result(t))
 
     def __init__(self,
-                 t: ParseResults,
+                 name: str,
+                 namespaces: list[str],
                  instantiations: Sequence[ParseResults] = ()):
-        self.name = t[-1]  # the name is the last element in this list
-        self.namespaces = t[:-1]
+        self.name = name
+        self.namespaces = namespaces
 
         # If the first namespace is empty string, just get rid of it.
         if self.namespaces and self.namespaces[0] == '':
@@ -63,12 +64,38 @@ class Typename:
             self.instantiations = []
 
     @staticmethod
-    def from_parse_result(parse_result: Union[str, list]):
+    def from_parse_result(parse_result: list):
         """Unpack the parsed result to get the Typename instance."""
-        return parse_result[0]
+        name = parse_result[-1]  # the name is the last element in this list
+        namespaces = parse_result[:-1]
+        return Typename(name, namespaces)
 
     def __repr__(self) -> str:
-        return self.to_cpp()
+        if self.get_template_args():
+            templates = f"<{self.get_template_args()}>"
+        else:
+            templates = ""
+
+        if len(self.namespaces) > 0:
+            namespaces = "::".join(self.namespaces) + "::"
+        else:
+            namespaces = ""
+
+        return f"{namespaces}{self.name}{templates}"
+
+    def get_template_args(self) -> str:
+        """Return the template args as a string, e.g. <double, gtsam::Pose3>."""
+        return ", ".join([inst.to_cpp() for inst in self.instantiations])
+
+    def templated_name(self) -> str:
+        """Return the name without namespace and with the template instantiations if any."""
+        if self.instantiations:
+            templates = self.get_template_args()
+            name = f"{self.name}<{templates}>"
+        else:
+            name = self.name
+
+        return name
 
     def instantiated_name(self) -> str:
         """Get the instantiated name of the type."""
@@ -84,8 +111,7 @@ class Typename:
     def to_cpp(self) -> str:
         """Generate the C++ code for wrapping."""
         if self.instantiations:
-            cpp_name = self.name + "<{}>".format(", ".join(
-                [inst.to_cpp() for inst in self.instantiations]))
+            cpp_name = self.name + f"<{self.get_template_args()}>"
         else:
             cpp_name = self.name
         return '{}{}{}'.format(
@@ -129,7 +155,7 @@ class BasicType:
     rule = (Or(BASIC_TYPES)("typename")).setParseAction(lambda t: BasicType(t))
 
     def __init__(self, t: ParseResults):
-        self.typename = Typename(t)
+        self.typename = Typename.from_parse_result(t)
 
 
 class CustomType:
@@ -148,7 +174,7 @@ class CustomType:
     rule = (Typename.rule("typename")).setParseAction(lambda t: CustomType(t))
 
     def __init__(self, t: ParseResults):
-        self.typename = Typename(t)
+        self.typename = Typename.from_parse_result(t)
 
 
 class Type:
@@ -226,18 +252,16 @@ class Type:
         """
 
         if self.is_shared_ptr:
-            typename = "std::shared_ptr<{typename}>".format(
-                typename=self.get_typename())
+            typename = f"std::shared_ptr<{self.get_typename()}>"
         elif self.is_ptr:
-            typename = "{typename}*".format(typename=self.typename.to_cpp())
+            typename = f"{self.typename.to_cpp()}*"
         elif self.is_ref:
-            typename = typename = "{typename}&".format(
-                typename=self.get_typename())
+            typename = f"{self.get_typename()}&"
         else:
             typename = self.get_typename()
 
-        return ("{const}{typename}".format(
-            const="const " if self.is_const else "", typename=typename))
+        const = "const " if self.is_const else ""
+        return f"{const}{typename}"
 
 
 class TemplatedType:
@@ -265,7 +289,7 @@ class TemplatedType:
                  is_const: str, is_shared_ptr: str, is_ptr: str, is_ref: str):
         instantiations = [param.typename for param in template_params]
         # Recreate the typename but with the template params as instantiations.
-        self.typename = Typename(typename.namespaces + [typename.name],
+        self.typename = Typename(typename.name, typename.namespaces,
                                  instantiations)
 
         self.template_params = template_params
@@ -278,22 +302,33 @@ class TemplatedType:
     @staticmethod
     def from_parse_result(t: ParseResults):
         """Get the TemplatedType from the parser results."""
-        return TemplatedType(t.typename, t.template_params, t.is_const,
-                             t.is_shared_ptr, t.is_ptr, t.is_ref)
+        return TemplatedType(t.typename, t.template_params.as_list(),
+                             t.is_const, t.is_shared_ptr, t.is_ptr, t.is_ref)
 
     def __repr__(self):
-        return "TemplatedType({typename.namespaces}::{typename.name})".format(
-            typename=self.typename)
+        return "TemplatedType({typename.namespaces}::{typename.name}<{template_params}>)".format(
+            typename=self.typename, template_params=self.template_params)
+
+    def get_template_params(self):
+        """
+        Get the template args for the type as a string.
+        E.g. for
+            ```
+            template <T = {double}, U = {string}>
+            class Random(){};
+            ```
+        it returns `<double, string>`.
+        
+        """
+        # Use Type.to_cpp to do the heavy lifting for the template parameters.
+        return ", ".join([t.to_cpp() for t in self.template_params])
 
     def get_typename(self):
         """
         Get the typename of this type without any qualifiers.
         E.g. for `const std::vector<double>& indices` this will return `std::vector<double>`.
         """
-        # Use Type.to_cpp to do the heavy lifting for the template parameters.
-        template_args = ", ".join([t.to_cpp() for t in self.template_params])
-
-        return f"{self.typename.qualified_name()}<{template_args}>"
+        return f"{self.typename.qualified_name()}<{self.get_template_params()}>"
 
     def to_cpp(self):
         """

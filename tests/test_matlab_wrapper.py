@@ -141,6 +141,7 @@ class TestWrap(unittest.TestCase):
             'MyVector3.m',
             'MyVector12.m',
             'PrimitiveRefDouble.m',
+            'SmartProjectionRigFactorPinholeCameraCal3_S2.m',
             'Test.m',
         ]
 
