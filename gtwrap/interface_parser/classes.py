@@ -59,7 +59,7 @@ class Method:
                  return_type: ReturnType,
                  args: ArgumentList,
                  is_const: str,
-                 parent: Union["Class", Any] = ''):
+                 parent: Union["Class", Any] = ""):
         self.template = template
         self.name = name
         self.return_type = return_type
@@ -73,13 +73,7 @@ class Method:
         return self.name
 
     def __repr__(self) -> str:
-        return "Method: {} {} {}({}){}".format(
-            self.template,
-            self.return_type,
-            self.name,
-            self.args,
-            self.is_const,
-        )
+        return f"Method: {self.template} {self.return_type} {self.name}({self.args}){self.is_const}"
 
 
 class StaticMethod:
@@ -110,7 +104,7 @@ class StaticMethod:
                  return_type: ReturnType,
                  args: ArgumentList,
                  template: Union[Template, Any] = None,
-                 parent: Union["Class", Any] = ''):
+                 parent: Union["Class", Any] = ""):
         self.name = name
         self.return_type = return_type
         self.args = args
@@ -119,7 +113,7 @@ class StaticMethod:
         self.parent = parent
 
     def __repr__(self) -> str:
-        return "static {} {}{}".format(self.return_type, self.name, self.args)
+        return f"static {self.return_type} {self.name}({self.args})"
 
     def to_cpp(self) -> str:
         """Generate the C++ code for wrapping."""
@@ -148,7 +142,7 @@ class Constructor:
                  name: str,
                  args: ArgumentList,
                  template: Union[Template, Any],
-                 parent: Union["Class", Any] = ''):
+                 parent: Union["Class", Any] = ""):
         self.name = name
         self.args = args
         self.template = template
@@ -156,7 +150,7 @@ class Constructor:
         self.parent = parent
 
     def __repr__(self) -> str:
-        return "Constructor: {}{}".format(self.name, self.args)
+        return f"Constructor: {self.name}({self.args})"
 
 
 class Operator:
@@ -192,7 +186,7 @@ class Operator:
                  return_type: ReturnType,
                  args: ArgumentList,
                  is_const: str,
-                 parent: Union["Class", Any] = ''):
+                 parent: Union["Class", Any] = ""):
         self.name = name
         self.operator = operator
         self.return_type = return_type
@@ -204,13 +198,12 @@ class Operator:
 
         # Check for valid unary operators
         if self.is_unary and self.operator not in ('+', '-'):
-            raise ValueError("Invalid unary operator {} used for {}".format(
-                self.operator, self))
+            raise ValueError(
+                f"Invalid unary operator {self.operator} used for {self}")
 
         # Check that number of arguments are either 0 or 1
         assert 0 <= len(args) < 2, \
-            "Operator overload should be at most 1 argument, " \
-                "{} arguments provided".format(len(args))
+            f"Operator overload should be at most 1 argument, {len(args)} arguments provided"
 
         # Check to ensure arg and return type are the same.
         if len(args) == 1 and self.operator not in ("()", "[]"):
@@ -218,13 +211,7 @@ class Operator:
                 "Mixed type overloading not supported. Both arg and return type must be the same."
 
     def __repr__(self) -> str:
-        return "Operator: {}{}{}({}) {}".format(
-            self.return_type,
-            self.name,
-            self.operator,
-            self.args,
-            self.is_const,
-        )
+        return f"Operator: {self.return_type} {self.name} {self.operator}({self.args}) {self.is_const}"
 
 
 class DunderMethod:
@@ -327,7 +314,7 @@ class Class:
         properties: List[Variable],
         operators: List[Operator],
         enums: List[Enum],
-        parent: Any = '',
+        parent: Any = "",
     ):
         self.template = template
         self.is_virtual = is_virtual
@@ -344,7 +331,7 @@ class Class:
 
             self.parent_class = parent_class
         else:
-            self.parent_class = ''  # type: ignore
+            self.parent_class = ""
 
         self.ctors = ctors
         self.methods = methods
@@ -359,8 +346,8 @@ class Class:
         # Make sure ctors' names and class name are the same.
         for ctor in self.ctors:
             if ctor.name != self.name:
-                raise ValueError("Error in constructor name! {} != {}".format(
-                    ctor.name, self.name))
+                raise ValueError(
+                    f"Error in constructor name! {ctor.name} != {self.name}")
 
         for ctor in self.ctors:
             ctor.parent = self
@@ -378,4 +365,4 @@ class Class:
         return collect_namespaces(self)
 
     def __repr__(self):
-        return "Class: {self.name}".format(self=self)
+        return f"Class: {self.name}"
