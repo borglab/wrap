@@ -38,6 +38,7 @@ class Typename:
             with the type being the last element.
         instantiations: Template parameters to the type.
     """
+    # TODO(Varun): Rename this class to Type and Type to Variable.
 
     namespaces_name_rule = delimitedList(IDENT, "::")
     rule = (
@@ -114,11 +115,7 @@ class Typename:
             cpp_name = self.name + f"<{self.get_template_args()}>"
         else:
             cpp_name = self.name
-        return '{}{}{}'.format(
-            "::".join(self.namespaces),
-            "::" if self.namespaces else "",
-            cpp_name,
-        )
+        return f"{'::'.join(self.namespaces)}{'::' if self.namespaces else ''}{cpp_name}"
 
     def __eq__(self, other) -> bool:
         if isinstance(other, Typename):
@@ -230,12 +227,9 @@ class Type:
             raise ValueError("Parse result is not a Type")
 
     def __repr__(self) -> str:
-        is_ptr_or_ref = "{0}{1}{2}".format(self.is_shared_ptr, self.is_ptr,
-                                           self.is_ref)
-        return "{is_const}{self.typename}{is_ptr_or_ref}".format(
-            self=self,
-            is_const="const " if self.is_const else "",
-            is_ptr_or_ref=" " + is_ptr_or_ref if is_ptr_or_ref else "")
+        is_ptr_or_ref = f"{self.is_shared_ptr}{self.is_ptr}{self.is_ref}"
+        const_str = 'const ' if self.is_const else ''
+        return f"{const_str}{self.typename}{' ' + is_ptr_or_ref if is_ptr_or_ref else ''}"
 
     def get_typename(self):
         """
@@ -306,8 +300,7 @@ class TemplatedType:
                              t.is_const, t.is_shared_ptr, t.is_ptr, t.is_ref)
 
     def __repr__(self):
-        return "TemplatedType({typename.namespaces}::{typename.name}<{template_params}>)".format(
-            typename=self.typename, template_params=self.template_params)
+        return f"TemplatedType({self.typename.namespaces}::{self.typename.name}<{self.template_params}>)"
 
     def get_template_params(self):
         """
@@ -339,11 +332,9 @@ class TemplatedType:
         if self.is_shared_ptr:
             typename = f"std::shared_ptr<{typename}>"
         elif self.is_ptr:
-            typename = "{typename}*".format(typename=typename)
+            typename = f"{typename}*"
         elif self.is_ref:
-            typename = typename = "{typename}&".format(typename=typename)
-        else:
-            pass
+            typename = f"{typename}&"
 
-        return ("{const}{typename}".format(
-            const="const " if self.is_const else "", typename=typename))
+        const = "const " if self.is_const else ""
+        return f"{const}{typename}"
