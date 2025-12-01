@@ -13,13 +13,22 @@ Author: Varun Agrawal
 from pyparsing import delimitedList  # type: ignore
 
 from .tokens import ENUM, IDENT, LBRACE, RBRACE, SEMI_COLON
-from .type import Typename
+from .type import Type
 from .utils import collect_namespaces
 
 
 class Enumerator:
     """
     Rule to parse an enumerator inside an enum.
+    
+    If the enum is
+    ```
+    enum Kind {
+        Dog,
+        Cat
+    };
+    ```
+    then `Dog` and `Cat` are the enumerators.
     """
     rule = (
         IDENT("enumerator")).setParseAction(lambda t: Enumerator(t.enumerator))
@@ -28,7 +37,7 @@ class Enumerator:
         self.name = name
 
     def __repr__(self):
-        return "Enumerator: ({0})".format(self.name)
+        return f"Enumerator: ({self.name})"
 
 
 class Enum:
@@ -59,10 +68,10 @@ class Enum:
 
     def cpp_typename(self):
         """
-        Return a Typename with the namespaces and cpp name of this
+        Return a Type with the namespaces and cpp name of this
         class.
         """
-        return Typename(self.name, self.namespaces())
+        return Type(self.name, self.namespaces())
 
     def __repr__(self):
-        return "Enum: {0}".format(self.name)
+        return f"Enum: {self.name}"
