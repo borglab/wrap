@@ -10,68 +10,70 @@ Classes and rules for parsing C++ templates and typedefs for template instantiat
 Author: Duy Nguyen Ta, Fan Jiang, Matthew Sklar, Varun Agrawal, and Frank Dellaert
 """
 
-from typing import List
+from typing import list
 
-from pyparsing import Optional, ParseResults, delimitedList  # type: ignore
+from pyparsing import DelimitedList, Optional, ParseResults  # type: ignore
 
 from .tokens import (EQUAL, IDENT, LBRACE, LOPBRACK, RBRACE, ROPBRACK,
                      SEMI_COLON, TEMPLATE, TYPEDEF)
-from .type import TemplatedType, Typename
+from .type import TemplatedType, Type
+
+
+class TypenameAndInstantiations:
+    """
+        Rule to parse the template parameters.
+
+        E.g. `template<POSE = {Pose2, Pose3}>`
+        POSE is the typename and
+        Pose2 and Pose3 are the `Instantiation`s.
+        """
+    rule = (
+        IDENT("typename")  #
+        + Optional(  #
+            EQUAL  #
+            + LBRACE  #
+            +
+            DelimitedList(TemplatedType.rule ^ Type.rule)("instantiations")  #
+            + RBRACE  #
+        )).setParseAction(
+            lambda t: TypenameAndInstantiations(t.typename, t.instantiations))
+
+    def __init__(self, typename: str, instantiations: ParseResults):
+        self.typename = typename
+
+        self.instantiations = []
+        if instantiations:
+            for inst in instantiations:
+                x = inst.typename if isinstance(inst, TemplatedType) else inst
+                self.instantiations.append(x)
 
 
 class Template:
     """
-    Rule to parse templated values in the interface file.
+    Rule to parse templated definition for a class/function in the interface file.
 
     E.g.
-    template<POSE>  // this is the Template.
+    template<POSE, CALIBRATION>  // this is the Template.
     class Camera { ... };
     """
-    class TypenameAndInstantiations:
-        """
-        Rule to parse the template parameters.
-
-        template<typename POSE = {Pose2, Pose3}>  // Pos2 and Pose3 are the `Instantiation`s.
-        """
-        rule = (
-            IDENT("typename")  #
-            + Optional(  #
-                EQUAL  #
-                + LBRACE  #
-                + ((delimitedList(TemplatedType.rule ^ Typename.rule)
-                    ("instantiations")))  #
-                + RBRACE  #
-            )).setParseAction(lambda t: Template.TypenameAndInstantiations(
-                t.typename, t.instantiations))
-
-        def __init__(self, typename: str, instantiations: ParseResults):
-            self.typename = typename
-
-            self.instantiations = []
-            if instantiations:
-                for inst in instantiations:
-                    x = inst.typename if isinstance(inst,
-                                                    TemplatedType) else inst
-                    self.instantiations.append(x)
 
     rule = (  # BR
         TEMPLATE  #
         + LOPBRACK  #
-        + delimitedList(TypenameAndInstantiations.rule)(
-            "typename_and_instantiations_list")  #
+        + DelimitedList(TypenameAndInstantiations.rule)(
+            "typename_and_instantiations")  #
         + ROPBRACK  # BR
     ).setParseAction(
-        lambda t: Template(t.typename_and_instantiations_list.asList()))
+        lambda t: Template(t.typename_and_instantiations.as_list()))
 
-    def __init__(
-            self,
-            typename_and_instantiations_list: List[TypenameAndInstantiations]):
-        ti_list = typename_and_instantiations_list
-        self.typenames = [ti.typename for ti in ti_list]
+    def __init__(self,
+                 typenames_and_instantiations: list[TypenameAndInstantiations]):
+        ti_list = typenames_and_instantiations
+        self.names = [ti.typename for ti in ti_list]
         self.instantiations = [ti.instantiations for ti in ti_list]
 
     def __repr__(self) -> str:
-        return "<{0}>".format(", ".join(self.typenames))
+        return f"<{', '.join(self.names)}>"
 
 
 class TypedefTemplateInstantiation:
@@ -92,10 +94,9 @@ class TypedefTemplateInstantiation:
                  templated_type: TemplatedType,
                  new_name: str,
                  parent: str = ''):
-        self.typename = templated_type.typename
+        self.type = templated_type.type
         self.new_name = new_name
         self.parent = parent
 
     def __repr__(self):
-        return "Typedef: {new_name} = {typename}".format(
-            new_name=self.new_name, typename=self.typename)
+        return f"Typedef: {self.new_name} = {self.type}"
