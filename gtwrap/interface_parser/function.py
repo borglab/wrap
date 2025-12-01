@@ -10,7 +10,7 @@ Parser classes and rules for parsing C++ functions.
 Author: Duy Nguyen Ta, Fan Jiang, Matthew Sklar, Varun Agrawal, and Frank Dellaert
 """
 
-from typing import Any, Iterable, List, Union
+from typing import Any, Union
 
 from pyparsing import Literal, Optional, ParseResults, delimitedList
 
@@ -29,32 +29,29 @@ class Argument:
     void sayHello(/*`s` is the method argument with type `const string&`*/ const string& s);
     ```
     """
-    rule = ((Type.rule ^ TemplatedType.rule)("ctype")  #
+    rule = ((Type.rule ^ TemplatedType.rule)("type")  #
             + IDENT("name")  #
-            + Optional(EQUAL + DEFAULT_ARG)("default")
-            ).setParseAction(lambda t: Argument(
-                t.ctype,  #
-                t.name,  #
-                t.default[0] if isinstance(t.default, ParseResults) else None))
+            + Optional(EQUAL + DEFAULT_ARG)("default")).setParseAction(
+                lambda t: Argument(
+                    t.type[0], t.name, t.default[0]
+                    if isinstance(t.default, ParseResults) else None), )
 
     def __init__(self,
-                 ctype: Union[Type, TemplatedType],
+                 t: Type | TemplatedType,
                  name: str,
                  default: ParseResults = None):
-        if isinstance(ctype, Iterable):
-            self.ctype = ctype[0]  # type: ignore
-        else:
-            self.ctype = ctype
+
+        self.type = t  # type: ignore
         self.name = name
-        self.default = default
-        self.parent: Union[ArgumentList, None] = None
+        self.default_value = default
+        self.parent: ArgumentList | None = None
 
     def __repr__(self) -> str:
         return self.to_cpp()
 
     def to_cpp(self) -> str:
         """Return full C++ representation of argument."""
-        return '{} {}'.format(repr(self.ctype), self.name)
+        return f"{self.type.to_cpp()} {self.name}"
 
 
 class ArgumentList:
@@ -64,7 +61,7 @@ class ArgumentList:
     rule = Optional(delimitedList(Argument.rule)("args_list")).setParseAction(
         lambda t: ArgumentList.from_parse_result(t.args_list))
 
-    def __init__(self, args_list: List[Argument]):
+    def __init__(self, args_list: list[Argument]):
         self.args_list = args_list
         for arg in args_list:
             arg.parent = self
@@ -75,10 +72,7 @@ class ArgumentList:
     @staticmethod
     def from_parse_result(parse_result: ParseResults):
         """Return the result of parsing."""
-        if parse_result:
-            return ArgumentList(parse_result.asList())
-        else:
-            return ArgumentList([])
+        return ArgumentList(parse_result.as_list() if parse_result else [])
 
     def __repr__(self) -> str:
         return ", ".join([repr(x) for x in self.args_list])
@@ -86,15 +80,15 @@ class ArgumentList:
     def __len__(self) -> int:
         return len(self.args_list)
 
-    def names(self) -> List[str]:
+    def names(self) -> list[str]:
         """Return a list of the names of all the arguments."""
         return [arg.name for arg in self.args_list]
 
-    def list(self) -> List[Argument]:
+    def list(self) -> list[Argument]:
         """Return a list of the names of all the arguments."""
         return self.args_list
 
-    def to_cpp(self) -> List[str]:
+    def to_cpp(self) -> list[str]:
         """Generate the C++ code for wrapping."""
         return [arg.ctype.to_cpp() for arg in self.args_list]
 
@@ -134,8 +128,7 @@ class ReturnType:
         return self.type1.typename.name == "void" and not self.type2
 
     def __repr__(self) -> str:
-        return "{}{}".format(
-            self.type1, (', ' + self.type2.__repr__()) if self.type2 else '')
+        return f"{self.type1}{', ' + self.type2 if self.type2 else ''}"
 
     def to_cpp(self) -> str:
         """
@@ -145,8 +138,7 @@ class ReturnType:
         otherwise we return the regular return type.
         """
         if self.type2:
-            return "std::pair<{type1},{type2}>".format(
-                type1=self.type1.to_cpp(), type2=self.type2.to_cpp())
+            return f"std::pair<{self.type1.to_cpp()},{self.type2.to_cpp()}>"
         else:
             return self.type1.to_cpp()
 
