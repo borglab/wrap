@@ -10,12 +10,11 @@ Parser classes and rules for parsing C++ variables.
 Author: Varun Agrawal, Gerry Chen
 """
 
-from typing import List
-
 from pyparsing import Optional, ParseResults  # type: ignore
 
-from .tokens import DEFAULT_ARG, EQUAL, IDENT, SEMI_COLON
-from .type import TemplatedType, Type
+from gtwrap.interface_parser.tokens import (DEFAULT_ARG, EQUAL, IDENT,
+                                            SEMI_COLON)
+from gtwrap.interface_parser.type import TemplatedType, Type
 
 
 class Variable:
@@ -32,24 +31,25 @@ class Variable:
     Vector3 kGravity;  // This is a global variable.
     ````
     """
-    rule = ((Type.rule ^ TemplatedType.rule)("ctype")  #
+    rule = ((Type.rule ^ TemplatedType.rule)("type")  #
             + IDENT("name")  #
-            + Optional(EQUAL + DEFAULT_ARG)("default")  #
+            + Optional(EQUAL + DEFAULT_ARG)("default_value")  #
             + SEMI_COLON  #
             ).setParseAction(lambda t: Variable(
-                t.ctype,  #
+                t.type[0],  #
                 t.name,  #
-                t.default[0] if isinstance(t.default, ParseResults) else None))
+                t.default_value[0]
+                if isinstance(t.default_value, ParseResults) else None))
 
     def __init__(self,
-                 ctype: List[Type],
+                 t: Type,
                  name: str,
-                 default: ParseResults = None,
-                 parent=''):
-        self.ctype = ctype[0]  # ParseResult is a list
+                 default_value: ParseResults = None,
+                 parent=""):
+        self.type = t
         self.name = name
-        self.default = default
+        self.default_value = default_value
         self.parent = parent
 
     def __repr__(self) -> str:
-        return '{} {}'.format(self.ctype.__repr__(), self.name)
+        return f"{self.type} {self.name}"
