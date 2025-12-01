@@ -12,7 +12,7 @@ Author: Duy Nguyen Ta, Fan Jiang, Matthew Sklar, Varun Agrawal, and Frank Dellae
 
 from typing import Any, Union
 
-from pyparsing import Literal, Optional, ParseResults, delimitedList
+from pyparsing import DelimitedList, Literal, Optional, ParseResults
 
 from .template import Template
 from .tokens import (COMMA, DEFAULT_ARG, EQUAL, IDENT, LOPBRACK, LPAREN, PAIR,
@@ -58,21 +58,18 @@ class ArgumentList:
     """
     List of Argument objects for all arguments in a function.
     """
-    rule = Optional(delimitedList(Argument.rule)("args_list")).setParseAction(
-        lambda t: ArgumentList.from_parse_result(t.args_list))
 
-    def __init__(self, args_list: list[Argument]):
-        self.args_list = args_list
+    # return the ParseResults as is so we can use __getitem__
+    rule = Optional(DelimitedList(
+        Argument.rule)("args_list")).setParseAction(lambda t: t)
+
+    def __init__(self, args_list: ParseResults):
+        self.args_list = args_list.as_list() if args_list else []
         for arg in args_list:
             arg.parent = self
         # The parent object which contains the argument list
         # E.g. Method, StaticMethod, Template, Constructor, GlobalFunction
         self.parent: Any = None
-
-    @staticmethod
-    def from_parse_result(parse_result: ParseResults):
-        """Return the result of parsing."""
-        return ArgumentList(parse_result.as_list() if parse_result else [])
 
     def __repr__(self) -> str:
         return ", ".join([repr(x) for x in self.args_list])
@@ -80,13 +77,12 @@ class ArgumentList:
     def __len__(self) -> int:
         return len(self.args_list)
 
+    def __getitem__(self, i):
+        return self.args_list[i]
+
     def names(self) -> list[str]:
         """Return a list of the names of all the arguments."""
         return [arg.name for arg in self.args_list]
-
-    def list(self) -> list[Argument]:
-        """Return a list of the names of all the arguments."""
-        return self.args_list
 
     def to_cpp(self) -> list[str]:
         """Generate the C++ code for wrapping."""

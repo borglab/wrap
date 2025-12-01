@@ -20,7 +20,7 @@ from .function import ArgumentList, ReturnType
 from .template import Template
 from .tokens import (CLASS, COLON, CONST, DUNDER, IDENT, LBRACE, LPAREN,
                      OPERATOR, RBRACE, RPAREN, SEMI_COLON, STATIC, VIRTUAL)
-from .type import TemplatedType, Typename
+from .type import TemplatedType, Type
 from .utils import collect_namespaces
 from .variable import Variable
 
@@ -41,12 +41,17 @@ class Method:
         + ReturnType.rule("return_type")  #
         + IDENT("name")  #
         + LPAREN  #
-        + ArgumentList.rule("args_list")  #
+        + ArgumentList.rule("args")  #
         + RPAREN  #
         + Optional(CONST("is_const"))  #
         + SEMI_COLON  # BR
-    ).setParseAction(lambda t: Method(t.template, t.name, t.return_type, t.
-                                      args_list, t.is_const))
+    ).setParseAction(lambda t: Method(
+        t.template,
+        t.name,
+        t.return_type,
+        ArgumentList(t.args),
+        t.is_const,
+    ))
 
     def __init__(self,
                  template: Union[Template, Any],
@@ -94,11 +99,11 @@ class StaticMethod:
         + ReturnType.rule("return_type")  #
         + IDENT("name")  #
         + LPAREN  #
-        + ArgumentList.rule("args_list")  #
+        + ArgumentList.rule("args")  #
         + RPAREN  #
         + SEMI_COLON  # BR
-    ).setParseAction(
-        lambda t: StaticMethod(t.name, t.return_type, t.args_list, t.template))
+    ).setParseAction(lambda t: StaticMethod(t.name, t.return_type,
+                                            ArgumentList(t.args), t.template))
 
     def __init__(self,
                  name: str,
@@ -126,14 +131,18 @@ class Constructor:
     Rule to parse the class constructor.
     Can have 0 or more arguments.
     """
+
+    @staticmethod
+    def from_parsed_result(t):
+        return Constructor(t.name, ArgumentList(t.args), t.template)
+
     rule = (
         Optional(Template.rule("template"))  #
         + IDENT("name")  #
         + LPAREN  #
-        + ArgumentList.rule("args_list")  #
-        + RPAREN  #
+        + ArgumentList.rule("args") + RPAREN  #
         + SEMI_COLON  # BR
-    ).setParseAction(lambda t: Constructor(t.name, t.args_list, t.template))
+    ).setParseAction(from_parsed_result)
 
     def __init__(self,
                  name: str,
@@ -165,12 +174,17 @@ class Operator:
         + Literal("operator")("name")  #
         + OPERATOR("operator")  #
         + LPAREN  #
-        + ArgumentList.rule("args_list")  #
+        + ArgumentList.rule("args")  #
         + RPAREN  #
         + CONST("is_const")  #
         + SEMI_COLON  # BR
-    ).setParseAction(lambda t: Operator(t.name, t.operator, t.return_type, t.
-                                        args_list, t.is_const))
+    ).setParseAction(lambda t: Operator(
+        t.name,
+        t.operator,
+        t.return_type,
+        ArgumentList(t.args),
+        t.is_const,
+    ))
 
     def __init__(self,
                  name: str,
@@ -220,10 +234,10 @@ class DunderMethod:
         + (Word(alphas))("name")  #
         + DUNDER  #
         + LPAREN  #
-        + ArgumentList.rule("args_list")  #
+        + ArgumentList.rule("args")  #
         + RPAREN  #
         + SEMI_COLON  # BR
-    ).setParseAction(lambda t: DunderMethod(t.name, t.args_list))
+    ).setParseAction(lambda t: DunderMethod(t.name, ArgumentList(t.args)))
 
     def __init__(self, name: str, args: ArgumentList):
         self.name = name
@@ -284,7 +298,7 @@ class Class:
                 elif isinstance(m, Enum):
                     self.enums.append(m)
 
-    _parent = COLON + (TemplatedType.rule ^ Typename.rule)("parent_class")
+    _parent = COLON + (TemplatedType.rule ^ Type.rule)("parent_class")
     rule = (
         Optional(Template.rule("template"))  #
         + Optional(VIRTUAL("is_virtual"))  #
@@ -324,7 +338,7 @@ class Class:
                 parent_class = parent_class[0]  # type: ignore
 
             # If the base class is a TemplatedType,
-            # we want the instantiated Typename
+            # we want the instantiated Type
             if isinstance(parent_class, TemplatedType):
                 pass  # Note: this must get handled in InstantiatedClass
 
