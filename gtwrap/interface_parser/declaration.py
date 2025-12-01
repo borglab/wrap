@@ -10,11 +10,11 @@ Classes and rules for declarations such as includes and forward declarations.
 Author: Duy Nguyen Ta, Fan Jiang, Matthew Sklar, Varun Agrawal, and Frank Dellaert
 """
 
-from pyparsing import CharsNotIn, Optional  # type: ignore
+from pyparsing import CharsNotIn, Optional
 
 from .tokens import (CLASS, COLON, INCLUDE, LOPBRACK, ROPBRACK, SEMI_COLON,
                      VIRTUAL)
-from .type import Typename
+from .type import Type
 from .utils import collect_namespaces
 
 
@@ -30,29 +30,26 @@ class Include:
         self.parent = parent
 
     def __repr__(self) -> str:
-        return "#include <{}>".format(self.header)
+        return f"#include <{self.header}>"
 
 
 class ForwardDeclaration:
     """
     Rule to parse forward declarations in the interface file.
     """
-    rule = (Optional(VIRTUAL("is_virtual")) + CLASS + Typename.rule("name") +
-            Optional(COLON + Typename.rule("parent_type")) +
+    rule = (Optional(VIRTUAL("is_virtual")) + CLASS + Type.rule("name") +
+            Optional(COLON + Type.rule("parent_type")) +
             SEMI_COLON).setParseAction(lambda t: ForwardDeclaration(
                 t.name, t.parent_type, t.is_virtual))
 
     def __init__(self,
-                 typename: Typename,
+                 t: Type,
                  parent_type: str,
                  is_virtual: str,
                  parent: str = ''):
-        self.name = typename.name
-        self.typename = typename
-        if parent_type:
-            self.parent_type = parent_type
-        else:
-            self.parent_type = ''
+        self.name = t.name
+        self.typename = t
+        self.parent_type = parent_type or ""
 
         self.is_virtual = is_virtual
         self.parent = parent
@@ -62,4 +59,4 @@ class ForwardDeclaration:
         return collect_namespaces(self)
 
     def __repr__(self) -> str:
-        return "ForwardDeclaration: {} {}".format(self.is_virtual, self.name)
+        return f"ForwardDeclaration: {self.is_virtual} {self.name}"
