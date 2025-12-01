@@ -10,9 +10,7 @@ Classes and rules for parsing C++ templates and typedefs for template instantiat
 Author: Duy Nguyen Ta, Fan Jiang, Matthew Sklar, Varun Agrawal, and Frank Dellaert
 """
 
-from typing import list
-
-from pyparsing import DelimitedList, Optional, ParseResults  # type: ignore
+from pyparsing import DelimitedList, Optional, ParseResults
 
 from .tokens import (EQUAL, IDENT, LBRACE, LOPBRACK, RBRACE, ROPBRACK,
                      SEMI_COLON, TEMPLATE, TYPEDEF)
@@ -66,13 +64,17 @@ class Template:
     ).setParseAction(
         lambda t: Template(t.typename_and_instantiations.as_list()))
 
-    def __init__(self,
-                 typenames_and_instantiations: list[TypenameAndInstantiations]):
+    def __init__(
+            self,
+            typenames_and_instantiations: list[TypenameAndInstantiations]):
         ti_list = typenames_and_instantiations
         self.names = [ti.typename for ti in ti_list]
         self.instantiations = [ti.instantiations for ti in ti_list]
 
     def __repr__(self) -> str:
+        return self.to_cpp()
+
+    def to_cpp(self) -> str:
         return f"<{', '.join(self.names)}>"
 
 
@@ -94,7 +96,8 @@ class TypedefTemplateInstantiation:
                  templated_type: TemplatedType,
                  new_name: str,
                  parent: str = ''):
-        self.type = templated_type.type
+        print(templated_type)
+        self.type = templated_type
         self.new_name = new_name
         self.parent = parent
 
