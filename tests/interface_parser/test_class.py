@@ -2,6 +2,7 @@ import unittest
 
 from gtwrap.interface_parser.classes import (Class, Constructor, DunderMethod,
                                              Method, Operator, StaticMethod)
+from gtwrap.template_instantiator.classes import InstantiatedClass
 
 
 class TestClass(unittest.TestCase):
@@ -237,14 +238,14 @@ class TestClass(unittest.TestCase):
         ret = Class.rule.parseString(
             "class ForwardKinematicsFactor : gtsam::BetweenFactor<gtsam::Pose3> {};"
         )[0]
-        # ret = InstantiatedClass(ret,
-        #                         [])  # Needed to correctly parse parent class
-        # self.assertEqual("ForwardKinematicsFactor", ret.name)
-        # self.assertEqual("BetweenFactor", ret.parent_class.name)
-        # self.assertEqual(["gtsam"], ret.parent_class.namespaces)
-        # self.assertEqual("Pose3", ret.parent_class.instantiations[0].name)
-        # self.assertEqual(["gtsam"],
-        #                  ret.parent_class.instantiations[0].namespaces)
+        ret = InstantiatedClass(ret,
+                                [])  # Needed to correctly parse parent class
+        self.assertEqual("ForwardKinematicsFactor", ret.name)
+        self.assertEqual("BetweenFactor", ret.parent_class.name)
+        self.assertEqual(["gtsam"], ret.parent_class.namespaces)
+        self.assertEqual("Pose3", ret.parent_class.instantiations[0].name)
+        self.assertEqual(["gtsam"],
+                         ret.parent_class.instantiations[0].namespaces)
 
     def test_class_with_enum(self):
         """Test for class with nested enum."""

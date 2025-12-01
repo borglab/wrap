@@ -59,9 +59,18 @@ class ArgumentList:
     List of Argument objects for all arguments in a function.
     """
 
-    # return the ParseResults as is so we can use __getitem__
+    # Rule which parses and directly returns the ParseResults
+    # To be used when ArgumentList.rule is part of a larger rule, so we can use __getitem__
+    rule_without_parse_action = Optional(
+        DelimitedList(Argument.rule)("args_list"))
+
+    @staticmethod
+    def from_parsed_results(t: ParseResults):
+        return ArgumentList(t)
+
+    # Rule to parse arguments list and return an ArgumentList object
     rule = Optional(DelimitedList(
-        Argument.rule)("args_list")).setParseAction(lambda t: t)
+        Argument.rule)("args_list")).set_parse_action(from_parsed_results)
 
     def __init__(self, args_list: ParseResults):
         self.args_list = args_list.as_list() if args_list else []
@@ -147,11 +156,15 @@ class GlobalFunction:
         Optional(Template.rule("template")) + ReturnType.rule("return_type")  #
         + IDENT("name")  #
         + LPAREN  #
-        + ArgumentList.rule("args_list")  #
+        + ArgumentList.rule_without_parse_action("args_list")  #
         + RPAREN  #
         + SEMI_COLON  #
-    ).setParseAction(lambda t: GlobalFunction(t.name, t.return_type, t.
-                                              args_list, t.template))
+    ).setParseAction(lambda t: GlobalFunction(
+        t.name,
+        t.return_type,
+        ArgumentList(t.args_list),
+        t.template,
+    ))
 
     def __init__(self,
                  name: str,

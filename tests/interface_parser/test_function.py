@@ -1,5 +1,7 @@
 import unittest
 
+from pyparsing import ParseResults
+
 from gtwrap.interface_parser.function import (ArgumentList, GlobalFunction,
                                               ReturnType)
 
@@ -23,7 +25,7 @@ class TestArgumentList(unittest.TestCase):
             "const C6* c6"
         args = ArgumentList.rule.parseString(arg_string)[0]
 
-        self.assertEqual(7, len(args.list()))
+        self.assertEqual(7, len(args))
         self.assertEqual(['a', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6'],
                          args.names())
 
@@ -34,7 +36,7 @@ class TestArgumentList(unittest.TestCase):
         """
         arg_string = "double x1, double* x2, double& x3, double@ x4, " \
             "const double x5, const double* x6, const double& x7, const double@ x8"
-        args = ArgumentList.rule.parseString(arg_string)[0].list()
+        args = ArgumentList.rule.parseString(arg_string)[0]
         self.assertEqual(8, len(args))
         self.assertFalse(args[1].type.is_ptr and args[1].type.is_shared_ptr
                          and args[1].type.is_ref)
@@ -49,8 +51,8 @@ class TestArgumentList(unittest.TestCase):
     def test_argument_list_templated(self):
         """Test arguments list where the arguments can be templated."""
         arg_string = "std::pair<string, double> steps, vector<T*> vector_of_pointers"
-        args = ArgumentList.rule.parseString(arg_string)[0]
-        args_list = args.list()
+        args_list = ArgumentList.rule.parseString(arg_string)[0]
+
         self.assertEqual(2, len(args_list))
         self.assertEqual("std::pair<string, double>",
                          args_list[0].type.to_cpp())
@@ -62,7 +64,7 @@ class TestArgumentList(unittest.TestCase):
         args = ArgumentList.rule.parseString("""
             string c = "", int z = 0, double z2 = 0.0, bool f = false,
             string s="hello"+"goodbye", char c='a', int a=3,
-            int b, double pi = 3.1415""")[0].list()
+            int b, double pi = 3.1415""")[0]
 
         # Test for basic types
         self.assertEqual(args[0].default_value, '""')
@@ -95,7 +97,7 @@ class TestArgumentList(unittest.TestCase):
             gtsam::Point3 x = {arg6},
             ns::Class<T, U> obj = {arg7}
             """
-        args = ArgumentList.rule.parseString(argument_list)[0].list()
+        args = ArgumentList.rule.parseString(argument_list)[0]
 
         # Test non-basic type
         self.assertEqual(args[0].default_value, arg0)
@@ -162,5 +164,6 @@ class TestFunction(unittest.TestCase):
             const gtsam::Pose2& base, const gtsam::KeyVector& keys);
         """)[0]
         self.assertEqual("localToWorld", func.name)
-        self.assertEqual("Values", func.return_type.type1.typename.name)
+        self.assertEqual("Values", func.return_type.type1.name)
+        print(type(func.args))
         self.assertEqual(3, len(func.args))

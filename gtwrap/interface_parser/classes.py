@@ -12,8 +12,7 @@ Author: Duy Nguyen Ta, Fan Jiang, Matthew Sklar, Varun Agrawal, and Frank Dellae
 
 from typing import Any, Iterable, List, Union
 
-from pyparsing import ZeroOrMore  # type: ignore
-from pyparsing import Literal, Optional, Word, alphas
+from pyparsing import Literal, Optional, Word, ZeroOrMore, alphas
 
 from .enum import Enum
 from .function import ArgumentList, ReturnType
@@ -41,7 +40,7 @@ class Method:
         + ReturnType.rule("return_type")  #
         + IDENT("name")  #
         + LPAREN  #
-        + ArgumentList.rule("args")  #
+        + ArgumentList.rule_without_parse_action("args")  #
         + RPAREN  #
         + Optional(CONST("is_const"))  #
         + SEMI_COLON  # BR
@@ -93,7 +92,7 @@ class StaticMethod:
         + ReturnType.rule("return_type")  #
         + IDENT("name")  #
         + LPAREN  #
-        + ArgumentList.rule("args")  #
+        + ArgumentList.rule_without_parse_action("args")  #
         + RPAREN  #
         + SEMI_COLON  # BR
     ).setParseAction(lambda t: StaticMethod(t.name, t.return_type,
@@ -134,7 +133,7 @@ class Constructor:
         Optional(Template.rule("template"))  #
         + IDENT("name")  #
         + LPAREN  #
-        + ArgumentList.rule("args") + RPAREN  #
+        + ArgumentList.rule_without_parse_action("args") + RPAREN  #
         + SEMI_COLON  # BR
     ).setParseAction(from_parsed_result)
 
@@ -168,7 +167,7 @@ class Operator:
         + Literal("operator")("name")  #
         + OPERATOR("operator")  #
         + LPAREN  #
-        + ArgumentList.rule("args")  #
+        + ArgumentList.rule_without_parse_action("args")  #
         + RPAREN  #
         + CONST("is_const")  #
         + SEMI_COLON  # BR
@@ -221,7 +220,7 @@ class DunderMethod:
         + (Word(alphas))("name")  #
         + DUNDER  #
         + LPAREN  #
-        + ArgumentList.rule("args")  #
+        + ArgumentList.rule_without_parse_action("args")  #
         + RPAREN  #
         + SEMI_COLON  # BR
     ).setParseAction(lambda t: DunderMethod(t.name, ArgumentList(t.args)))
