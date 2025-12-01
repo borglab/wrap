@@ -12,91 +12,14 @@ Author: Duy Nguyen Ta, Fan Jiang, Matthew Sklar, Varun Agrawal, and Frank Dellae
 
 # pylint: disable=unnecessary-lambda, expression-not-assigned
 
-from typing import List, Sequence, Union
-
 from pyparsing import ParseResults  # type: ignore
-from pyparsing import Forward, Optional, Or, delimitedList
+from pyparsing import DelimitedList, Forward, Optional, Or
 
 from .tokens import (BASIC_TYPES, CONST, IDENT, LOPBRACK, RAW_POINTER, REF,
                      ROPBRACK, SHARED_POINTER)
 
 
 class Typename:
-    """
-    Class which holds a type's name, full namespace, and template arguments.
-
-    E.g.
-    ```
-    gtsam::PinholeCamera<gtsam::Cal3S2>
-    ```
-
-    will give the name as `PinholeCamera`, namespace as `gtsam`,
-    and template instantiations as `[gtsam::Cal3S2]`.
-
-    Args:
-        namespaces_and_name: A list representing the namespaces of the type
-            with the type being the last element.
-        instantiations: Template parameters to the type.
-    """
-    # TODO(Varun): Rename this class to Type and Type to Variable.
-
-    namespaces_name_rule = delimitedList(IDENT, "::")
-    rule = (
-        namespaces_name_rule("namespaces_and_name")  #
-    ).setParseAction(lambda t: Typename.from_parse_result(t))
-
-    def __init__(self,
-                 name: str,
-                 namespaces: list[str],
-                 instantiations: Sequence[ParseResults] = ()):
-        self.name = name
-        self.namespaces = namespaces
-
-        # If the first namespace is empty string, just get rid of it.
-        if self.namespaces and self.namespaces[0] == '':
-            self.namespaces.pop(0)
-
-        if instantiations:
-            if isinstance(instantiations, Sequence):
-                self.instantiations = instantiations  # type: ignore
-            else:
-                self.instantiations = instantiations.asList()
-        else:
-            self.instantiations = []
-
-    @staticmethod
-    def from_parse_result(parse_result: list):
-        """Unpack the parsed result to get the Typename instance."""
-        name = parse_result[-1]  # the name is the last element in this list
-        namespaces = parse_result[:-1]
-        return Typename(name, namespaces)
-
-    def __repr__(self) -> str:
-        if self.get_template_args():
-            templates = f"<{self.get_template_args()}>"
-        else:
-            templates = ""
-
-        if len(self.namespaces) > 0:
-            namespaces = "::".join(self.namespaces) + "::"
-        else:
-            namespaces = ""
-
-        return f"{namespaces}{self.name}{templates}"
-
-    def get_template_args(self) -> str:
-        """Return the template args as a string, e.g. <double, gtsam::Pose3>."""
-        return ", ".join([inst.to_cpp() for inst in self.instantiations])
-
-    def templated_name(self) -> str:
-        """Return the name without namespace and with the template instantiations if any."""
-        if self.instantiations:
-            templates = self.get_template_args()
-            name = f"{self.name}<{templates}>"
-        else:
-            name = self.name
-
-        return name
 
     def instantiated_name(self) -> str:
         """Get the instantiated name of the type."""
@@ -105,18 +28,6 @@ class Typename:
             res += instantiation.instantiated_name()
         return res
 
-    def qualified_name(self):
-        """Return the fully qualified name, e.g. `gtsam::internal::PoseKey`."""
-        return "::".join(self.namespaces + [self.name])
-
-    def to_cpp(self) -> str:
-        """Generate the C++ code for wrapping."""
-        if self.instantiations:
-            cpp_name = self.name + f"<{self.get_template_args()}>"
-        else:
-            cpp_name = self.name
-        return f"{'::'.join(self.namespaces)}{'::' if self.namespaces else ''}{cpp_name}"
-
     def __eq__(self, other) -> bool:
         if isinstance(other, Typename):
             return str(self) == str(other)
@@ -124,119 +35,114 @@ class Typename:
             return False
 
     def __ne__(self, other) -> bool:
-        res = self.__eq__(other)
-        return not res
-
-
-class BasicType:
-    """
-    Basic types are the fundamental built-in types in C++ such as double, int, char, etc.
-
-    When using templates, the basic type will take on the same form as the template.
-
-    E.g.
-    ```
-    template<T = {double}>
-    void func(const T& x);
-    ```
-
-    will give
-
-    ```
-    m_.def("funcDouble",[](const double& x){
-        ::func<double>(x);
-    }, py::arg("x"));
-    ```
-    """
-
-    rule = (Or(BASIC_TYPES)("typename")).setParseAction(lambda t: BasicType(t))
-
-    def __init__(self, t: ParseResults):
-        self.typename = Typename.from_parse_result(t)
-
-
-class CustomType:
-    """
-    Custom defined types with the namespace.
-    Essentially any C++ data type that is not a BasicType.
-
-    E.g.
-    ```
-    gtsam::Matrix wTc;
-    ```
-
-    Here `gtsam::Matrix` is a custom type.
-    """
-
-    rule = (Typename.rule("typename")).setParseAction(lambda t: CustomType(t))
-
-    def __init__(self, t: ParseResults):
-        self.typename = Typename.from_parse_result(t)
+        return not self.__eq__(other)
 
 
 class Type:
     """
-    Parsed datatype, can be either a fundamental/basic type or a custom datatype.
+    Parsed variable with type, which can be either a fundamental/basic type or a custom datatype.
     E.g. void, double, size_t, Matrix.
-    Think of this as a high-level type which encodes the typename and other
-    characteristics of the type.
 
-    The type can optionally be a raw pointer, shared pointer or reference.
+    The variable can optionally be a raw pointer, shared pointer or reference.
     Can also be optionally qualified with a `const`, e.g. `const int`.
     """
+
+    @staticmethod
+    def from_parsed_result(t: ParseResults):
+        """Return the resulting Type from parsing the source."""
+        # If the type is a basic/fundamental c++ type (e.g int, bool)
+        if t.basic:
+            name = t.basic
+            namespaces = []
+            is_basic_type = True
+        elif t.custom:
+            name = t.custom[-1]
+            namespaces = t.custom[:-1]
+            is_basic_type = False
+        else:
+            raise ValueError("Parse result is not a Type")
+
+        return Type(
+            name=name,
+            namespaces=namespaces,
+            is_const=t.is_const,
+            is_shared_ptr=t.is_shared_ptr,
+            is_ptr=t.is_ptr,
+            is_ref=t.is_ref,
+            is_basic_type=is_basic_type,
+        )
+
+    @staticmethod
+    def basic_type_rule():
+        """
+        Basic types are the fundamental built-in types in C++ such as double, int, char, etc.
+        When using templates, the basic type will take on the same form as the template.
+
+        E.g.
+        ```
+        template<T = {double}>
+        void func(const T& x);
+        ```
+
+        will give
+
+        ```
+        m_.def("funcDouble",[](const double& x){
+            ::func<double>(x);
+        }, py::arg("x"));
+        ```
+        """
+        return Or(BASIC_TYPES)
+
+    @staticmethod
+    def custom_type_rule():
+        """
+        Custom defined types with the namespace.
+        Essentially any C++ data type that is not a BasicType.
+
+        E.g.
+        ```
+        gtsam::Matrix wTc;
+        ```
+
+        Here `gtsam::Matrix` is a custom type.
+        """
+        return DelimitedList(IDENT, "::")
+
     rule = (
         Optional(CONST("is_const"))  #
-        + (BasicType.rule("basic") | CustomType.rule("custom"))  # BR
+        + (basic_type_rule()("basic") | custom_type_rule()("custom"))  #
         + Optional(
             SHARED_POINTER("is_shared_ptr") | RAW_POINTER("is_ptr")
             | REF("is_ref"))  #
-    ).setParseAction(lambda t: Type.from_parse_result(t))
+    ).setParseAction(from_parsed_result)
 
-    def __init__(self, typename: Typename, is_const: str, is_shared_ptr: str,
-                 is_ptr: str, is_ref: str, is_basic: bool):
-        self.typename = typename
+    def __init__(self, name: str, namespaces: list[str], is_const: str,
+                 is_shared_ptr: str, is_ptr: str, is_ref: str,
+                 is_basic_type: bool):
+        self.name = name
+        self.namespaces = namespaces
+        # If the first namespace is empty string, just get rid of it.
+        if self.namespaces and self.namespaces[0] == '':
+            self.namespaces.pop(0)
+
         self.is_const = is_const
         self.is_shared_ptr = is_shared_ptr
         self.is_ptr = is_ptr
         self.is_ref = is_ref
-        self.is_basic = is_basic
-
-    @staticmethod
-    def from_parse_result(t: ParseResults):
-        """Return the resulting Type from parsing the source."""
-        # If the type is a basic/fundamental c++ type (e.g int, bool)
-        if t.basic:
-            return Type(
-                typename=t.basic.typename,
-                is_const=t.is_const,
-                is_shared_ptr=t.is_shared_ptr,
-                is_ptr=t.is_ptr,
-                is_ref=t.is_ref,
-                is_basic=True,
-            )
-        elif t.custom:
-            return Type(
-                typename=t.custom.typename,
-                is_const=t.is_const,
-                is_shared_ptr=t.is_shared_ptr,
-                is_ptr=t.is_ptr,
-                is_ref=t.is_ref,
-                is_basic=False,
-            )
-        else:
-            raise ValueError("Parse result is not a Type")
+        self.is_basic_type = is_basic_type
 
     def __repr__(self) -> str:
         is_ptr_or_ref = f"{self.is_shared_ptr}{self.is_ptr}{self.is_ref}"
-        const_str = 'const ' if self.is_const else ''
-        return f"{const_str}{self.typename}{' ' + is_ptr_or_ref if is_ptr_or_ref else ''}"
+        const_str = "const " if self.is_const else ""
+        return f"Type: {const_str}{self.get_type()}{' ' + is_ptr_or_ref if is_ptr_or_ref else ''}"
 
-    def get_typename(self):
+    def get_type(self):
         """
-        Get the typename of this type without any qualifiers.
-        E.g. for `const gtsam::Pose3& pose` this will return `gtsam::Pose3`.
+        Get the fully qualified typename, i.e. the type name with all of its namespaces.
+        E.g. for `const gtsam::internal::Pose3& pose` this will return `gtsam::internal::Pose3`.
         """
-        return self.typename.to_cpp()
+        return "::".join(self.namespaces + [self.name])
 
     def to_cpp(self) -> str:
         """
@@ -246,61 +152,66 @@ class Type:
         """
 
         if self.is_shared_ptr:
-            typename = f"std::shared_ptr<{self.get_typename()}>"
+            type_value = f"std::shared_ptr<{self.get_type()}>"
         elif self.is_ptr:
-            typename = f"{self.typename.to_cpp()}*"
+            type_value = f"{self.get_type()}*"
         elif self.is_ref:
-            typename = f"{self.get_typename()}&"
+            type_value = f"{self.get_type()}&"
         else:
-            typename = self.get_typename()
+            type_value = self.get_type()
 
         const = "const " if self.is_const else ""
-        return f"{const}{typename}"
+        return f"{const}{type_value}"
 
 
-class TemplatedType:
+class TemplatedType(Type):
     """
-    Parser rule for data types which are templated.
+    Type which is templated.
     This is done so that the template parameters can be pointers/references.
 
-    E.g. std::vector<double>, BearingRange<Pose3, Point3>
+    E.g. std::vector<double>, BearingRange<Pose3, Point3&>
     """
+
+    @staticmethod
+    def from_parsed_result(t: ParseResults):
+        """Get the TemplatedType from the parser results."""
+        name = t.type.name
+        namespaces = t.type.namespaces
+        is_basic_type = t.type.is_basic_type
+
+        return TemplatedType(name, namespaces, t.template_params.as_list(),
+                             t.is_const, t.is_shared_ptr, t.is_ptr, t.is_ref,
+                             is_basic_type)
 
     rule = Forward()
     rule << (
         Optional(CONST("is_const"))  #
-        + Typename.rule("typename")  #
+        + Type.rule("type")  #
         + (
             LOPBRACK  #
-            + delimitedList(Type.rule ^ rule, ",")("template_params")  #
+            + DelimitedList(Type.rule ^ rule, ",")("template_params")  #
             + ROPBRACK)  #
         + Optional(
             SHARED_POINTER("is_shared_ptr") | RAW_POINTER("is_ptr")
             | REF("is_ref"))  #
-    ).setParseAction(lambda t: TemplatedType.from_parse_result(t))
+    ).setParseAction(from_parsed_result)
 
-    def __init__(self, typename: Typename, template_params: List[Type],
-                 is_const: str, is_shared_ptr: str, is_ptr: str, is_ref: str):
-        instantiations = [param.typename for param in template_params]
-        # Recreate the typename but with the template params as instantiations.
-        self.typename = Typename(typename.name, typename.namespaces,
-                                 instantiations)
+    def __init__(self, name: str, namespaces: list[str],
+                 template_params: list[Type], is_const: str,
+                 is_shared_ptr: str, is_ptr: str, is_ref: str,
+                 is_basic_type: bool):
+        super().__init__(name,
+                         namespaces,
+                         is_const=is_const,
+                         is_shared_ptr=is_shared_ptr,
+                         is_ptr=is_ptr,
+                         is_ref=is_ref,
+                         is_basic_type=is_basic_type)
 
         self.template_params = template_params
 
-        self.is_const = is_const
-        self.is_shared_ptr = is_shared_ptr
-        self.is_ptr = is_ptr
-        self.is_ref = is_ref
-
-    @staticmethod
-    def from_parse_result(t: ParseResults):
-        """Get the TemplatedType from the parser results."""
-        return TemplatedType(t.typename, t.template_params.as_list(),
-                             t.is_const, t.is_shared_ptr, t.is_ptr, t.is_ref)
-
     def __repr__(self):
-        return f"TemplatedType({self.typename.namespaces}::{self.typename.name}<{self.template_params}>)"
+        return f"TemplatedType({self.namespaces}::{self.name}<{self.template_params}>)"
 
     def get_template_params(self):
         """
@@ -311,23 +222,28 @@ class TemplatedType:
             class Random(){};
             ```
         it returns `<double, string>`.
-        
+
         """
         # Use Type.to_cpp to do the heavy lifting for the template parameters.
         return ", ".join([t.to_cpp() for t in self.template_params])
 
-    def get_typename(self):
+    def get_type(self):
         """
         Get the typename of this type without any qualifiers.
         E.g. for `const std::vector<double>& indices` this will return `std::vector<double>`.
         """
-        return f"{self.typename.qualified_name()}<{self.get_template_params()}>"
+        return f"{super().get_type()}<{self.get_template_params()}>"
+
+    def templated_name(self) -> str:
+        """Return the name without namespace and with the template instantiations."""
+        templates = self.get_template_params()
+        return f"{self.name}<{templates}>"
 
     def to_cpp(self):
         """
         Generate the C++ code for wrapping.
         """
-        typename = self.get_typename()
+        typename = self.get_type()
 
         if self.is_shared_ptr:
             typename = f"std::shared_ptr<{typename}>"
