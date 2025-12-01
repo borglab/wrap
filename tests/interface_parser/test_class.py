@@ -243,9 +243,9 @@ class TestClass(unittest.TestCase):
         self.assertEqual("ForwardKinematicsFactor", ret.name)
         self.assertEqual("BetweenFactor", ret.parent_class.name)
         self.assertEqual(["gtsam"], ret.parent_class.namespaces)
-        self.assertEqual("Pose3", ret.parent_class.instantiations[0].name)
+        self.assertEqual("Pose3", ret.parent_class.template_params[0].name)
         self.assertEqual(["gtsam"],
-                         ret.parent_class.instantiations[0].namespaces)
+                         ret.parent_class.template_params[0].namespaces)
 
     def test_class_with_enum(self):
         """Test for class with nested enum."""
