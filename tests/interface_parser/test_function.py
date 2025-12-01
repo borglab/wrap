@@ -155,3 +155,12 @@ class TestReturnType(unittest.TestCase):
 class TestFunction(unittest.TestCase):
     """Unit tests for the GlobalFunction class."""
 
+    def test_parsing(self):
+        """Test for global/free function."""
+        func = GlobalFunction.rule.parseString("""
+        gtsam::Values localToWorld(const gtsam::Values& local,
+            const gtsam::Pose2& base, const gtsam::KeyVector& keys);
+        """)[0]
+        self.assertEqual("localToWorld", func.name)
+        self.assertEqual("Values", func.return_type.type1.typename.name)
+        self.assertEqual(3, len(func.args))
