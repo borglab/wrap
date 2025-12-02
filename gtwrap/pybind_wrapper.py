@@ -65,7 +65,7 @@ class PybindWrapper:
         names = args.names()
         if names:
             py_args = []
-            for arg in args.list():
+            for arg in args:
                 if arg.default is not None:
                     default = ' = {arg.default}'.format(arg=arg)
                 else:
@@ -410,7 +410,7 @@ class PybindWrapper:
         if module is None:
             module = self._gen_module_var(enum.namespaces())
 
-        cpp_class = enum.cpp_typename().to_cpp()
+        cpp_class = enum.cpp_type().to_cpp()
         if class_name:
             # If class_name is provided, add that as the namespace
             cpp_class = class_name + "::" + cpp_class

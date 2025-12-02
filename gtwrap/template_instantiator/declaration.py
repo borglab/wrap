@@ -15,6 +15,7 @@ class InstantiatedDeclaration(parser.ForwardDeclaration):
 
         typedef FactorFromAnotherMother<gtsam::Pose3> FactorWeCanUse;
     """
+
     def __init__(self, original, instantiations=(), new_name=''):
         super().__init__(original.typename,
                          original.parent_type,
@@ -30,14 +31,12 @@ class InstantiatedDeclaration(parser.ForwardDeclaration):
 
     def to_cpp(self):
         """Generate the C++ code for wrapping."""
-        instantiated_names = [
-            inst.qualified_name() for inst in self.instantiations
-        ]
-        name = "{}<{}>".format(self.original.name,
-                               ",".join(instantiated_names))
-        # Leverage Typename to generate the fully qualified C++ name
-        return parser.Typename(name=name, namespaces=self.namespaces()).to_cpp()
+        if namespace := "::".join(self.namespaces()):
+            namespace += "::"
+
+        instantiated_names = [inst.get_type() for inst in self.instantiations]
+
+        return f"{namespace}{self.original.name}<{','.join(instantiated_names)}>"
 
     def __repr__(self):
-        return "Instantiated {}".format(
-            super(InstantiatedDeclaration, self).__repr__())
+        return f"Instantiated {super(InstantiatedDeclaration, self)}"

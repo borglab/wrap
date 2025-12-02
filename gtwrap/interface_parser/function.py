@@ -41,7 +41,7 @@ class Argument:
                  name: str,
                  default: ParseResults = None):
 
-        self.type = t  # type: ignore
+        self.type = t
         self.name = name
         self.default_value = default
         self.parent: ArgumentList | None = None
@@ -73,7 +73,14 @@ class ArgumentList:
         Argument.rule)("args_list")).set_parse_action(from_parsed_results)
 
     def __init__(self, args_list: ParseResults):
-        self.args_list = args_list.as_list() if args_list else []
+        if args_list:
+            if isinstance(args_list, ParseResults):
+                self.args_list = args_list.as_list()
+            else:
+                self.args_list = args_list
+        else:
+            self.args_list = []
+
         for arg in args_list:
             arg.parent = self
         # The parent object which contains the argument list
@@ -95,7 +102,7 @@ class ArgumentList:
 
     def to_cpp(self) -> list[str]:
         """Generate the C++ code for wrapping."""
-        return [arg.ctype.to_cpp() for arg in self.args_list]
+        return [arg.type.to_cpp() for arg in self.args_list]
 
 
 class ReturnType:

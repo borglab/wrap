@@ -47,7 +47,7 @@ class InstantiatedMethod(parser.Method):
             return_type=instantiate_return_type(
                 original.return_type, typenames,
                 class_instantiations + method_instantiations,
-                parent.cpp_typename()),
+                parent.cpp_type()),
             args=parser.ArgumentList(instantiated_args),
             is_const=original.is_const,
             parent=parent,
@@ -99,7 +99,7 @@ class InstantiatedStaticMethod(parser.StaticMethod):
                                                 typenames,
                                                 class_instantiations +
                                                 method_instantiations,
-                                                parent.cpp_typename(),
+                                                parent.cpp_type(),
                                                 instantiated_class=parent),
             args=parser.ArgumentList(instantiated_args),
             template=original.template,

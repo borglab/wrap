@@ -15,7 +15,7 @@ class InstantiatedGlobalFunction(parser.GlobalFunction):
         T add(const T& x, const T& y);
     """
 
-    def __init__(self, original, instantiations=(), new_name=''):
+    def __init__(self, original: parser.GlobalFunction, instantiations=(), new_name=''):
         self.original = original
         self.instantiations = instantiations
         self.template = ''
@@ -30,19 +30,19 @@ class InstantiatedGlobalFunction(parser.GlobalFunction):
                 original.name, instantiations) if not new_name else new_name
             self.return_type = instantiate_return_type(
                 original.return_type,
-                self.original.template.typenames,
+                self.original.template.names,
                 self.instantiations,
                 # Keyword type name `This` should already be replaced in the
                 # previous class template instantiation round.
-                cpp_typename='',
+                cpp_type='',
             )
             instantiated_args = instantiate_args_list(
-                original.args.list(),
-                self.original.template.typenames,
+                original.args,
+                self.original.template.names,
                 self.instantiations,
                 # Keyword type name `This` should already be replaced in the
                 # previous class template instantiation round.
-                cpp_typename='',
+                cpp_type='',
             )
             self.args = parser.ArgumentList(instantiated_args)
 
@@ -56,7 +56,7 @@ class InstantiatedGlobalFunction(parser.GlobalFunction):
         """Generate the C++ code for wrapping."""
         if self.original.template:
             instantiated_params = [
-                "::".join(inst.namespaces + [inst.instantiated_name()])
+                "::".join(inst.namespaces + [inst.name])
                 for inst in self.instantiations
             ]
             ret = f"{self.original.name}<{','.join(instantiated_params)}>"

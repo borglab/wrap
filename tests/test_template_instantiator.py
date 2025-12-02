@@ -21,8 +21,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from gtwrap.interface_parser import (Argument, ArgumentList, Class,
                                      Constructor, ForwardDeclaration,
                                      GlobalFunction, Include, Method,
-                                     Namespace, ReturnType, StaticMethod,
-                                     Typename)
+                                     Namespace, ReturnType, StaticMethod, Type)
 from gtwrap.template_instantiator import (InstantiatedClass,
                                           InstantiatedConstructor,
                                           InstantiatedDeclaration,
@@ -65,22 +64,22 @@ class TestInstantiationHelper(unittest.TestCase):
             template<T={string}>
             class Foo {};
         """)[0]
-        typenames = ['T', 'U']
-        class_instantiations = [Typename.rule.parseString("string")[0]]
-        method_instantiations = [Typename.rule.parseString("double")[0]]
+        template_params = ['T', 'U']
+        class_instantiations = [Type.rule.parseString("string")[0]]
+        method_instantiations = [Type.rule.parseString("double")[0]]
 
         parent = InstantiatedClass(cls, class_instantiations)
 
         helper = InstantiationHelper(InstantiatedMethod)
         instantiated_methods = [
-            helper.instantiate(method, typenames, class_instantiations,
+            helper.instantiate(method, template_params, class_instantiations,
                                method_instantiations, parent)
         ]
 
         self.assertEqual(len(instantiated_methods), 1)
-        args_list = instantiated_methods[0].args.list()
-        self.assertEqual(args_list[0].ctype.get_typename(), 'string')
-        self.assertEqual(args_list[1].ctype.get_typename(), 'double')
+        args_list = instantiated_methods[0].args
+        self.assertEqual(args_list[0].type.get_type(), 'string')
+        self.assertEqual(args_list[1].type.get_type(), 'double')
 
     def test_multilevel_instantiation(self):
         """
@@ -98,26 +97,23 @@ class TestInstantiationHelper(unittest.TestCase):
             };
         """)[0]
 
-        typenames = ['T']
-        class_instantiations = [Typename.rule.parseString("string")[0]]
+        template_params = ['T']
+        class_instantiations = [Type.rule.parseString("string")[0]]
         parent = InstantiatedClass(cls, class_instantiations)
 
         helper = InstantiationHelper(InstantiatedMethod)
 
         instantiated_methods = helper.multilevel_instantiation(
-            cls.methods, typenames, parent)
+            cls.methods, template_params, parent)
         self.assertEqual(len(instantiated_methods), 2)
-        self.assertEqual(
-            instantiated_methods[0].args.list()[0].ctype.get_typename(),
-            'string')
-        self.assertEqual(
-            instantiated_methods[0].args.list()[1].ctype.get_typename(),
-            'double')
-        self.assertEqual(
-            instantiated_methods[1].args.list()[0].ctype.get_typename(),
-            'string')
-        self.assertEqual(
-            instantiated_methods[1].return_type.type1.get_typename(), 'int')
+        self.assertEqual(instantiated_methods[0].args[0].type.get_type(),
+                         'string')
+        self.assertEqual(instantiated_methods[0].args[1].type.get_type(),
+                         'double')
+        self.assertEqual(instantiated_methods[1].args[0].type.get_type(),
+                         'string')
+        self.assertEqual(instantiated_methods[1].return_type.type1.get_type(),
+                         'int')
 
 
 class TestInstantiatedGlobalFunction(unittest.TestCase):
@@ -129,8 +125,8 @@ class TestInstantiatedGlobalFunction(unittest.TestCase):
             R function(const T& x);
         """)[0]
         instantiations = [
-            Typename.rule.parseString("int")[0],
-            Typename.rule.parseString("double")[0]
+            Type.rule.parseString("int")[0],
+            Type.rule.parseString("double")[0]
         ]
         self.func = InstantiatedGlobalFunction(original, instantiations)
 
@@ -139,9 +135,9 @@ class TestInstantiatedGlobalFunction(unittest.TestCase):
         self.assertIsInstance(self.func, InstantiatedGlobalFunction)
         self.assertIsInstance(self.func.original, GlobalFunction)
         self.assertEqual(self.func.name, "functionIntDouble")
-        self.assertEqual(len(self.func.args.list()), 1)
-        self.assertEqual(self.func.args.list()[0].ctype.get_typename(), "int")
-        self.assertEqual(self.func.return_type.type1.get_typename(), "double")
+        self.assertEqual(len(self.func.args), 1)
+        self.assertEqual(self.func.args[0].type.get_type(), "int")
+        self.assertEqual(self.func.return_type.type1.get_type(), "double")
 
     def test_to_cpp(self):
         """Test to_cpp method."""
@@ -158,8 +154,8 @@ class TestInstantiatedConstructor(unittest.TestCase):
             Class(C x, const U& param);
             """)[0]
         instantiations = [
-            Typename.rule.parseString("double")[0],
-            Typename.rule.parseString("string")[0]
+            Type.rule.parseString("double")[0],
+            Type.rule.parseString("string")[0]
         ]
         self.constructor = InstantiatedConstructor(constructor, instantiations)
 
@@ -178,25 +174,22 @@ class TestInstantiatedConstructor(unittest.TestCase):
             template<C={string}>
             class Class {};
         """)[0]
-        class_instantiations = [Typename.rule.parseString("double")[0]]
-        method_instantiations = [Typename.rule.parseString("string")[0]]
-        typenames = ['C', 'U']
+        class_instantiations = [Type.rule.parseString("double")[0]]
+        method_instantiations = [Type.rule.parseString("string")[0]]
+        template_params = ['C', 'U']
         parent = InstantiatedClass(c, class_instantiations)
         instantiated_args = instantiate_args_list(
-            constructor.args.list(),
-            typenames, class_instantiations + method_instantiations,
-            parent.cpp_typename())
+            constructor.args, template_params,
+            class_instantiations + method_instantiations, parent.cpp_type())
 
         instantiated_constructor = InstantiatedConstructor.construct(
-            constructor, typenames, class_instantiations,
+            constructor, template_params, class_instantiations,
             method_instantiations, instantiated_args, parent)
         self.assertEqual(instantiated_constructor.name, "ClassDouble")
-        self.assertEqual(
-            instantiated_constructor.args.list()[0].ctype.get_typename(),
-            "double")
-        self.assertEqual(
-            instantiated_constructor.args.list()[1].ctype.get_typename(),
-            "string")
+        self.assertEqual(instantiated_constructor.args[0].type.get_type(),
+                         "double")
+        self.assertEqual(instantiated_constructor.args[1].type.get_type(),
+                         "string")
 
     def test_to_cpp(self):
         """Test the to_cpp method."""
@@ -212,7 +205,7 @@ class TestInstantiatedMethod(unittest.TestCase):
             template<U={double}>
             double method(const U& param);
             """)[0]
-        instantiations = [Typename.rule.parseString("double")[0]]
+        instantiations = [Type.rule.parseString("double")[0]]
         self.method = InstantiatedMethod(method, instantiations)
 
     def test_constructor(self):
@@ -227,27 +220,25 @@ class TestInstantiatedMethod(unittest.TestCase):
             template<U={double}>
             T method(U& param);
             """)[0]
-        method_instantiations = [Typename.rule.parseString("double")[0]]
+        method_instantiations = Type.rule.parseString("double")
         c = Class.rule.parseString("""
             template<T={string}>
             class Class {};
         """)[0]
-        class_instantiations = [Typename.rule.parseString("string")[0]]
+        class_instantiations = Type.rule.parseString("string")
 
         typenames = ['T', 'U']
         parent = InstantiatedClass(c, class_instantiations)
         instantiated_args = instantiate_args_list(
-            method.args.list(),
-            typenames, class_instantiations + method_instantiations,
-            parent.cpp_typename())
+            method.args, typenames,
+            class_instantiations + method_instantiations, parent.cpp_type())
 
         instantiated_method = InstantiatedMethod.construct(
             method, typenames, class_instantiations, method_instantiations,
             instantiated_args, parent)
         self.assertEqual(instantiated_method.name, "methodDouble")
-        self.assertEqual(
-            instantiated_method.args.list()[0].ctype.get_typename(), "double")
-        self.assertEqual(instantiated_method.return_type.type1.get_typename(),
+        self.assertEqual(instantiated_method.args[0].type.get_type(), "double")
+        self.assertEqual(instantiated_method.return_type.type1.get_type(),
                          "string")
 
     def test_to_cpp(self):
@@ -264,7 +255,7 @@ class TestInstantiatedStaticMethod(unittest.TestCase):
             template<U={double}>
             static T staticMethod(const U& param);
             """)[0]
-        instantiations = [Typename.rule.parseString("double")[0]]
+        instantiations = [Type.rule.parseString("double")[0]]
         self.static_method = InstantiatedStaticMethod(static_method,
                                                       instantiations)
 
@@ -280,30 +271,27 @@ class TestInstantiatedStaticMethod(unittest.TestCase):
             template<U={double}>
             static T staticMethod(U& param);
             """)[0]
-        method_instantiations = [Typename.rule.parseString("double")[0]]
+        method_instantiations = [Type.rule.parseString("double")[0]]
         c = Class.rule.parseString("""
             template<T={string}>
             class Class {};
         """)[0]
-        class_instantiations = [Typename.rule.parseString("string")[0]]
+        class_instantiations = [Type.rule.parseString("string")[0]]
 
         typenames = ['T', 'U']
         parent = InstantiatedClass(c, class_instantiations)
         instantiated_args = instantiate_args_list(
-            static_method.args.list(),
-            typenames, class_instantiations + method_instantiations,
-            parent.cpp_typename())
+            static_method.args, typenames,
+            class_instantiations + method_instantiations, parent.cpp_type())
 
         instantiated_static_method = InstantiatedStaticMethod.construct(
             static_method, typenames, class_instantiations,
             method_instantiations, instantiated_args, parent)
         self.assertEqual(instantiated_static_method.name, "staticMethodDouble")
+        self.assertEqual(instantiated_static_method.args[0].type.get_type(),
+                         "double")
         self.assertEqual(
-            instantiated_static_method.args.list()[0].ctype.get_typename(),
-            "double")
-        self.assertEqual(
-            instantiated_static_method.return_type.type1.get_typename(),
-            "string")
+            instantiated_static_method.return_type.type1.get_type(), "string")
 
     def test_to_cpp(self):
         """Test the to_cpp method."""
@@ -332,14 +320,14 @@ class TestInstantiatedClass(unittest.TestCase):
                 T prop;
             };
         """)[0]
-        class_instantiations = [Typename.rule.parseString('string')[0]]
+        class_instantiations = [Type.rule.parseString('string')[0]]
         self.member_instantiations = [
-            Typename.rule.parseString('int')[0],
-            Typename.rule.parseString('char')[0],
-            Typename.rule.parseString('double')[0],
+            Type.rule.parseString('int')[0],
+            Type.rule.parseString('char')[0],
+            Type.rule.parseString('double')[0],
         ]
         self.cl = InstantiatedClass(cl, class_instantiations)
-        self.typenames = self.cl.original.template.typenames
+        self.template_names = self.cl.original.template.names
 
     def test_constructor(self):
         """Test constructor."""
@@ -349,50 +337,47 @@ class TestInstantiatedClass(unittest.TestCase):
 
     def test_instantiate_ctors(self):
         """Test instantiate_ctors method."""
-        ctors = self.cl.instantiate_ctors(self.typenames)
+        ctors = self.cl.instantiate_ctors(self.template_names)
         self.assertEqual(len(ctors), 1)
         self.assertEqual(ctors[0].name, "FooString")
-        self.assertEqual(ctors[0].args.list()[0].ctype.get_typename(), "int")
+        self.assertEqual(ctors[0].args[0].type.get_type(), "int")
 
     def test_instantiate_static_methods(self):
         """Test instantiate_static_methods method."""
-        static_methods = self.cl.instantiate_static_methods(self.typenames)
+        static_methods = self.cl.instantiate_static_methods(
+            self.template_names)
         self.assertEqual(len(static_methods), 1)
         self.assertEqual(static_methods[0].name, "staticMethodChar")
-        self.assertEqual(static_methods[0].args.list()[0].ctype.get_typename(),
-                         "char")
-        self.assertEqual(static_methods[0].return_type.type1.get_typename(),
+        self.assertEqual(static_methods[0].args[0].type.get_type(), "char")
+        self.assertEqual(static_methods[0].return_type.type1.get_type(),
                          "string")
 
     def test_instantiate_methods(self):
         """Test instantiate_methods method."""
-        methods = self.cl.instantiate_methods(self.typenames)
+        methods = self.cl.instantiate_methods(self.template_names)
         self.assertEqual(len(methods), 1)
         self.assertEqual(methods[0].name, "methodDouble")
-        self.assertEqual(methods[0].args.list()[0].ctype.get_typename(),
-                         "double")
-        self.assertEqual(methods[0].return_type.type1.get_typename(), "string")
+        self.assertEqual(methods[0].args[0].type.get_type(), "double")
+        self.assertEqual(methods[0].return_type.type1.get_type(), "string")
 
     def test_instantiate_operators(self):
         """Test instantiate_operators method."""
-        operators = self.cl.instantiate_operators(self.typenames)
+        operators = self.cl.instantiate_operators(self.template_names)
         self.assertEqual(len(operators), 1)
         self.assertEqual(operators[0].operator, "*")
-        self.assertEqual(operators[0].args.list()[0].ctype.get_typename(),
-                         "string")
-        self.assertEqual(operators[0].return_type.type1.get_typename(),
-                         "string")
+        self.assertEqual(operators[0].args[0].type.get_type(), "string")
+        self.assertEqual(operators[0].return_type.type1.get_type(), "string")
 
     def test_instantiate_properties(self):
         """Test instantiate_properties method."""
-        properties = self.cl.instantiate_properties(self.typenames)
+        properties = self.cl.instantiate_properties(self.template_names)
         self.assertEqual(len(properties), 1)
         self.assertEqual(properties[0].name, "prop")
-        self.assertEqual(properties[0].ctype.get_typename(), "string")
+        self.assertEqual(properties[0].type.get_type(), "string")
 
     def test_cpp_typename(self):
-        """Test cpp_typename method."""
-        actual = self.cl.cpp_typename()
+        """Test cpp_type method."""
+        actual = self.cl.cpp_type()
         self.assertEqual(actual.name, "Foo<string>")
 
     def test_to_cpp(self):
@@ -409,7 +394,7 @@ class TestInstantiatedDeclaration(unittest.TestCase):
         forward_declaration = ForwardDeclaration.rule.parseString("""
             class FooBar;
             """)[0]
-        instantiations = [Typename.rule.parseString("double")[0]]
+        instantiations = [Type.rule.parseString("double")[0]]
         self.declaration = InstantiatedDeclaration(
             forward_declaration, instantiations=instantiations)
 
@@ -433,136 +418,123 @@ class TestTemplateInstantiator(unittest.TestCase):
     def test_scoped_template(self):
         """Test is_scoped_template."""
         # Test if not scoped template.
-        template_typenames = ['T']
+        template_types = ['T']
         str_arg_typename = "double"
         scoped_template, scoped_idx = is_scoped_template(
-            template_typenames, str_arg_typename)
+            template_types, str_arg_typename)
         self.assertFalse(scoped_template)
         self.assertEqual(scoped_idx, -1)
 
         # Check for correct template match.
-        template_typenames = ['T']
+        template_types = ['T']
         str_arg_typename = "gtsam::Matrix"
         scoped_template, scoped_idx = is_scoped_template(
-            template_typenames, str_arg_typename)
+            template_types, str_arg_typename)
         self.assertFalse(scoped_template)
         self.assertEqual(scoped_idx, -1)
 
         # Test scoped templatte
-        template_typenames = ['T']
+        template_types = ['T']
         str_arg_typename = "T::Value"
         scoped_template, scoped_idx = is_scoped_template(
-            template_typenames, str_arg_typename)
+            template_types, str_arg_typename)
         self.assertEqual(scoped_template, "T")
         self.assertEqual(scoped_idx, 0)
 
-        template_typenames = ['U', 'T']
+        template_types = ['U', 'T']
         str_arg_typename = "T::Value"
         scoped_template, scoped_idx = is_scoped_template(
-            template_typenames, str_arg_typename)
+            template_types, str_arg_typename)
         self.assertEqual(scoped_template, "T")
         self.assertEqual(scoped_idx, 1)
 
     def test_instantiate_type(self):
         """Test for instantiate_type."""
         arg = Argument.rule.parseString("const T x")[0]
-        template_typenames = ["T"]
-        instantiations = [Typename.rule.parseString("double")[0]]
-        cpp_typename = "ExampleClass"
-        new_type = instantiate_type(arg.ctype,
-                                    template_typenames,
+        template_types = ["T"]
+        instantiations = [Type.rule.parseString("double")[0]]
+        cpp_type = "ExampleClass"
+        new_type = instantiate_type(arg.type,
+                                    template_types,
                                     instantiations=instantiations,
-                                    cpp_typename=cpp_typename,
+                                    cpp_type=cpp_type,
                                     instantiated_class=None)
 
-        new_typename = new_type.typename
-        self.assertEqual(new_typename.name, "double")
-        self.assertEqual(new_typename.instantiated_name(), "double")
+        self.assertIsInstance(new_type, Type)
+        self.assertEqual(new_type.name, "double")
 
     def test_instantiate_args_list(self):
         """Test for instantiate_args_list."""
-        args = ArgumentList.rule.parseString("T x, double y, string z")[0]
-        args_list = args.list()
-        template_typenames = ['T']
-        instantiations = [Typename.rule.parseString("double")[0]]
-        instantiated_args_list = instantiate_args_list(
-            args_list,
-            template_typenames,
-            instantiations,
-            cpp_typename="ExampleClass")
+        args_list = ArgumentList.rule.parseString("T x, double y, string z")[0]
+        template_types = ['T']
+        instantiations = [Type.rule.parseString("double")[0]]
+        instantiated_args_list = instantiate_args_list(args_list,
+                                                       template_types,
+                                                       instantiations,
+                                                       cpp_type="ExampleClass")
 
-        self.assertEqual(instantiated_args_list[0].ctype.get_typename(),
-                         "double")
+        self.assertEqual(instantiated_args_list[0].type.get_type(), "double")
 
-        args = ArgumentList.rule.parseString("T x, U y, string z")[0]
-        args_list = args.list()
-        template_typenames = ['T', 'U']
+        args_list = ArgumentList.rule.parseString("T x, U y, string z")[0]
+
+        template_types = ['T', 'U']
         instantiations = [
-            Typename.rule.parseString("double")[0],
-            Typename.rule.parseString("Matrix")[0]
+            Type.rule.parseString("double")[0],
+            Type.rule.parseString("Matrix")[0]
         ]
-        instantiated_args_list = instantiate_args_list(
-            args_list,
-            template_typenames,
-            instantiations,
-            cpp_typename="ExampleClass")
-        self.assertEqual(instantiated_args_list[0].ctype.get_typename(),
-                         "double")
-        self.assertEqual(instantiated_args_list[1].ctype.get_typename(),
-                         "Matrix")
+        instantiated_args_list = instantiate_args_list(args_list,
+                                                       template_types,
+                                                       instantiations,
+                                                       cpp_type="ExampleClass")
+        self.assertEqual(instantiated_args_list[0].type.get_type(), "double")
+        self.assertEqual(instantiated_args_list[1].type.get_type(), "Matrix")
 
-        args = ArgumentList.rule.parseString("T x, U y, T z")[0]
-        args_list = args.list()
-        template_typenames = ['T', 'U']
+        args_list = ArgumentList.rule.parseString("T x, U y, T z")[0]
+
+        template_types = ['T', 'U']
         instantiations = [
-            Typename.rule.parseString("double")[0],
-            Typename.rule.parseString("Matrix")[0]
+            Type.rule.parseString("double")[0],
+            Type.rule.parseString("Matrix")[0]
         ]
-        instantiated_args_list = instantiate_args_list(
-            args_list,
-            template_typenames,
-            instantiations,
-            cpp_typename="ExampleClass")
-        self.assertEqual(instantiated_args_list[0].ctype.get_typename(),
-                         "double")
-        self.assertEqual(instantiated_args_list[1].ctype.get_typename(),
-                         "Matrix")
-        self.assertEqual(instantiated_args_list[2].ctype.get_typename(),
-                         "double")
+        instantiated_args_list = instantiate_args_list(args_list,
+                                                       template_types,
+                                                       instantiations,
+                                                       cpp_type="ExampleClass")
+        self.assertEqual(instantiated_args_list[0].type.get_type(), "double")
+        self.assertEqual(instantiated_args_list[1].type.get_type(), "Matrix")
+        self.assertEqual(instantiated_args_list[2].type.get_type(), "double")
 
     def test_instantiate_return_type(self):
         """Test for instantiate_return_type."""
         return_type = ReturnType.rule.parseString("T")[0]
-        template_typenames = ['T']
-        instantiations = [Typename.rule.parseString("double")[0]]
+        template_types = ['T']
+        instantiations = [Type.rule.parseString("double")[0]]
         instantiated_return_type = instantiate_return_type(
             return_type,
-            template_typenames,
+            template_types,
             instantiations,
-            cpp_typename="ExampleClass")
+            cpp_type="ExampleClass")
 
-        self.assertEqual(instantiated_return_type.type1.get_typename(),
-                         "double")
+        self.assertEqual(instantiated_return_type.type1.get_type(), "double")
 
         return_type = ReturnType.rule.parseString("pair<T, U>")[0]
-        template_typenames = ['T', 'U']
+        template_types = ['T', 'U']
         instantiations = [
-            Typename.rule.parseString("double")[0],
-            Typename.rule.parseString("char")[0],
+            Type.rule.parseString("double")[0],
+            Type.rule.parseString("char")[0],
         ]
         instantiated_return_type = instantiate_return_type(
             return_type,
-            template_typenames,
+            template_types,
             instantiations,
-            cpp_typename="ExampleClass")
+            cpp_type="ExampleClass")
 
-        self.assertEqual(instantiated_return_type.type1.get_typename(),
-                         "double")
-        self.assertEqual(instantiated_return_type.type2.get_typename(), "char")
+        self.assertEqual(instantiated_return_type.type1.get_type(), "double")
+        self.assertEqual(instantiated_return_type.type2.get_type(), "char")
 
     def test_instantiate_name(self):
         """Test for instantiate_name."""
-        instantiations = [Typename.rule.parseString("Man")[0]]
+        instantiations = [Type.rule.parseString("Man")[0]]
         instantiated_name = instantiate_name("Iron", instantiations)
         self.assertEqual(instantiated_name, "IronMan")
 

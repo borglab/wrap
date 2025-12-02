@@ -66,7 +66,7 @@ class Enum:
         """Get the namespaces which this class is nested under as a list."""
         return collect_namespaces(self)
 
-    def cpp_typename(self):
+    def cpp_type(self):
         """
         Return a Type with the namespaces and cpp name of this
         class.
