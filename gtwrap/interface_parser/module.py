@@ -51,7 +51,7 @@ class Module:
     rule.ignore(cpp_style_comment)
 
     @staticmethod
-    def parse_string(s: str, source_name: str = "<string>") -> ParseResults:
+def parse_string(s: str, source_name: str = "<string>") -> Namespace:
         """Parse source text and report any failure at its best known location."""
         # Imported here to avoid adding the diagnostic machinery to the grammar's
         # import cycle.
