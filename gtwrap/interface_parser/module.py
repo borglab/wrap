@@ -12,8 +12,8 @@ Author: Duy Nguyen Ta, Fan Jiang, Matthew Sklar, Varun Agrawal, and Frank Dellae
 
 # pylint: disable=unnecessary-lambda, unused-import, expression-not-assigned, no-else-return, protected-access, too-few-public-methods, too-many-arguments
 
-from pyparsing import (ParseBaseException, ParseResults, ZeroOrMore,  # type: ignore
-                       cpp_style_comment, string_end)
+from pyparsing import (ParseBaseException, ZeroOrMore, cpp_style_comment,  # type: ignore
+                       string_end)
 
 from .classes import Class
 from .declaration import ForwardDeclaration, Include
@@ -51,7 +51,7 @@ class Module:
     rule.ignore(cpp_style_comment)
 
     @staticmethod
-def parse_string(s: str, source_name: str = "<string>") -> Namespace:
+    def parse_string(s: str, source_name: str = "<string>") -> Namespace:
         """Parse source text and report any failure at its best known location."""
         # Imported here to avoid adding the diagnostic machinery to the grammar's
         # import cycle.
