@@ -111,6 +111,80 @@ pybind11::arg py_arg(const char* name) {
 
         return ', '.join(types_names)
 
+    @staticmethod
+    def _cpp_symbol(callable_):
+        """Return the unspecialized C++ symbol used for overload detection."""
+        if isinstance(callable_, (instantiator.InstantiatedMethod,
+                                  instantiator.InstantiatedStaticMethod,
+                                  instantiator.InstantiatedGlobalFunction)):
+            return callable_.original.name
+        return callable_.to_cpp()
+
+    @staticmethod
+    def _is_static_method(method):
+        return isinstance(
+            method,
+            (parser.StaticMethod, instantiator.InstantiatedStaticMethod))
+
+    @staticmethod
+    def _is_specialized_callable(callable_):
+        """Return whether the callable is an explicit function-template specialization."""
+        instantiated_callables = (instantiator.InstantiatedMethod,
+                                  instantiator.InstantiatedStaticMethod,
+                                  instantiator.InstantiatedGlobalFunction)
+        return (isinstance(callable_, instantiated_callables)
+                and bool(callable_.original.template))
+
+    def _overload_info(self, callable_, all_callables, is_method=False):
+        """Return whether a callable is overloaded and needs a return-type cast."""
+        symbol = self._cpp_symbol(callable_)
+        overloads = [item for item in all_callables
+                     if self._cpp_symbol(item) == symbol]
+        if len(overloads) < 2:
+            return False, False
+
+        args = tuple(callable_.args.to_cpp())
+        if is_method:
+            signature = (self._is_static_method(callable_),
+                         bool(getattr(callable_, 'is_const', False)), args)
+            matching_signatures = [
+                item for item in overloads
+                if (self._is_static_method(item),
+                    bool(getattr(item, 'is_const', False)),
+                    tuple(item.args.to_cpp())) == signature
+            ]
+        else:
+            matching_signatures = [
+                item for item in overloads
+                if tuple(item.args.to_cpp()) == args
+            ]
+
+        return True, len(matching_signatures) > 1
+
+    @staticmethod
+    def _overload_cast(cpp_target, args, is_const=False):
+        """Generate a py::overload_cast expression."""
+        cpp_args = ', '.join(args.to_cpp())
+        const_qualifier = ', py::const_' if is_const else ''
+        return (f'py::overload_cast<{cpp_args}>({cpp_target}'
+                f'{const_qualifier})')
+
+    @staticmethod
+    def _full_signature_cast(cpp_target,
+                             return_type,
+                             args,
+                             cpp_class=None,
+                             is_const=False):
+        """Generate a full function-pointer cast when overload_cast is ambiguous."""
+        cpp_args = ', '.join(args.to_cpp())
+        if cpp_class is None:
+            pointer_type = f'{return_type.to_cpp()} (*)({cpp_args})'
+        else:
+            const_qualifier = ' const' if is_const else ''
+            pointer_type = (f'{return_type.to_cpp()} ({cpp_class}::*)'
+                            f'({cpp_args}){const_qualifier}')
+        return f'static_cast<{pointer_type}>({cpp_target})'
+
     def wrap_ctors(self, my_class):
         """Wrap the constructors."""
         res = ""
@@ -233,7 +307,8 @@ pybind11::arg py_arg(const char* name) {
                      cpp_class,
                      prefix,
                      suffix,
-                     method_suffix=""):
+                     method_suffix="",
+                     all_methods=None):
         """
         Wrap the `method` for the class specified by `cpp_class`.
 
@@ -270,9 +345,7 @@ pybind11::arg py_arg(const char* name) {
 
         is_method = isinstance(
             method, (parser.Method, instantiator.InstantiatedMethod))
-        is_static = isinstance(
-            method,
-            (parser.StaticMethod, instantiator.InstantiatedStaticMethod))
+        is_static = self._is_static_method(method)
         return_void = method.return_type.is_void()
         return_type = getattr(method.return_type, 'type1', None)
         return_ref = getattr(return_type, 'is_ref', False)
@@ -287,44 +360,73 @@ pybind11::arg py_arg(const char* name) {
             lambda_ret = ''
             ref_policy = ''
 
-        caller = cpp_class + "::" if not is_method else "self->"
-        function_call = ('{opt_return} {caller}{method_name}'
-                         '({args_names});'.format(
-                             opt_return='return' if not return_void else '',
-                             caller=caller,
-                             method_name=cpp_method,
-                             args_names=', '.join(args_names),
-                         ))
+        # Try to get the function's docstring from the Doxygen XML.
+        # If extract_docstring errors or fails to find a docstring, it just prints a warning.
+        # The incantation repr(...)[1:-1].replace('"', r'\"') replaces newlines with \n
+        # and " with \" so that the docstring can be put into a C++ string on a single line.
+        docstring = (', "' + repr(
+            self.xml_parser.extract_docstring(
+                self.xml_source, cpp_class, cpp_method,
+                method.args.names()))[1:-1].replace('"', r'\"') + '"'
+                     if self.xml_source != "" else "")
 
-        result = (
-            '{prefix}.{cdef}("{py_method}",'
-            '[]({opt_self}{opt_comma}{args_signature_with_names}){lambda_ret}{{'
-            '{function_call}'
-            '}}'
-            '{ref_policy}{py_args_names}{docstring}){suffix}'.format(
-                prefix=prefix,
-                cdef="def_static" if is_static else "def",
-                py_method=py_method,
-                opt_self="{cpp_class}* self".format(
-                    cpp_class=cpp_class) if is_method else "",
-                opt_comma=', '
-                if is_method and args_signature_with_names else '',
-                args_signature_with_names=args_signature_with_names,
-                lambda_ret=lambda_ret,
-                function_call=function_call,
-                ref_policy=ref_policy,
-                py_args_names=py_args_names,
-                suffix=suffix,
-                # Try to get the function's docstring from the Doxygen XML.
-                # If extract_docstring errors or fails to find a docstring, it just prints a warning.
-                # The incantation repr(...)[1:-1].replace('"', r'\"') replaces newlines with \n
-                # and " with \" so that the docstring can be put into a C++ string on a single line.
-                docstring=', "' + repr(
-                    self.xml_parser.extract_docstring(
-                        self.xml_source, cpp_class, cpp_method,
-                        method.args.names()))[1:-1].replace('"', r'\"') +
-                '"' if self.xml_source != "" else "",
-            ))
+        requires_lambda = (self._is_specialized_callable(method)
+                           or bool(method_suffix) or method.name == 'print')
+
+        if requires_lambda:
+            caller = cpp_class + "::" if not is_method else "self->"
+            function_call = ('{opt_return} {caller}{method_name}'
+                             '({args_names});'.format(
+                                 opt_return='return'
+                                 if not return_void else '',
+                                 caller=caller,
+                                 method_name=cpp_method,
+                                 args_names=', '.join(args_names),
+                             ))
+            callable_binding = (
+                '[]({opt_self}{opt_comma}{args_signature_with_names})'
+                '{lambda_ret}{{{function_call}}}'.format(
+                    opt_self=f'{cpp_class}* self' if is_method else '',
+                    opt_comma=', '
+                    if is_method and args_signature_with_names else '',
+                    args_signature_with_names=args_signature_with_names,
+                    lambda_ret=lambda_ret,
+                    function_call=function_call,
+                ))
+        else:
+            cpp_target = f'&{cpp_class}::{cpp_method}'
+            all_methods = all_methods if all_methods is not None else [method]
+            overloaded, needs_full_cast = self._overload_info(
+                method, all_methods, is_method=True)
+            if needs_full_cast:
+                callable_binding = self._full_signature_cast(
+                    cpp_target,
+                    method.return_type,
+                    method.args,
+                    cpp_class=None if is_static else cpp_class,
+                    is_const=bool(getattr(method, 'is_const', False)),
+                )
+            elif overloaded:
+                callable_binding = self._overload_cast(
+                    cpp_target,
+                    method.args,
+                    is_const=is_method
+                    and bool(getattr(method, 'is_const', False)),
+                )
+            else:
+                callable_binding = cpp_target
+
+        result = ('{prefix}.{cdef}("{py_method}",{callable_binding}'
+                  '{ref_policy}{py_args_names}{docstring}){suffix}'.format(
+                      prefix=prefix,
+                      cdef="def_static" if is_static else "def",
+                      py_method=py_method,
+                      callable_binding=callable_binding,
+                      ref_policy=ref_policy,
+                      py_args_names=py_args_names,
+                      docstring=docstring,
+                      suffix=suffix,
+                  ))
 
         # Create __repr__ override
         # We allow all arguments to .print() and let the compiler handle type mismatches.
@@ -353,11 +455,13 @@ pybind11::arg py_arg(const char* name) {
                      methods,
                      cpp_class,
                      prefix='\n' + ' ' * 8,
-                     suffix=''):
+                     suffix='',
+                     all_methods=None):
         """
         Wrap all the methods in the `cpp_class`.
         """
         res = ""
+        all_methods = all_methods if all_methods is not None else methods
         for method in methods:
 
             # To avoid type confusion for insert
@@ -371,13 +475,15 @@ pybind11::arg py_arg(const char* name) {
                                              cpp_class=cpp_class,
                                              prefix=prefix,
                                              suffix=suffix,
-                                             method_suffix=method_suffix)
+                                             method_suffix=method_suffix,
+                                             all_methods=all_methods)
 
             res += self._wrap_method(
                 method=method,
                 cpp_class=cpp_class,
                 prefix=prefix,
                 suffix=suffix,
+                all_methods=all_methods,
             )
 
         return res
@@ -508,6 +614,9 @@ pybind11::arg py_arg(const char* name) {
                      class_parent=class_parent,
                      module_var=module_var)
 
+        all_methods = (instantiated_class.methods +
+                       instantiated_class.static_methods)
+
         return ('{class_declaration}'
                 '{wrapped_ctors}'
                 '{wrapped_methods}'
@@ -518,9 +627,13 @@ pybind11::arg py_arg(const char* name) {
                     class_declaration=class_declaration,
                     wrapped_ctors=self.wrap_ctors(instantiated_class),
                     wrapped_methods=self.wrap_methods(
-                        instantiated_class.methods, cpp_class),
+                        instantiated_class.methods,
+                        cpp_class,
+                        all_methods=all_methods),
                     wrapped_static_methods=self.wrap_methods(
-                        instantiated_class.static_methods, cpp_class),
+                        instantiated_class.static_methods,
+                        cpp_class,
+                        all_methods=all_methods),
                     wrapped_dunder_methods=self.wrap_dunder_methods(
                         instantiated_class.dunder_methods, cpp_class),
                     wrapped_properties=self.wrap_properties(
@@ -550,6 +663,8 @@ pybind11::arg py_arg(const char* name) {
         if cpp_class in self.ignore_classes:
             return ""
 
+        all_methods = stl_class.methods + stl_class.static_methods
+
         return ('\n    py::class_<{cpp_class}, {class_parent}'
                 'std::shared_ptr<{cpp_class}>>({module_var}, "{class_name}")'
                 '{wrapped_ctors}'
@@ -562,10 +677,14 @@ pybind11::arg py_arg(const char* name) {
                     (', ' if stl_class.parent_class else ''),
                     module_var=module_var,
                     wrapped_ctors=self.wrap_ctors(stl_class),
-                    wrapped_methods=self.wrap_methods(stl_class.methods,
-                                                      cpp_class),
+                    wrapped_methods=self.wrap_methods(
+                        stl_class.methods,
+                        cpp_class,
+                        all_methods=all_methods),
                     wrapped_static_methods=self.wrap_methods(
-                        stl_class.static_methods, cpp_class),
+                        stl_class.static_methods,
+                        cpp_class,
+                        all_methods=all_methods),
                     wrapped_properties=self.wrap_properties(
                         stl_class.properties, cpp_class),
                 ))
@@ -597,25 +716,40 @@ pybind11::arg py_arg(const char* name) {
             args_signature = self._method_args_signature(function.args)
 
             caller = namespace + "::"
-            function_call = ('{opt_return} {caller}{function_name}'
-                             '({args_names});'.format(
-                                 opt_return='return'
-                                 if not return_void else '',
-                                 caller=caller,
-                                 function_name=cpp_method,
-                                 args_names=', '.join(args_names),
-                             ))
+            if self._is_specialized_callable(function):
+                function_call = ('{opt_return} {caller}{function_name}'
+                                 '({args_names});'.format(
+                                     opt_return='return'
+                                     if not return_void else '',
+                                     caller=caller,
+                                     function_name=cpp_method,
+                                     args_names=', '.join(args_names),
+                                 ))
+                callable_binding = ('[]({args_signature}){{'
+                                    '{function_call}'
+                                    '}}'.format(
+                                        args_signature=args_signature,
+                                        function_call=function_call,
+                                    ))
+            else:
+                cpp_target = f'&{caller}{cpp_method}'
+                overloaded, needs_full_cast = self._overload_info(
+                    function, functions)
+                if needs_full_cast:
+                    callable_binding = self._full_signature_cast(
+                        cpp_target, function.return_type, function.args)
+                elif overloaded:
+                    callable_binding = self._overload_cast(
+                        cpp_target, function.args)
+                else:
+                    callable_binding = cpp_target
 
-            ret = ('{prefix}.{cdef}("{function_name}",'
-                   '[]({args_signature}){{'
-                   '{function_call}'
-                   '}}'
+            ret = ('{prefix}.{cdef}("{function_name}",{callable_binding}'
                    '{py_args_names}){suffix}'.format(
                        prefix=prefix,
                        cdef="def_static" if is_static else "def",
                        function_name=function_name,
-                       args_signature=args_signature,
-                       function_call=function_call,
+                       callable_binding=callable_binding,
                        py_args_names=py_args_names,
                        suffix=suffix))
 
