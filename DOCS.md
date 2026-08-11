@@ -125,6 +125,7 @@ The python wrapper supports keyword arguments for functions/methods. Hence, the 
         ```cpp
         template<T, R, S>
         ```
+
 - Global variables
     - Similar to global functions, the wrapper supports global variables as well.
     - Currently we only support primitive types, such as `double`, `int`, `string`, etc.
@@ -232,6 +233,84 @@ The python wrapper supports keyword arguments for functions/methods. Hence, the 
     - To be able to use classes from another module, simply import the C++ header file in that wrapper file.
     - Unfortunately, this means that aliases can no longer be used.
     - Similarly, there can be multiple `preamble.h` and `specializations.h` files. Each of these should match the module file name.
+
+## Pybind Callable Adapters
+
+The Python generator uses direct C++ callable pointers for ordinary wrapper
+declarations. For example:
+
+```cpp
+class Example {
+  int size() const;
+  static Example Create();
+};
+
+int globalFunction(int value);
+```
+
+generates bindings based on `&Example::size`, `&Example::Create`, and
+`&::globalFunction`. Exact overloads use `py::overload_cast` or an explicit
+function-pointer cast when necessary.
+
+A wrapper `.i` declaration does not always reproduce the underlying C++
+signature exactly. Add `@pybind_lambda` to one method, static method, or global
+function when its wrapper signature is intentionally an adapter:
+
+```cpp
+class Example {
+  @pybind_lambda
+  int lookup(int index) const;
+
+  @pybind_lambda
+  static Example Load(string filename);
+
+  template<T = {double}>
+  @pybind_lambda
+  T convert(T value) const;
+};
+
+@pybind_lambda
+int globalFunction(int value);
+```
+
+Place the annotation after any `template<...>` declaration and immediately
+before the callable. The annotated instance method is emitted using the existing
+forwarding-lambda path, for example:
+
+```cpp
+.def("lookup",
+     [](Example* self, int index) {
+       return self->lookup(index);
+     },
+     py::arg("index"))
+```
+
+The annotation is useful when the interface intentionally:
+
+- omits underlying C++ parameters that have defaults;
+- accepts values where the C++ function accepts references;
+- exposes one overload while other C++ overloads remain hidden from the `.i`;
+- synthesizes a value-returning container operation such as `at` or `front`;
+- uses a type alias that differs from the callable's declared signature; or
+- adapts an inherited or templated member.
+
+Do not annotate a callable merely because it is overloaded. Unannotated exact
+overloads should continue to use the generated casts. Likewise, existing
+automatic lambdas for template specializations, renamed bindings, print/repr,
+serialization, and synthesized dunder methods do not need this marker.
+
+`@pybind_lambda` affects only pybind output. MATLAB generation ignores the
+stored marker. Template instantiation preserves the marker on every instantiated
+callable. Python-visible names, keyword escaping, default arguments, argument
+policies, return-value policies such as `reference_internal`, and generated
+docstrings are appended exactly as they are for the normal binding path.
+
+Wrap does not inspect the C++ AST and cannot determine whether an interface
+signature exactly matches the real declaration. Use the annotation only after
+comparing the `.i` declaration with the C++ header or after diagnosing a
+generated-code compilation error. Unknown annotations and annotations on
+constructors, properties, classes, enums, or other unsupported declarations are
+parser errors.
 
 ### TODO
 - Handle `gtsam::Rot3M` conversions to quaternions.

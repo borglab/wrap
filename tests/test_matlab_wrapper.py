@@ -8,7 +8,10 @@ Date: March 2019
 import filecmp
 import os
 import os.path as osp
+from pathlib import Path
+import re
 import sys
+import tempfile
 import unittest
 
 sys.path.append(osp.dirname(osp.dirname(osp.abspath(__file__))))
@@ -118,6 +121,47 @@ class TestWrap(unittest.TestCase):
         self.assertIn('static_cast<unsigned long long>(rows)', header_content)
         self.assertIn('Eigen::Index m', header_content)
         self.assertIn('Stride(m, 1)', header_content)
+
+    def test_pybind_lambda_annotation_is_ignored(self):
+        """Pybind-only annotations do not alter generated MATLAB files."""
+        source = Path(self.INTERFACE_DIR) / 'pybind_lambda_adapters.i'
+        annotated = source.read_text(encoding='UTF-8')
+        unannotated = re.sub(r'^[ \t]*@pybind_lambda[ \t]*\n',
+                             '',
+                             annotated,
+                             flags=re.MULTILINE)
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            annotated_source = root / 'annotated.i'
+            unannotated_source = root / 'unannotated.i'
+            annotated_source.write_text(annotated, encoding='UTF-8')
+            unannotated_source.write_text(unannotated, encoding='UTF-8')
+            annotated_output = root / 'annotated'
+            unannotated_output = root / 'unannotated'
+            annotated_output.mkdir()
+            unannotated_output.mkdir()
+
+            MatlabWrapper(
+                module_name='pybind_lambda_adapters',
+                top_module_namespace=['adapters'],
+                ignore_classes=[''],
+            ).wrap([str(annotated_source)], path=str(annotated_output))
+            MatlabWrapper(
+                module_name='pybind_lambda_adapters',
+                top_module_namespace=['adapters'],
+                ignore_classes=[''],
+            ).wrap([str(unannotated_source)], path=str(unannotated_output))
+
+            annotated_files = {
+                path.relative_to(annotated_output): path.read_bytes()
+                for path in annotated_output.rglob('*') if path.is_file()
+            }
+            unannotated_files = {
+                path.relative_to(unannotated_output): path.read_bytes()
+                for path in unannotated_output.rglob('*') if path.is_file()
+            }
+            self.assertEqual(annotated_files, unannotated_files)
 
     def test_eigen_ref_jacobians(self):
         """Test that Eigen::Ref<MatrixXd> args are treated as Jacobian outputs.

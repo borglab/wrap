@@ -9,7 +9,11 @@ Date: February 2019
 import filecmp
 import os
 import os.path as osp
+import shlex
+import shutil
+import subprocess
 import sys
+import sysconfig
 import unittest
 
 sys.path.append(osp.dirname(osp.dirname(osp.abspath(__file__))))
@@ -30,6 +34,18 @@ class TestWrap(unittest.TestCase):
 
     # Create the `actual/python` directory
     os.makedirs(PYTHON_ACTUAL_DIR, exist_ok=True)
+
+    MINIMAL_MODULE_TEMPLATE = """#include <pybind11/pybind11.h>
+
+{includes}
+
+using namespace std;
+namespace py = pybind11;
+
+PYBIND11_MODULE({module_name}, m_) {{
+{wrapped_namespace}
+}}
+"""
 
     def wrap_content(self,
                      sources,
@@ -339,6 +355,113 @@ PYBIND11_MODULE({module_name}, m_) {{
 
         self.assertIn(
             '.def("value",&DocClass::value, "A docstring.")', content)
+
+    def test_pybind_lambda_annotation(self):
+        """Annotated adapters use the old lambda path and compile."""
+        source = osp.join(self.INTERFACE_DIR, 'pybind_lambda_adapters.i')
+        output = self.wrap_content(
+            [source],
+            'pybind_lambda_adapters_py',
+            self.PYTHON_ACTUAL_DIR,
+            module_template=self.MINIMAL_MODULE_TEMPLATE,
+        )
+        self.compare_and_diff('pybind_lambda_adapters_pybind.cpp', output)
+
+        with open(output, 'r', encoding='UTF-8') as generated:
+            content = generated.read()
+
+        # Unannotated callables retain direct-pointer output.
+        self.assertIn(
+            '.def("exact",&adapters::Adapter<int>::exact', content)
+        self.assertIn(
+            '.def("exactConst",&adapters::Adapter<int>::exactConst', content)
+        self.assertIn(
+            '.def_static("exactStatic",&adapters::Adapter<int>::exactStatic',
+            content)
+        self.assertIn(
+            'm_adapters.def("exactGlobal",&adapters::exactGlobal', content)
+
+        # Annotated callables use the shared forwarding-lambda implementation.
+        self.assertIn(
+            '.def("omittedDefault",[](adapters::Adapter<int>* self, int value)',
+            content)
+        self.assertIn(
+            '.def("hiddenOverload",[](adapters::Adapter<int>* self, int value)',
+            content)
+        self.assertNotIn(
+            'overload_cast<int>(&adapters::Adapter<int>::hiddenOverload',
+            content)
+        self.assertIn(
+            '.def("declaredOverload",[](adapters::Adapter<int>* self, '
+            'int value)', content)
+        self.assertNotIn(
+            'overload_cast<int>(&adapters::Adapter<int>::declaredOverload',
+            content)
+        self.assertIn(
+            'py::overload_cast<double>('
+            '&adapters::Adapter<int>::declaredOverload, py::const_)', content)
+        self.assertIn(
+            '.def_static("staticOmitted",[](int value)', content)
+        self.assertIn(
+            'm_adapters.def("globalOmitted",[](int value)', content)
+        self.assertIn(
+            'm_adapters.def("globalOverload",[](int value)', content)
+        self.assertIn(
+            'py::overload_cast<double>(&adapters::globalOverload)', content)
+
+        # Template instantiation, defaults, keyword renaming, and return policy
+        # all remain on the same lambda-emission path.
+        self.assertIn(
+            '.def("templatedDouble",[](adapters::Adapter<int>* self, '
+            'double value)', content)
+        self.assertIn(
+            '.def("lambda_",[](adapters::Adapter<int>* self, '
+            'const string& value) -> const auto&', content)
+        self.assertIn('py::return_value_policy::reference_internal', content)
+        self.assertIn(
+            'gtwrap::internal::py_arg<const string&>("value") = "fallback"',
+            content)
+
+        compiler = shlex.split(os.environ.get('CXX', 'c++'))
+        compiler_path = shutil.which(compiler[0])
+        self.assertIsNotNone(compiler_path,
+                             f"C++ compiler not found: {compiler[0]}")
+        command = [
+            compiler_path,
+            *compiler[1:],
+            '-std=c++14',
+            '-fsyntax-only',
+            output,
+            '-I',
+            osp.join(self.TEST_DIR, '..', 'pybind11', 'include'),
+            '-I',
+            sysconfig.get_paths()['include'],
+            '-I',
+            self.INTERFACE_DIR,
+        ]
+        result = subprocess.run(command,
+                                capture_output=True,
+                                text=True,
+                                check=False)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_annotated_lambda_preserves_docstring(self):
+        """The forced lambda path retains metadata appended by the wrapper."""
+        wrapper = PybindWrapper(module_name='docstring_py',
+                                top_module_namespaces=[''],
+                                module_template=self.MINIMAL_MODULE_TEMPLATE,
+                                xml_source='unused')
+        wrapper.xml_parser.extract_docstring = lambda *args: 'An adapter.'
+        content = wrapper.wrap_file(
+            'class DocClass { @pybind_lambda const int& lambda('
+            'int value = 1) const; };',
+            module_name='docstring_py')
+
+        self.assertIn('.def("lambda_",[](DocClass* self, int value) '
+                      '-> const auto&{return self->lambda(value);}, '
+                      'py::return_value_policy::reference_internal, '
+                      'gtwrap::internal::py_arg<int>("value") = 1, '
+                      '"An adapter.")', content)
 
     def test_const_ref_return_policy(self):
         """Test that methods returning const T& emit reference_internal policy.

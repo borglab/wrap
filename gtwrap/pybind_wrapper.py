@@ -370,7 +370,8 @@ pybind11::arg py_arg(const char* name) {
                 method.args.names()))[1:-1].replace('"', r'\"') + '"'
                      if self.xml_source != "" else "")
 
-        requires_lambda = (self._is_specialized_callable(method)
+        requires_lambda = (method.force_pybind_lambda
+                           or self._is_specialized_callable(method)
                            or bool(method_suffix) or method.name == 'print')
 
         if requires_lambda:
@@ -716,7 +717,8 @@ pybind11::arg py_arg(const char* name) {
             args_signature = self._method_args_signature(function.args)
 
             caller = namespace + "::"
-            if self._is_specialized_callable(function):
+            if (function.force_pybind_lambda
+                    or self._is_specialized_callable(function)):
                 function_call = ('{opt_return} {caller}{function_name}'
                                  '({args_names});'.format(
                                      opt_return='return'
