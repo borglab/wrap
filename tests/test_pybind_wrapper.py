@@ -209,11 +209,13 @@ PYBIND11_MODULE({module_name}, m_) {{
             'gtwrap::internal::py_arg<const testing::SpecialView&>("values")',
             content)
         self.assertIn('gtwrap::internal::py_arg<int>("count") = 1', content)
-        self.assertIn('.def("noConvert",&testing::ArgPolicyFixture::noConvert',
-                      content)
+        self.assertIn(
+            'static_cast<void (testing::ArgPolicyFixture::*)('
+            'const testing::SpecialView&, int) const>'
+            '(&testing::ArgPolicyFixture::noConvert)', content)
 
-    def test_direct_callable_bindings(self):
-        """Test direct pointers and overload casts for ordinary callables."""
+    def test_full_signature_callable_bindings(self):
+        """Test full-signature pointer casts for ordinary callables."""
         source = osp.join(self.INTERFACE_DIR, 'class.i')
         output = self.wrap_content([source], 'class_py',
                                    self.PYTHON_ACTUAL_DIR)
@@ -221,19 +223,29 @@ PYBIND11_MODULE({module_name}, m_) {{
         with open(output, 'r', encoding='UTF-8') as f:
             content = f.read()
 
-        # Unambiguous const/non-const methods and static methods use pointers.
-        self.assertIn('.def("return_bool",&Test::return_bool', content)
-        self.assertIn('.def("push_back",&Test::push_back', content)
-        self.assertIn('.def_static("create",&FunRange::create)', content)
-
-        # Python-only renaming does not require an adapter.
-        self.assertIn('.def("lambda_",&Test::lambda)', content)
-        self.assertIn('.def("_repr_markdown_",&Test::markdown', content)
-
-        # Ordinary const overloads use py::overload_cast with py::const_.
+        # Const/non-const methods and static methods use explicit pointer types.
         self.assertIn(
-            'py::overload_cast<const gtsam::Vector&, const gtsam::Matrix&>'
-            '(&Test::return_pair, py::const_)', content)
+            'static_cast<bool (Test::*)(bool) const>(&Test::return_bool)',
+            content)
+        self.assertIn(
+            'static_cast<void (Test::*)(gtsam::Key)>(&Test::push_back)',
+            content)
+        self.assertIn(
+            'static_cast<FunRange (*)()>(&FunRange::create)', content)
+
+        # Python-only renaming does not require an adapter lambda.
+        self.assertIn(
+            '.def("lambda_",static_cast<void (Test::*)() const>'
+            '(&Test::lambda)', content)
+        self.assertIn(
+            '.def("_repr_markdown_",static_cast<string (Test::*)('
+            'const gtsam::KeyFormatter&) const>(&Test::markdown)', content)
+
+        # Ordinary const overloads include return type and const qualification.
+        self.assertIn(
+            'static_cast<std::pair<gtsam::Vector,gtsam::Matrix> (Test::*)('
+            'const gtsam::Vector&, const gtsam::Matrix&) const>'
+            '(&Test::return_pair)', content)
 
         source = osp.join(self.INTERFACE_DIR, 'geometry.i')
         output = self.wrap_content([source],
@@ -243,7 +255,8 @@ PYBIND11_MODULE({module_name}, m_) {{
         with open(output, 'r', encoding='UTF-8') as f:
             content = f.read()
         self.assertIn(
-            '.def_static("staticFunction",&gtsam::Point3::staticFunction)',
+            '.def_static("staticFunction",static_cast<double (*)()>'
+            '(&gtsam::Point3::staticFunction))',
             content)
 
         source = osp.join(self.INTERFACE_DIR, 'functions.i')
@@ -251,10 +264,12 @@ PYBIND11_MODULE({module_name}, m_) {{
                                    self.PYTHON_ACTUAL_DIR)
         with open(output, 'r', encoding='UTF-8') as f:
             content = f.read()
-        self.assertIn('m_.def("aGlobalFunction",&::aGlobalFunction)', content)
         self.assertIn(
-            'py::overload_cast<int, double>(&::overloadedGlobalFunction)',
-            content)
+            'm_.def("aGlobalFunction",static_cast<gtsam::Vector (*)()>'
+            '(&::aGlobalFunction))', content)
+        self.assertIn(
+            'static_cast<gtsam::Vector (*)(int, double)>'
+            '(&::overloadedGlobalFunction)', content)
 
     def test_mutable_output_and_static_overloads(self):
         """Test pointer bindings for mutable output args and static overloads."""
@@ -266,16 +281,17 @@ PYBIND11_MODULE({module_name}, m_) {{
             content = f.read()
 
         self.assertIn(
-            'py::overload_cast<const gtsam::Point3&, '
-            'Eigen::Ref<Eigen::MatrixXd>, Eigen::Ref<Eigen::MatrixXd>>'
-            '(&gtsam::Pose3::transformFrom, py::const_)', content)
+            'static_cast<gtsam::Point3 (gtsam::Pose3::*)('
+            'const gtsam::Point3&, Eigen::Ref<Eigen::MatrixXd>, '
+            'Eigen::Ref<Eigen::MatrixXd>) const>'
+            '(&gtsam::Pose3::transformFrom)', content)
         self.assertIn(
-            'py::overload_cast<gtsam::Vector, Eigen::Ref<Eigen::MatrixXd>>'
-            '(&gtsam::Pose3::Expmap)', content)
+            'static_cast<gtsam::Pose3 (*)(gtsam::Vector, '
+            'Eigen::Ref<Eigen::MatrixXd>)>(&gtsam::Pose3::Expmap)', content)
         self.assertNotIn('[](', content)
 
     def test_member_static_name_collision(self):
-        """Test overload detection across member and static method lists."""
+        """Test member/static collisions use distinct full pointer types."""
         with open(osp.join(self.TEST_DIR, "pybind_wrapper.tpl"),
                   encoding="UTF-8") as template_file:
             module_template = template_file.read()
@@ -288,8 +304,10 @@ PYBIND11_MODULE({module_name}, m_) {{
             'static int call(double value); };',
             module_name='mixed_py')
 
-        self.assertIn('py::overload_cast<int>(&Mixed::call)', content)
-        self.assertIn('py::overload_cast<double>(&Mixed::call)', content)
+        self.assertIn(
+            'static_cast<int (Mixed::*)(int)>(&Mixed::call)', content)
+        self.assertIn(
+            'static_cast<int (*)(double)>(&Mixed::call)', content)
         self.assertNotIn('[](', content)
 
     def test_lambda_adapters_are_preserved(self):
@@ -339,8 +357,8 @@ PYBIND11_MODULE({module_name}, m_) {{
         self.assertIn(
             '.def("addPriorPinholeCameraCal3Bundler",[](', content)
 
-    def test_direct_pointer_preserves_docstring(self):
-        """Test that direct member pointers retain generated docstrings."""
+    def test_full_signature_cast_preserves_docstring(self):
+        """Test that member-pointer casts retain generated docstrings."""
         with open(osp.join(self.TEST_DIR, "pybind_wrapper.tpl"),
                   encoding="UTF-8") as template_file:
             module_template = template_file.read()
@@ -354,7 +372,8 @@ PYBIND11_MODULE({module_name}, m_) {{
                                     module_name='docstring_py')
 
         self.assertIn(
-            '.def("value",&DocClass::value, "A docstring.")', content)
+            '.def("value",static_cast<int (DocClass::*)() const>'
+            '(&DocClass::value), "A docstring.")', content)
 
     def test_pybind_lambda_annotation(self):
         """Annotated adapters use the old lambda path and compile."""
@@ -370,47 +389,49 @@ PYBIND11_MODULE({module_name}, m_) {{
         with open(output, 'r', encoding='UTF-8') as generated:
             content = generated.read()
 
-        # Unannotated callables retain direct-pointer output.
+        # Unannotated callables use complete function-pointer types.
         self.assertIn(
-            '.def("exact",&adapters::Adapter<int>::exact', content)
+            'static_cast<int (adapters::Adapter<int>::*)(int)>'
+            '(&adapters::Adapter<int>::exact)', content)
         self.assertIn(
-            '.def("exactConst",&adapters::Adapter<int>::exactConst', content)
+            'static_cast<int (adapters::Adapter<int>::*)(int) const>'
+            '(&adapters::Adapter<int>::exactConst)', content)
         self.assertIn(
-            '.def_static("exactStatic",&adapters::Adapter<int>::exactStatic',
-            content)
+            'static_cast<int (*)(int)>'
+            '(&adapters::Adapter<int>::exactStatic)', content)
         self.assertIn(
-            'm_adapters.def("exactGlobal",&adapters::exactGlobal', content)
+            'static_cast<int (*)(int)>(&adapters::exactGlobal)', content)
 
-        # Annotated callables use the shared forwarding-lambda implementation.
+        # Hidden and declared exact overloads are selected without annotations.
+        self.assertIn(
+            'static_cast<int (adapters::Adapter<int>::*)(int) const>'
+            '(&adapters::Adapter<int>::hiddenOverload)', content)
+        self.assertIn(
+            'static_cast<int (adapters::Adapter<int>::*)(int) const>'
+            '(&adapters::Adapter<int>::declaredOverload)', content)
+        self.assertNotIn(
+            '[](adapters::Adapter<int>* self, int value)'
+            '{return self->hiddenOverload(value);}', content)
+        self.assertIn(
+            'static_cast<double (adapters::Adapter<int>::*)(double) const>'
+            '(&adapters::Adapter<int>::declaredOverload)', content)
+        self.assertIn(
+            'static_cast<int (*)(int)>(&adapters::globalHidden)', content)
+        self.assertIn(
+            'static_cast<double (*)(double)>(&adapters::globalOverload)',
+            content)
+
+        # Intentional signature adapters retain the shared lambda implementation.
         self.assertIn(
             '.def("omittedDefault",[](adapters::Adapter<int>* self, int value)',
             content)
         self.assertIn(
-            '.def("hiddenOverload",[](adapters::Adapter<int>* self, int value)',
-            content)
-        self.assertNotIn(
-            'overload_cast<int>(&adapters::Adapter<int>::hiddenOverload',
-            content)
-        self.assertIn(
-            '.def("declaredOverload",[](adapters::Adapter<int>* self, '
-            'int value)', content)
-        self.assertNotIn(
-            'overload_cast<int>(&adapters::Adapter<int>::declaredOverload',
-            content)
-        self.assertIn(
-            'py::overload_cast<double>('
-            '&adapters::Adapter<int>::declaredOverload, py::const_)', content)
-        self.assertIn(
             '.def_static("staticOmitted",[](int value)', content)
         self.assertIn(
             'm_adapters.def("globalOmitted",[](int value)', content)
-        self.assertIn(
-            'm_adapters.def("globalOverload",[](int value)', content)
-        self.assertIn(
-            'py::overload_cast<double>(&adapters::globalOverload)', content)
 
-        # Template instantiation, defaults, keyword renaming, and return policy
-        # all remain on the same lambda-emission path.
+        # Automatic template specialization, defaults, keyword renaming, and
+        # return policy remain on the same lambda-emission path.
         self.assertIn(
             '.def("templatedDouble",[](adapters::Adapter<int>* self, '
             'double value)', content)
@@ -469,7 +490,7 @@ PYBIND11_MODULE({module_name}, m_) {{
         Without this policy, pybind11 defaults to copying the returned reference.
         With the policy, the binding keeps the reference alive via the parent object.
 
-        Direct pointers preserve the C++ reference return type, while
+        Full pointer casts preserve the C++ reference return type, while
         reference_internal keeps the returned reference tied to its parent.
         """
         source = osp.join(self.INTERFACE_DIR, 'class.i')
@@ -493,10 +514,14 @@ PYBIND11_MODULE({module_name}, m_) {{
         for line in lines:
             if 'return_vector1' in line:
                 self.assertNotIn('reference_internal', line)
-                self.assertIn('&Test::return_vector1', line)
+                self.assertIn(
+                    'static_cast<gtsam::Vector (Test::*)('
+                    'const gtsam::Vector&) const>', line)
             if 'return_matrix1' in line:
                 self.assertNotIn('reference_internal', line)
-                self.assertIn('&Test::return_matrix1', line)
+                self.assertIn(
+                    'static_cast<gtsam::Matrix (Test::*)('
+                    'const gtsam::Matrix&) const>', line)
 
         source = osp.join(self.INTERFACE_DIR, 'return_policies.i')
         output = self.wrap_content([source], 'return_policies_py',
@@ -508,11 +533,13 @@ PYBIND11_MODULE({module_name}, m_) {{
         for line in content.split('\n'):
             if 'return_const_ref' in line:
                 self.assertIn('reference_internal', line)
-                self.assertIn('&ReturnPolicyFixture::return_const_ref', line)
+                self.assertIn(
+                    'static_cast<const gtsam::Matrix& '
+                    '(ReturnPolicyFixture::*)', line)
                 self.assertNotIn('[](', line)
             if '.def("return_mutable_ref"' in line or '.def("return_value"' in line:
                 self.assertNotIn('reference_internal', line)
-                self.assertIn('&ReturnPolicyFixture::', line)
+                self.assertIn('static_cast<', line)
                 self.assertNotIn('[](', line)
 
 

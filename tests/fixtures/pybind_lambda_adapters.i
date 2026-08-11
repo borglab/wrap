@@ -23,10 +23,8 @@ class Adapter: adapters::BaseAdapter {
   @pybind_lambda
   int referenceArgument(int value) const;
 
-  @pybind_lambda
   int hiddenOverload(int value) const;
 
-  @pybind_lambda
   int declaredOverload(int value) const;
   double declaredOverload(double value) const;
 
@@ -43,7 +41,6 @@ class Adapter: adapters::BaseAdapter {
   static int staticOmitted(int value);
 
   template<U = {double}>
-  @pybind_lambda
   U templated(U value) const;
 
   @pybind_lambda
@@ -55,15 +52,12 @@ int exactGlobal(int value);
 @pybind_lambda
 int globalOmitted(int value);
 
-@pybind_lambda
 int globalHidden(int value);
 
-@pybind_lambda
 int globalOverload(int value);
 double globalOverload(double value);
 
 template<T = {int}>
-@pybind_lambda
 T globalTemplated(T value);
 
 }

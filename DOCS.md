@@ -236,8 +236,8 @@ The python wrapper supports keyword arguments for functions/methods. Hence, the 
 
 ## Pybind Callable Adapters
 
-The Python generator uses direct C++ callable pointers for ordinary wrapper
-declarations. For example:
+The Python generator uses explicit full-signature C++ callable-pointer casts for
+ordinary wrapper declarations. For example:
 
 ```cpp
 class Example {
@@ -248,9 +248,17 @@ class Example {
 int globalFunction(int value);
 ```
 
-generates bindings based on `&Example::size`, `&Example::Create`, and
-`&::globalFunction`. Exact overloads use `py::overload_cast` or an explicit
-function-pointer cast when necessary.
+generates bindings equivalent to:
+
+```cpp
+static_cast<int (Example::*)() const>(&Example::size)
+static_cast<Example (*)()>(&Example::Create)
+static_cast<int (*)(int)>(&::globalFunction)
+```
+
+The return type, argument types, class type, and member constness are always
+part of the cast. This selects an exact overload even when other overloads exist
+in the C++ header but are not listed in the `.i` file.
 
 A wrapper `.i` declaration does not always reproduce the underlying C++
 signature exactly. Add `@pybind_lambda` to one method, static method, or global
@@ -289,15 +297,16 @@ The annotation is useful when the interface intentionally:
 
 - omits underlying C++ parameters that have defaults;
 - accepts values where the C++ function accepts references;
-- exposes one overload while other C++ overloads remain hidden from the `.i`;
 - synthesizes a value-returning container operation such as `at` or `front`;
-- uses a type alias that differs from the callable's declared signature; or
-- adapts an inherited or templated member.
+- uses types that are not equivalent to the callable's declared signature; or
+- otherwise adapts an inherited or templated member's signature.
 
-Do not annotate a callable merely because it is overloaded. Unannotated exact
-overloads should continue to use the generated casts. Likewise, existing
-automatic lambdas for template specializations, renamed bindings, print/repr,
-serialization, and synthesized dunder methods do not need this marker.
+Do not annotate a callable merely because it is overloaded, including when an
+overload exists only in the C++ header. An unannotated `.i` declaration whose
+complete function type matches the desired C++ overload uses the generated
+full-signature cast. Likewise, existing automatic lambdas for template
+specializations, renamed bindings, print/repr, serialization, and synthesized
+dunder methods do not need this marker.
 
 `@pybind_lambda` affects only pybind output. MATLAB generation ignores the
 stored marker. Template instantiation preserves the marker on every instantiated

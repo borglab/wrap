@@ -1,13 +1,13 @@
 ---
 name: annotate-pybind-adapters
-description: Diagnose generated pybind compilation failures caused by wrapper interface signatures that differ from their C++ declarations, then apply the wrap `@pybind_lambda` annotation to only the affected methods, static methods, or global functions. Use for compile-annotate-regenerate migrations after direct callable pointers are introduced, especially for omitted parameters, value/reference differences, hidden overloads, synthetic container accessors, aliases, inheritance, or templates.
+description: Diagnose generated pybind compilation failures caused by wrapper interface signatures that differ from their C++ declarations, then apply the wrap `@pybind_lambda` annotation to only the affected methods, static methods, or global functions. Use for compile-annotate-regenerate migrations with full-signature callable-pointer casts, especially for omitted parameters, value/reference differences, synthetic container accessors, incompatible types, inheritance, or templates.
 ---
 
 # Annotate Pybind Adapters
 
 Use `@pybind_lambda` as an explicit escape hatch when a wrapper declaration is
-an adapter rather than the exact C++ callable signature. Keep direct pointers as
-the default.
+an adapter rather than the exact C++ callable signature. Keep full-signature
+callable-pointer casts as the default.
 
 Read the repository instructions and the `Pybind Callable Adapters` section in
 `DOCS.md` before editing an interface file.
@@ -20,8 +20,8 @@ Read the repository instructions and the `Pybind Callable Adapters` section in
    declaration in the wrapper `.i` file.
 3. Inspect the real C++ header. Do not infer signature equivalence from the `.i`
    file or from generator heuristics.
-4. Confirm that the old forwarding call is valid even though a direct pointer,
-   `py::overload_cast`, or full-signature `static_cast` is not.
+4. Confirm that the old forwarding call is valid even though the generated
+   full-signature `static_cast` does not match the C++ declaration.
 5. Add the marker after any `template<...>` prefix and immediately before that
    callable:
 
@@ -35,7 +35,7 @@ Read the repository instructions and the `Pybind Callable Adapters` section in
    ```
 
 6. Regenerate the binding and verify the annotated declaration emits a lambda
-   while nearby unannotated declarations still emit direct pointers or casts.
+   while nearby unannotated declarations still emit full-signature casts.
 7. Re-run the failing compile target, relevant wrapper tests, and the full test
    suite prescribed by the repository.
 8. Report each annotation and the concrete C++ signature mismatch that requires
@@ -57,15 +57,15 @@ Annotate when the wrapper intentionally differs from C++, including:
 
 - omitted underlying parameters with C++ defaults;
 - wrapper values that bind to C++ references;
-- C++ overloads hidden from the `.i` file;
 - synthetic value-returning interfaces such as `at` or `front` over reference
   returns;
-- type aliases or inherited/template declarations whose pointer signature does
-  not match the wrapper spelling.
+- incompatible types or inherited/template declarations whose pointer signature
+  does not match the wrapper spelling.
 
-Do not annotate merely because a callable is overloaded or templated. The
-generator already handles exact overloads and its existing automatic adapter
-cases.
+Do not annotate merely because a callable is overloaded or templated. A
+full-signature cast selects an exact overload even when other overloads appear
+only in the C++ header. The generator also retains its existing automatic
+template-specialization and adapter cases.
 
 ## Guardrails
 
