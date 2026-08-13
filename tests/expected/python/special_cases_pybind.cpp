@@ -24,6 +24,33 @@ pybind11::arg py_arg(const char* name) {
 }  // namespace internal
 }  // namespace gtwrap
 
+namespace gtwrap {
+namespace internal {
+
+template <typename... Args>
+struct SelectOverload {
+  template <typename Return>
+  static constexpr auto function(Return (*pointer)(Args...))
+      -> decltype(pointer) {
+    return pointer;
+  }
+
+  template <typename Return, typename Class>
+  static constexpr auto method(Return (Class::*pointer)(Args...))
+      -> decltype(pointer) {
+    return pointer;
+  }
+
+  template <typename Return, typename Class>
+  static constexpr auto const_method(Return (Class::*pointer)(Args...) const)
+      -> decltype(pointer) {
+    return pointer;
+  }
+};
+
+}  // namespace internal
+}  // namespace gtwrap
+
 
 
 
@@ -34,15 +61,10 @@ namespace py = pybind11;
 PYBIND11_MODULE(special_cases_py, m_) {
     m_.doc() = "pybind11 wrapper of special_cases_py";
 
-
-    // Named adapters avoid a unique callable type per binding.
-    struct gtwrap_generated_adapters {
-        static void callable_0(gtsam::NonlinearFactorGraph* self, size_t key, const gtsam::PinholeCamera<gtsam::Cal3Bundler>& prior, const std::shared_ptr<gtsam::noiseModel::Base> noiseModel) { self->addPrior<gtsam::PinholeCamera<gtsam::Cal3Bundler>>(key, prior, noiseModel); }
-    };
     pybind11::module m_gtsam = m_.def_submodule("gtsam", "gtsam submodule");
 
     py::class_<gtsam::NonlinearFactorGraph, std::shared_ptr<gtsam::NonlinearFactorGraph>>(m_gtsam, "NonlinearFactorGraph")
-        .def("addPriorPinholeCameraCal3Bundler",&gtwrap_generated_adapters::callable_0, gtwrap::internal::py_arg<size_t>("key"), gtwrap::internal::py_arg<const gtsam::PinholeCamera<gtsam::Cal3Bundler>&>("prior"), gtwrap::internal::py_arg<const std::shared_ptr<gtsam::noiseModel::Base>>("noiseModel"));
+        .def("addPriorPinholeCameraCal3Bundler",gtwrap::internal::SelectOverload<size_t, const gtsam::PinholeCamera<gtsam::Cal3Bundler>&, const std::shared_ptr<gtsam::noiseModel::Base>>::method(&gtsam::NonlinearFactorGraph::addPrior<gtsam::PinholeCamera<gtsam::Cal3Bundler>>), gtwrap::internal::py_arg<size_t>("key"), gtwrap::internal::py_arg<const gtsam::PinholeCamera<gtsam::Cal3Bundler>&>("prior"), gtwrap::internal::py_arg<const std::shared_ptr<gtsam::noiseModel::Base>>("noiseModel"));
 
     py::class_<gtsam::SfmTrack, std::shared_ptr<gtsam::SfmTrack>>(m_gtsam, "SfmTrack")
         .def_readwrite("measurements", &gtsam::SfmTrack::measurements);

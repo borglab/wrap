@@ -210,8 +210,8 @@ PYBIND11_MODULE({module_name}, m_) {{
             content)
         self.assertIn('gtwrap::internal::py_arg<int>("count") = 1', content)
 
-    def test_named_callable_adapters(self):
-        """Ordinary callables bind named forwarding-function pointers."""
+    def test_direct_callable_pointers(self):
+        """Ordinary callables bind direct C++ function/member pointers."""
         source = osp.join(self.INTERFACE_DIR, 'class.i')
         output = self.wrap_content([source], 'class_py',
                                    self.PYTHON_ACTUAL_DIR)
@@ -219,19 +219,25 @@ PYBIND11_MODULE({module_name}, m_) {{
         with open(output, 'r', encoding='UTF-8') as generated:
             content = generated.read()
 
-        self.assertIn('struct gtwrap_generated_adapters', content)
+        self.assertNotIn('struct gtwrap_generated_adapters', content)
         self.assertIn(
-            '.def("return_bool",&gtwrap_generated_adapters::callable_',
+            '.def("return_bool",gtwrap::internal::SelectOverload<bool>::'
+            'const_method(&Test::return_bool)',
             content)
         self.assertIn(
-            '.def("push_back",&gtwrap_generated_adapters::callable_',
+            '.def("push_back",gtwrap::internal::SelectOverload<gtsam::Key>::'
+            'method(&Test::push_back)',
             content)
         self.assertIn(
-            '.def_static("create",&gtwrap_generated_adapters::callable_',
+            '.def_static("create",gtwrap::internal::SelectOverload<>::'
+            'function(&FunRange::create)',
             content)
         self.assertIn(
-            '.def("lambda_",&gtwrap_generated_adapters::callable_', content)
-        self.assertIn('self->templatedMethod<string>(d, t)', content)
+            '.def("lambda_",gtwrap::internal::SelectOverload<>::'
+            'const_method(&Test::lambda)', content)
+        self.assertIn(
+            'SelectOverload<double, string>::method('
+            '&Fun<double>::templatedMethod<string>)', content)
         self.assertIn('.def("print",[](Test* self)', content)
         self.assertIn('.def("__len__",[](FastSet* self)', content)
 
@@ -242,10 +248,12 @@ PYBIND11_MODULE({module_name}, m_) {{
             content = generated.read()
 
         self.assertIn(
-            'm_.def("overloadedGlobalFunction",'
-            '&gtwrap_generated_adapters::callable_', content)
+            'm_.def("overloadedGlobalFunction",gtwrap::internal::'
+            'SelectOverload<int>::function(&::overloadedGlobalFunction)',
+            content)
         self.assertIn(
-            '::MultiTemplatedFunction<string,size_t,double>(x, y)', content)
+            'SelectOverload<const string&, size_t>::function('
+            '&::MultiTemplatedFunction<string,size_t,double>)', content)
 
     def test_callable_adapters_preserve_signature_adaptation(self):
         """Named adapters preserve forwarding behavior and compile."""
@@ -261,6 +269,14 @@ PYBIND11_MODULE({module_name}, m_) {{
             content = generated.read()
 
         self.assertNotIn('[](', content)
+        self.assertIn(
+            'SelectOverload<int>::method(&adapters::Adapter<int>::exact)',
+            content)
+        self.assertIn(
+            'SelectOverload<int>::const_method('
+            '&adapters::Adapter<int>::hiddenOverload)', content)
+        self.assertIn(
+            'SelectOverload<int>::function(&adapters::exactGlobal)', content)
         self.assertIn('self->omittedDefault(value)', content)
         self.assertIn('self->referenceArgument(value)', content)
         self.assertIn('self->adaptedTemplated<double>(value)', content)
@@ -296,8 +312,8 @@ PYBIND11_MODULE({module_name}, m_) {{
                                 check=False)
         self.assertEqual(result.returncode, 0, result.stderr)
 
-    def test_callable_adapter_preserves_docstring(self):
-        """Named adapter bindings retain generated method docstrings."""
+    def test_direct_callable_preserves_docstring(self):
+        """Direct-pointer bindings retain generated method docstrings."""
         wrapper = PybindWrapper(module_name='docstring_py',
                                 top_module_namespaces=[''],
                                 module_template=self.MINIMAL_MODULE_TEMPLATE,
@@ -309,7 +325,8 @@ PYBIND11_MODULE({module_name}, m_) {{
             module_name='docstring_py')
 
         self.assertIn(
-            '.def("value",&gtwrap_generated_adapters::callable_0, '
+            '.def("value",gtwrap::internal::SelectOverload<>::const_method('
+            '&DocClass::value), '
             '"A docstring.")', content)
 
     def test_const_ref_return_policy(self):
@@ -318,7 +335,7 @@ PYBIND11_MODULE({module_name}, m_) {{
         Without this policy, pybind11 defaults to copying the returned reference.
         With the policy, the binding keeps the reference alive via the parent object.
 
-        The named adapter preserves the C++ reference return type, while
+        The member pointer preserves the C++ reference return type, while
         reference_internal keeps the returned reference tied to its parent.
         """
         source = osp.join(self.INTERFACE_DIR, 'class.i')
@@ -329,11 +346,11 @@ PYBIND11_MODULE({module_name}, m_) {{
             content = f.read()
 
         self.assertIn(
-            'std::remove_reference<decltype('
-            'self->return_vector2(value))>::type const&', content)
+            'SelectOverload<const gtsam::Vector&>::const_method('
+            '&Test::return_vector2)', content)
         self.assertIn(
-            'std::remove_reference<decltype('
-            'self->return_matrix2(value))>::type const&', content)
+            'SelectOverload<const gtsam::Matrix&>::const_method('
+            '&Test::return_matrix2)', content)
 
         # Non-ref returns (e.g. return_vector1 which returns by value) should NOT
         lines = content.split('\n')
@@ -353,10 +370,10 @@ PYBIND11_MODULE({module_name}, m_) {{
         for line in content.split('\n'):
             if '.def("return_const_ref"' in line:
                 self.assertIn('reference_internal', line)
-                self.assertIn('&gtwrap_generated_adapters::', line)
+                self.assertIn('SelectOverload<', line)
             if '.def("return_mutable_ref"' in line or '.def("return_value"' in line:
                 self.assertNotIn('reference_internal', line)
-                self.assertIn('&gtwrap_generated_adapters::', line)
+                self.assertIn('SelectOverload<', line)
 
 
 if __name__ == '__main__':

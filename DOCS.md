@@ -227,12 +227,62 @@ The python wrapper supports keyword arguments for functions/methods. Hence, the 
 
 ## Generated Pybind Callables
 
-Ordinary methods, static methods, and global functions are forwarded through
-named static functions in the generated module and bound using function
-pointers. This avoids creating a unique lambda type for every binding while
-preserving the existing wrapper behavior for overload resolution, omitted C++
-default parameters, reference adaptation, template specialization, argument
-policies, docstrings, and return-value policies.
+Ordinary methods, static methods, and global functions are bound as direct C++
+function or member-function pointers. The generator selects the overload using
+the argument types and member constness from the interface while allowing C++
+to deduce the callable's true return type. For example:
+
+```cpp
+class Example {
+  int size() const;
+  static Example Create();
+};
+
+int globalFunction(int value);
+```
+
+generates bindings equivalent to:
+
+```cpp
+gtwrap::internal::SelectOverload<>::const_method(&Example::size)
+gtwrap::internal::SelectOverload<>::function(&Example::Create)
+gtwrap::internal::SelectOverload<int>::function(&::globalFunction)
+```
+
+This selects exact overloads, including function-template specializations,
+without generating a forwarding callable for every binding. Python-visible
+names, default arguments, argument policies, return-value policies, and
+docstrings are appended as before.
+
+A wrapper interface declaration does not always reproduce the underlying C++
+argument list exactly. Add `@pybind_adapter` when it intentionally adapts the
+C++ call:
+
+```cpp
+class Example {
+  @pybind_adapter
+  int lookup(int index) const;
+
+  template<T = {double}>
+  @pybind_adapter
+  T convert(T value) const;
+};
+
+@pybind_adapter
+int globalFunction(int value);
+```
+
+Annotated declarations use a named static forwarding function. Use the marker
+when the interface omits underlying C++ parameters, accepts a type that must be
+converted before the call (such as a value for a C++ reference parameter), or
+otherwise has an argument list or member constness that cannot form a direct
+pointer. Overloading or templating alone does not require an annotation.
+
+Place `@pybind_adapter` after any `template<...>` declaration and immediately
+before the callable. It affects only Pybind generation; MATLAB generation
+ignores it, and template instantiation preserves it. Because wrap does not
+inspect the included C++ AST, the generated C++ compilation is the final check
+that an unannotated interface declaration matches the real callable.
 
 Lambdas are still generated for wrappers that inherently add inline behavior,
 including redirected `print`/`__repr__`, serialization and pickle, and

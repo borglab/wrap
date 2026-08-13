@@ -29,6 +29,33 @@ pybind11::arg py_arg(const char* name) {
 }  // namespace internal
 }  // namespace gtwrap
 
+namespace gtwrap {
+namespace internal {
+
+template <typename... Args>
+struct SelectOverload {
+  template <typename Return>
+  static constexpr auto function(Return (*pointer)(Args...))
+      -> decltype(pointer) {
+    return pointer;
+  }
+
+  template <typename Return, typename Class>
+  static constexpr auto method(Return (Class::*pointer)(Args...))
+      -> decltype(pointer) {
+    return pointer;
+  }
+
+  template <typename Return, typename Class>
+  static constexpr auto const_method(Return (Class::*pointer)(Args...) const)
+      -> decltype(pointer) {
+    return pointer;
+  }
+};
+
+}  // namespace internal
+}  // namespace gtwrap
+
 
 
 
@@ -39,22 +66,6 @@ namespace py = pybind11;
 PYBIND11_MODULE(namespaces_py, m_) {
     m_.doc() = "pybind11 wrapper of namespaces_py";
 
-
-    // Named adapters avoid a unique callable type per binding.
-    struct gtwrap_generated_adapters {
-        static auto callable_0() -> std::decay<decltype(ns1::aGlobalFunction())>::type { return ns1::aGlobalFunction(); }
-        static auto callable_1(ns2::ClassA* self) -> std::decay<decltype(self->memberFunction())>::type { return self->memberFunction(); }
-        static auto callable_2(ns2::ClassA* self, const ns1::ClassB& arg) -> std::decay<decltype(self->nsArg(arg))>::type { return self->nsArg(arg); }
-        static auto callable_3(ns2::ClassA* self, double q) -> std::decay<decltype(self->nsReturn(q))>::type { return self->nsReturn(q); }
-        static auto callable_4() -> std::decay<decltype(ns2::ClassA::afunction())>::type { return ns2::ClassA::afunction(); }
-        static auto callable_5() -> std::decay<decltype(ns2::aGlobalFunction())>::type { return ns2::aGlobalFunction(); }
-        static auto callable_6(const ns1::ClassA& a) -> std::decay<decltype(ns2::overloadedGlobalFunction(a))>::type { return ns2::overloadedGlobalFunction(a); }
-        static auto callable_7(const ns1::ClassA& a, double b) -> std::decay<decltype(ns2::overloadedGlobalFunction(a, b))>::type { return ns2::overloadedGlobalFunction(a, b); }
-        static void callable_8(gtsam::Values* self, size_t j, const gtsam::Vector& vector) { self->insert(j, vector); }
-        static void callable_9(gtsam::Values* self, size_t j, const gtsam::Vector& vector) { self->insert(j, vector); }
-        static void callable_10(gtsam::Values* self, size_t j, const gtsam::Matrix& matrix) { self->insert(j, matrix); }
-        static void callable_11(gtsam::Values* self, size_t j, const gtsam::Matrix& matrix) { self->insert(j, matrix); }
-    };
     pybind11::module m_ns1 = m_.def_submodule("ns1", "ns1 submodule");
 
     py::class_<ns1::ClassA, std::shared_ptr<ns1::ClassA>>(m_ns1, "ClassA")
@@ -63,14 +74,14 @@ PYBIND11_MODULE(namespaces_py, m_) {
     py::class_<ns1::ClassB, std::shared_ptr<ns1::ClassB>>(m_ns1, "ClassB")
         .def(py::init<>());
 
-    m_ns1.def("aGlobalFunction",&gtwrap_generated_adapters::callable_0);    pybind11::module m_ns2 = m_.def_submodule("ns2", "ns2 submodule");
+    m_ns1.def("aGlobalFunction",gtwrap::internal::SelectOverload<>::function(&ns1::aGlobalFunction));    pybind11::module m_ns2 = m_.def_submodule("ns2", "ns2 submodule");
 
     py::class_<ns2::ClassA, std::shared_ptr<ns2::ClassA>>(m_ns2, "ClassA")
         .def(py::init<>())
-        .def("memberFunction",&gtwrap_generated_adapters::callable_1)
-        .def("nsArg",&gtwrap_generated_adapters::callable_2, gtwrap::internal::py_arg<const ns1::ClassB&>("arg"))
-        .def("nsReturn",&gtwrap_generated_adapters::callable_3, gtwrap::internal::py_arg<double>("q"))
-        .def_static("afunction",&gtwrap_generated_adapters::callable_4);
+        .def("memberFunction",gtwrap::internal::SelectOverload<>::method(&ns2::ClassA::memberFunction))
+        .def("nsArg",gtwrap::internal::SelectOverload<const ns1::ClassB&>::method(&ns2::ClassA::nsArg), gtwrap::internal::py_arg<const ns1::ClassB&>("arg"))
+        .def("nsReturn",gtwrap::internal::SelectOverload<double>::method(&ns2::ClassA::nsReturn), gtwrap::internal::py_arg<double>("q"))
+        .def_static("afunction",gtwrap::internal::SelectOverload<>::function(&ns2::ClassA::afunction));
     pybind11::module m_ns2_ns3 = m_ns2.def_submodule("ns3", "ns3 submodule");
 
     py::class_<ns2::ns3::ClassB, std::shared_ptr<ns2::ns3::ClassB>>(m_ns2_ns3, "ClassB")
@@ -80,9 +91,9 @@ PYBIND11_MODULE(namespaces_py, m_) {
         .def(py::init<>());
 
     m_ns2.attr("aNs2Var") = ns2::aNs2Var;
-    m_ns2.def("aGlobalFunction",&gtwrap_generated_adapters::callable_5);
-    m_ns2.def("overloadedGlobalFunction",&gtwrap_generated_adapters::callable_6, gtwrap::internal::py_arg<const ns1::ClassA&>("a"));
-    m_ns2.def("overloadedGlobalFunction",&gtwrap_generated_adapters::callable_7, gtwrap::internal::py_arg<const ns1::ClassA&>("a"), gtwrap::internal::py_arg<double>("b"));
+    m_ns2.def("aGlobalFunction",gtwrap::internal::SelectOverload<>::function(&ns2::aGlobalFunction));
+    m_ns2.def("overloadedGlobalFunction",gtwrap::internal::SelectOverload<const ns1::ClassA&>::function(&ns2::overloadedGlobalFunction), gtwrap::internal::py_arg<const ns1::ClassA&>("a"));
+    m_ns2.def("overloadedGlobalFunction",gtwrap::internal::SelectOverload<const ns1::ClassA&, double>::function(&ns2::overloadedGlobalFunction), gtwrap::internal::py_arg<const ns1::ClassA&>("a"), gtwrap::internal::py_arg<double>("b"));
     py::class_<ClassD, std::shared_ptr<ClassD>>(m_, "ClassD")
         .def(py::init<>());
 
@@ -91,10 +102,10 @@ PYBIND11_MODULE(namespaces_py, m_) {
     py::class_<gtsam::Values, std::shared_ptr<gtsam::Values>>(m_gtsam, "Values")
         .def(py::init<>())
         .def(py::init<const gtsam::Values&>(), gtwrap::internal::py_arg<const gtsam::Values&>("other"))
-        .def("insert_vector",&gtwrap_generated_adapters::callable_8, gtwrap::internal::py_arg<size_t>("j"), gtwrap::internal::py_arg<const gtsam::Vector&>("vector"))
-        .def("insert",&gtwrap_generated_adapters::callable_9, gtwrap::internal::py_arg<size_t>("j"), gtwrap::internal::py_arg<const gtsam::Vector&>("vector"))
-        .def("insert_matrix",&gtwrap_generated_adapters::callable_10, gtwrap::internal::py_arg<size_t>("j"), gtwrap::internal::py_arg<const gtsam::Matrix&>("matrix"))
-        .def("insert",&gtwrap_generated_adapters::callable_11, gtwrap::internal::py_arg<size_t>("j"), gtwrap::internal::py_arg<const gtsam::Matrix&>("matrix"));
+        .def("insert_vector",gtwrap::internal::SelectOverload<size_t, const gtsam::Vector&>::method(&gtsam::Values::insert), gtwrap::internal::py_arg<size_t>("j"), gtwrap::internal::py_arg<const gtsam::Vector&>("vector"))
+        .def("insert",gtwrap::internal::SelectOverload<size_t, const gtsam::Vector&>::method(&gtsam::Values::insert), gtwrap::internal::py_arg<size_t>("j"), gtwrap::internal::py_arg<const gtsam::Vector&>("vector"))
+        .def("insert_matrix",gtwrap::internal::SelectOverload<size_t, const gtsam::Matrix&>::method(&gtsam::Values::insert), gtwrap::internal::py_arg<size_t>("j"), gtwrap::internal::py_arg<const gtsam::Matrix&>("matrix"))
+        .def("insert",gtwrap::internal::SelectOverload<size_t, const gtsam::Matrix&>::method(&gtsam::Values::insert), gtwrap::internal::py_arg<size_t>("j"), gtwrap::internal::py_arg<const gtsam::Matrix&>("matrix"));
 
 
 #include "python/specializations.h"

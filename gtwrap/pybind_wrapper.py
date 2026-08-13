@@ -47,6 +47,35 @@ pybind11::arg py_arg(const char* name) {
 }  // namespace gtwrap
 """
 
+    OVERLOAD_SELECTOR_SUPPORT = """
+namespace gtwrap {
+namespace internal {
+
+template <typename... Args>
+struct SelectOverload {
+  template <typename Return>
+  static constexpr auto function(Return (*pointer)(Args...))
+      -> decltype(pointer) {
+    return pointer;
+  }
+
+  template <typename Return, typename Class>
+  static constexpr auto method(Return (Class::*pointer)(Args...))
+      -> decltype(pointer) {
+    return pointer;
+  }
+
+  template <typename Return, typename Class>
+  static constexpr auto const_method(Return (Class::*pointer)(Args...) const)
+      -> decltype(pointer) {
+    return pointer;
+  }
+};
+
+}  // namespace internal
+}  // namespace gtwrap
+"""
+
     def __init__(self,
                  module_name,
                  top_module_namespaces='',
@@ -60,6 +89,7 @@ pybind11::arg py_arg(const char* name) {
         self.ignore_classes = ignore_classes
         self._serializing_classes = []
         self._callable_adapters = []
+        self._uses_direct_callables = False
         self.module_template = module_template
         self.python_keywords = [
             'lambda', 'False', 'def', 'if', 'raise', 'None', 'del', 'import',
@@ -119,6 +149,23 @@ pybind11::arg py_arg(const char* name) {
             method,
             (parser.StaticMethod, instantiator.InstantiatedStaticMethod))
 
+    def _direct_callable(self,
+                         cpp_target,
+                         args,
+                         is_method=False,
+                         is_const=False):
+        """Select a function overload while deducing its true return type."""
+        self._uses_direct_callables = True
+        cpp_args = ', '.join(args.to_cpp())
+        if not is_method:
+            selector = 'function'
+        elif is_const:
+            selector = 'const_method'
+        else:
+            selector = 'method'
+        return (f'gtwrap::internal::SelectOverload<{cpp_args}>::{selector}'
+                f'({cpp_target})')
+
     def _register_callable_adapter(self,
                                    args_signature,
                                    call_expression,
@@ -155,10 +202,12 @@ pybind11::arg py_arg(const char* name) {
         definitions = '\n'.join(
             f'        {definition}'
             for definition in self._callable_adapters)
-        return ('\n    // Named adapters avoid a unique callable type per binding.\n'
-                '    struct gtwrap_generated_adapters {\n'
-                f'{definitions}\n'
-                '    };\n')
+        return (
+            '\n    // Forwarding adapters are emitted only for signatures that '
+            'intentionally differ from C++.\n'
+            '    struct gtwrap_generated_adapters {\n'
+            f'{definitions}\n'
+            '    };\n')
 
     def wrap_ctors(self, my_class):
         """Wrap the constructors."""
@@ -370,7 +419,7 @@ pybind11::arg py_arg(const char* name) {
                     lambda_ret=lambda_ret,
                     function_call=function_call,
                 ))
-        else:
+        elif method.force_pybind_adapter:
             adapter_signature = (
                 f'{cpp_class}* self' if is_method else '')
             if is_method and args_signature_with_names:
@@ -381,6 +430,15 @@ pybind11::arg py_arg(const char* name) {
                 call_expression,
                 return_void,
                 preserve_reference=bool(lambda_ret),
+            )
+        else:
+            cpp_target = f'&{cpp_class}::{cpp_method}'
+            callable_binding = self._direct_callable(
+                cpp_target,
+                method.args,
+                is_method=not is_static,
+                is_const=is_method
+                and bool(getattr(method, 'is_const', False)),
             )
 
         result = ('{prefix}.{cdef}("{py_method}",{callable_binding}'
@@ -666,13 +724,20 @@ pybind11::arg py_arg(const char* name) {
             args_signature = self._method_args_signature(function.args)
 
             caller = namespace + "::"
-            call_expression = ('{caller}{function_name}({args_names})'.format(
-                caller=caller,
-                function_name=cpp_method,
-                args_names=', '.join(args_names),
-            ))
-            callable_binding = self._register_callable_adapter(
-                args_signature, call_expression, return_void)
+            if function.force_pybind_adapter:
+                call_expression = (
+                    '{caller}{function_name}({args_names})'.format(
+                        caller=caller,
+                        function_name=cpp_method,
+                        args_names=', '.join(args_names),
+                    ))
+                callable_binding = self._register_callable_adapter(
+                    args_signature, call_expression, return_void)
+            else:
+                callable_binding = self._direct_callable(
+                    f'&{caller}{cpp_method}',
+                    function.args,
+                )
 
             ret = ('{prefix}.{cdef}("{function_name}",{callable_binding}'
                    '{py_args_names}){suffix}'.format(
@@ -805,6 +870,7 @@ pybind11::arg py_arg(const char* name) {
             source_name: Name of the interface file for parser diagnostics.
         """
         self._callable_adapters = []
+        self._uses_direct_callables = False
 
         # Parse the contents of the interface file
         module = parser.Module.parse_string(content, source_name=source_name)
@@ -850,6 +916,8 @@ pybind11::arg py_arg(const char* name) {
             submodules = []
 
         includes += self.ARG_POLICY_SUPPORT
+        if self._uses_direct_callables:
+            includes += self.OVERLOAD_SELECTOR_SUPPORT
 
         return self.module_template.format(
             module_def=module_def,
