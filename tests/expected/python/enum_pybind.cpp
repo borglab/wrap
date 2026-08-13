@@ -33,6 +33,15 @@ namespace py = pybind11;
 PYBIND11_MODULE(enum_py, m_) {
     m_.doc() = "pybind11 wrapper of enum_py";
 
+
+    // Named adapters avoid a unique callable type per binding.
+    struct gtwrap_generated_adapters {
+        static void callable_0(Pet* self, const Color& color) { self->setColor(color); }
+        static auto callable_1(Pet* self) -> std::decay<decltype(self->getColor())>::type { return self->getColor(); }
+        static void callable_2(gtsam::Optimizer<gtsam::GaussNewtonParams>* self, const Optimizer<gtsam::GaussNewtonParams>::Verbosity value) { self->setVerbosity(value); }
+        static auto callable_3(gtsam::Optimizer<gtsam::GaussNewtonParams>* self) -> std::decay<decltype(self->getVerbosity())>::type { return self->getVerbosity(); }
+        static auto callable_4(gtsam::Optimizer<gtsam::GaussNewtonParams>* self) -> std::decay<decltype(self->getVerbosity())>::type { return self->getVerbosity(); }
+    };
     py::enum_<Color>(m_, "Color", py::arithmetic())
         .value("Red", Color::Red)
         .value("Green", Color::Green)
@@ -42,8 +51,8 @@ PYBIND11_MODULE(enum_py, m_) {
     py::class_<Pet, std::shared_ptr<Pet>> pet(m_, "Pet");
     pet
         .def(py::init<const string&, Pet::Kind>(), gtwrap::internal::py_arg<const string&>("name"), gtwrap::internal::py_arg<Pet::Kind>("type"))
-        .def("setColor",[](Pet* self, const Color& color){ self->setColor(color);}, gtwrap::internal::py_arg<const Color&>("color"))
-        .def("getColor",[](Pet* self){return self->getColor();})
+        .def("setColor",&gtwrap_generated_adapters::callable_0, gtwrap::internal::py_arg<const Color&>("color"))
+        .def("getColor",&gtwrap_generated_adapters::callable_1)
         .def_readwrite("name", &Pet::name)
         .def_readwrite("type", &Pet::type);
 
@@ -86,9 +95,9 @@ PYBIND11_MODULE(enum_py, m_) {
     py::class_<gtsam::Optimizer<gtsam::GaussNewtonParams>, std::shared_ptr<gtsam::Optimizer<gtsam::GaussNewtonParams>>> optimizergaussnewtonparams(m_gtsam, "OptimizerGaussNewtonParams");
     optimizergaussnewtonparams
         .def(py::init<const Optimizer<gtsam::GaussNewtonParams>::Verbosity&>(), gtwrap::internal::py_arg<const Optimizer<gtsam::GaussNewtonParams>::Verbosity&>("verbosity"))
-        .def("setVerbosity",[](gtsam::Optimizer<gtsam::GaussNewtonParams>* self, const Optimizer<gtsam::GaussNewtonParams>::Verbosity value){ self->setVerbosity(value);}, gtwrap::internal::py_arg<const Optimizer<gtsam::GaussNewtonParams>::Verbosity>("value"))
-        .def("getVerbosity",[](gtsam::Optimizer<gtsam::GaussNewtonParams>* self){return self->getVerbosity();})
-        .def("getVerbosity",[](gtsam::Optimizer<gtsam::GaussNewtonParams>* self){return self->getVerbosity();});
+        .def("setVerbosity",&gtwrap_generated_adapters::callable_2, gtwrap::internal::py_arg<const Optimizer<gtsam::GaussNewtonParams>::Verbosity>("value"))
+        .def("getVerbosity",&gtwrap_generated_adapters::callable_3)
+        .def("getVerbosity",&gtwrap_generated_adapters::callable_4);
 
     py::enum_<gtsam::Optimizer<gtsam::GaussNewtonParams>::Verbosity>(optimizergaussnewtonparams, "Verbosity", py::arithmetic())
         .value("SILENT", gtsam::Optimizer<gtsam::GaussNewtonParams>::Verbosity::SILENT)

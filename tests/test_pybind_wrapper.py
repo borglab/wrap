@@ -9,7 +9,11 @@ Date: February 2019
 import filecmp
 import os
 import os.path as osp
+import shlex
+import shutil
+import subprocess
 import sys
+import sysconfig
 import unittest
 
 sys.path.append(osp.dirname(osp.dirname(osp.abspath(__file__))))
@@ -30,6 +34,18 @@ class TestWrap(unittest.TestCase):
 
     # Create the `actual/python` directory
     os.makedirs(PYTHON_ACTUAL_DIR, exist_ok=True)
+
+    MINIMAL_MODULE_TEMPLATE = """#include <pybind11/pybind11.h>
+
+{includes}
+
+using namespace std;
+namespace py = pybind11;
+
+PYBIND11_MODULE({module_name}, m_) {{
+{wrapped_namespace}
+}}
+"""
 
     def wrap_content(self,
                      sources,
@@ -68,7 +84,7 @@ class TestWrap(unittest.TestCase):
         and assert if diff is zero.
         """
         expected = osp.join(self.PYTHON_TEST_DIR, file)
-        success = filecmp.cmp(actual, expected)
+        success = filecmp.cmp(actual, expected, shallow=False)
 
         if not success:
             os.system(f"diff {actual} {expected}")
@@ -194,16 +210,116 @@ PYBIND11_MODULE({module_name}, m_) {{
             content)
         self.assertIn('gtwrap::internal::py_arg<int>("count") = 1', content)
 
+    def test_named_callable_adapters(self):
+        """Ordinary callables bind named forwarding-function pointers."""
+        source = osp.join(self.INTERFACE_DIR, 'class.i')
+        output = self.wrap_content([source], 'class_py',
+                                   self.PYTHON_ACTUAL_DIR)
+
+        with open(output, 'r', encoding='UTF-8') as generated:
+            content = generated.read()
+
+        self.assertIn('struct gtwrap_generated_adapters', content)
+        self.assertIn(
+            '.def("return_bool",&gtwrap_generated_adapters::callable_',
+            content)
+        self.assertIn(
+            '.def("push_back",&gtwrap_generated_adapters::callable_',
+            content)
+        self.assertIn(
+            '.def_static("create",&gtwrap_generated_adapters::callable_',
+            content)
+        self.assertIn(
+            '.def("lambda_",&gtwrap_generated_adapters::callable_', content)
+        self.assertIn('self->templatedMethod<string>(d, t)', content)
+        self.assertIn('.def("print",[](Test* self)', content)
+        self.assertIn('.def("__len__",[](FastSet* self)', content)
+
+        source = osp.join(self.INTERFACE_DIR, 'functions.i')
+        output = self.wrap_content([source], 'functions_py',
+                                   self.PYTHON_ACTUAL_DIR)
+        with open(output, 'r', encoding='UTF-8') as generated:
+            content = generated.read()
+
+        self.assertIn(
+            'm_.def("overloadedGlobalFunction",'
+            '&gtwrap_generated_adapters::callable_', content)
+        self.assertIn(
+            '::MultiTemplatedFunction<string,size_t,double>(x, y)', content)
+
+    def test_callable_adapters_preserve_signature_adaptation(self):
+        """Named adapters preserve forwarding behavior and compile."""
+        source = osp.join(self.INTERFACE_DIR, 'pybind_callable_adapters.i')
+        output = self.wrap_content(
+            [source],
+            'pybind_callable_adapters_py',
+            self.PYTHON_ACTUAL_DIR,
+            module_template=self.MINIMAL_MODULE_TEMPLATE,
+        )
+
+        with open(output, 'r', encoding='UTF-8') as generated:
+            content = generated.read()
+
+        self.assertNotIn('[](', content)
+        self.assertIn('self->omittedDefault(value)', content)
+        self.assertIn('self->referenceArgument(value)', content)
+        self.assertIn('self->adaptedTemplated<double>(value)', content)
+        self.assertIn('adapters::adaptedGlobalTemplated<int>(value)', content)
+        self.assertIn(
+            'std::remove_reference<decltype(self->lambda(value))>::type '
+            'const&', content)
+        self.assertIn(
+            '.def("omittedDefault",&gtwrap_generated_adapters::callable_',
+            content)
+        self.assertIn('py::return_value_policy::reference_internal', content)
+
+        compiler = shlex.split(os.environ.get('CXX', 'c++'))
+        compiler_path = shutil.which(compiler[0])
+        self.assertIsNotNone(compiler_path,
+                             f"C++ compiler not found: {compiler[0]}")
+        command = [
+            compiler_path,
+            *compiler[1:],
+            '-std=c++11',
+            '-fsyntax-only',
+            output,
+            '-I',
+            osp.join(self.TEST_DIR, '..', 'pybind11', 'include'),
+            '-I',
+            sysconfig.get_paths()['include'],
+            '-I',
+            self.INTERFACE_DIR,
+        ]
+        result = subprocess.run(command,
+                                capture_output=True,
+                                text=True,
+                                check=False)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_callable_adapter_preserves_docstring(self):
+        """Named adapter bindings retain generated method docstrings."""
+        wrapper = PybindWrapper(module_name='docstring_py',
+                                top_module_namespaces=[''],
+                                module_template=self.MINIMAL_MODULE_TEMPLATE,
+                                xml_source='unused')
+        wrapper.xml_parser.extract_docstring = lambda *args: 'A docstring.'
+
+        content = wrapper.wrap_file(
+            'class DocClass { int value() const; };',
+            module_name='docstring_py')
+
+        self.assertIn(
+            '.def("value",&gtwrap_generated_adapters::callable_0, '
+            '"A docstring.")', content)
+
     def test_const_ref_return_policy(self):
         """Test that methods returning const T& emit reference_internal policy.
 
         Without this policy, pybind11 defaults to copying the returned reference.
         With the policy, the binding keeps the reference alive via the parent object.
 
-        Expected emitted code difference:
-          Before: [](Cls* self, ...){return self->method(...);}, py::arg(...))
-          After:  [](Cls* self, ...) -> const auto&{return self->method(...);},
-                  py::return_value_policy::reference_internal, py::arg(...))
+        The named adapter preserves the C++ reference return type, while
+        reference_internal keeps the returned reference tied to its parent.
         """
         source = osp.join(self.INTERFACE_DIR, 'class.i')
         output = self.wrap_content([source], 'class_py',
@@ -212,22 +328,20 @@ PYBIND11_MODULE({module_name}, m_) {{
         with open(output, 'r') as f:
             content = f.read()
 
-        # const Vector& return_vector2 should have reference_internal
-        self.assertIn('-> const auto&{return self->return_vector2', content)
-        self.assertIn('py::return_value_policy::reference_internal', content)
-
-        # const Matrix& return_matrix2 should also have reference_internal
-        self.assertIn('-> const auto&{return self->return_matrix2', content)
+        self.assertIn(
+            'std::remove_reference<decltype('
+            'self->return_vector2(value))>::type const&', content)
+        self.assertIn(
+            'std::remove_reference<decltype('
+            'self->return_matrix2(value))>::type const&', content)
 
         # Non-ref returns (e.g. return_vector1 which returns by value) should NOT
         lines = content.split('\n')
         for line in lines:
             if 'return_vector1' in line:
                 self.assertNotIn('reference_internal', line)
-                self.assertNotIn('-> const auto&', line)
             if 'return_matrix1' in line:
                 self.assertNotIn('reference_internal', line)
-                self.assertNotIn('-> const auto&', line)
 
         source = osp.join(self.INTERFACE_DIR, 'return_policies.i')
         output = self.wrap_content([source], 'return_policies_py',
@@ -237,12 +351,12 @@ PYBIND11_MODULE({module_name}, m_) {{
             content = f.read()
 
         for line in content.split('\n'):
-            if 'return_const_ref' in line:
+            if '.def("return_const_ref"' in line:
                 self.assertIn('reference_internal', line)
-                self.assertIn('-> const auto&', line)
+                self.assertIn('&gtwrap_generated_adapters::', line)
             if '.def("return_mutable_ref"' in line or '.def("return_value"' in line:
                 self.assertNotIn('reference_internal', line)
-                self.assertNotIn('-> const auto&', line)
+                self.assertIn('&gtwrap_generated_adapters::', line)
 
 
 if __name__ == '__main__':

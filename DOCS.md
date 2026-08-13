@@ -225,6 +225,19 @@ The python wrapper supports keyword arguments for functions/methods. Hence, the 
     - Unfortunately, this means that aliases can no longer be used.
     - Similarly, there can be multiple `preamble.h` and `specializations.h` files. Each of these should match the module file name.
 
+## Generated Pybind Callables
+
+Ordinary methods, static methods, and global functions are forwarded through
+named static functions in the generated module and bound using function
+pointers. This avoids creating a unique lambda type for every binding while
+preserving the existing wrapper behavior for overload resolution, omitted C++
+default parameters, reference adaptation, template specialization, argument
+policies, docstrings, and return-value policies.
+
+Lambdas are still generated for wrappers that inherently add inline behavior,
+including redirected `print`/`__repr__`, serialization and pickle, and
+synthesized dunder methods.
+
 ### TODO
 - Handle `gtsam::Rot3M` conversions to quaternions.
 - Parse return of const ref arguments.

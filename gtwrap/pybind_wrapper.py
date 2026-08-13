@@ -59,6 +59,7 @@ pybind11::arg py_arg(const char* name) {
         self.use_boost_serialization = use_boost_serialization
         self.ignore_classes = ignore_classes
         self._serializing_classes = []
+        self._callable_adapters = []
         self.module_template = module_template
         self.python_keywords = [
             'lambda', 'False', 'def', 'if', 'raise', 'None', 'del', 'import',
@@ -110,6 +111,54 @@ pybind11::arg py_arg(const char* name) {
         ]
 
         return ', '.join(types_names)
+
+    @staticmethod
+    def _is_static_method(method):
+        """Return whether ``method`` is a static class method."""
+        return isinstance(
+            method,
+            (parser.StaticMethod, instantiator.InstantiatedStaticMethod))
+
+    def _register_callable_adapter(self,
+                                   args_signature,
+                                   call_expression,
+                                   return_void,
+                                   preserve_reference=False):
+        """Create a named forwarding function and return its function pointer.
+
+        Decaying the deduced result matches a lambda's default return
+        deduction. Const-reference returns opt out of the decay so Pybind can
+        apply ``reference_internal`` exactly as before.
+        """
+        name = f'callable_{len(self._callable_adapters)}'
+        if return_void:
+            definition = (f'static void {name}({args_signature}) '
+                          f'{{ {call_expression}; }}')
+        else:
+            if preserve_reference:
+                result_type = (
+                    f'std::remove_reference<decltype({call_expression})>::type '
+                    'const&')
+            else:
+                result_type = f'std::decay<decltype({call_expression})>::type'
+            definition = (f'static auto {name}({args_signature}) -> '
+                          f'{result_type} {{ return {call_expression}; }}')
+
+        self._callable_adapters.append(definition)
+        return f'&gtwrap_generated_adapters::{name}'
+
+    def _render_callable_adapters(self):
+        """Render registered adapters as static functions on a local struct."""
+        if not self._callable_adapters:
+            return ''
+
+        definitions = '\n'.join(
+            f'        {definition}'
+            for definition in self._callable_adapters)
+        return ('\n    // Named adapters avoid a unique callable type per binding.\n'
+                '    struct gtwrap_generated_adapters {\n'
+                f'{definitions}\n'
+                '    };\n')
 
     def wrap_ctors(self, my_class):
         """Wrap the constructors."""
@@ -270,9 +319,7 @@ pybind11::arg py_arg(const char* name) {
 
         is_method = isinstance(
             method, (parser.Method, instantiator.InstantiatedMethod))
-        is_static = isinstance(
-            method,
-            (parser.StaticMethod, instantiator.InstantiatedStaticMethod))
+        is_static = self._is_static_method(method)
         return_void = method.return_type.is_void()
         return_type = getattr(method.return_type, 'type1', None)
         return_ref = getattr(return_type, 'is_ref', False)
@@ -287,44 +334,66 @@ pybind11::arg py_arg(const char* name) {
             lambda_ret = ''
             ref_policy = ''
 
-        caller = cpp_class + "::" if not is_method else "self->"
-        function_call = ('{opt_return} {caller}{method_name}'
-                         '({args_names});'.format(
-                             opt_return='return' if not return_void else '',
-                             caller=caller,
-                             method_name=cpp_method,
-                             args_names=', '.join(args_names),
-                         ))
+        # Try to get the function's docstring from the Doxygen XML.
+        # If extract_docstring errors or fails to find a docstring, it just prints a warning.
+        # The incantation repr(...)[1:-1].replace('"', r'\"') replaces newlines with \n
+        # and " with \" so that the docstring can be put into a C++ string on a single line.
+        docstring = (', "' + repr(
+            self.xml_parser.extract_docstring(
+                self.xml_source, cpp_class, cpp_method,
+                method.args.names()))[1:-1].replace('"', r'\"') + '"'
+                     if self.xml_source != "" else "")
 
-        result = (
-            '{prefix}.{cdef}("{py_method}",'
-            '[]({opt_self}{opt_comma}{args_signature_with_names}){lambda_ret}{{'
-            '{function_call}'
-            '}}'
-            '{ref_policy}{py_args_names}{docstring}){suffix}'.format(
-                prefix=prefix,
-                cdef="def_static" if is_static else "def",
-                py_method=py_method,
-                opt_self="{cpp_class}* self".format(
-                    cpp_class=cpp_class) if is_method else "",
-                opt_comma=', '
-                if is_method and args_signature_with_names else '',
-                args_signature_with_names=args_signature_with_names,
-                lambda_ret=lambda_ret,
-                function_call=function_call,
-                ref_policy=ref_policy,
-                py_args_names=py_args_names,
-                suffix=suffix,
-                # Try to get the function's docstring from the Doxygen XML.
-                # If extract_docstring errors or fails to find a docstring, it just prints a warning.
-                # The incantation repr(...)[1:-1].replace('"', r'\"') replaces newlines with \n
-                # and " with \" so that the docstring can be put into a C++ string on a single line.
-                docstring=', "' + repr(
-                    self.xml_parser.extract_docstring(
-                        self.xml_source, cpp_class, cpp_method,
-                        method.args.names()))[1:-1].replace('"', r'\"') +
-                '"' if self.xml_source != "" else "",
-            ))
+        caller = cpp_class + "::" if not is_method else "self->"
+        call_expression = ('{caller}{method_name}({args_names})'.format(
+            caller=caller,
+            method_name=cpp_method,
+            args_names=', '.join(args_names),
+        ))
+
+        if method.name == 'print':
+            function_call = ('{opt_return} {caller}{method_name}'
+                             '({args_names});'.format(
+                                 opt_return='return'
+                                 if not return_void else '',
+                                 caller=caller,
+                                 method_name=cpp_method,
+                                 args_names=', '.join(args_names),
+                             ))
+            callable_binding = (
+                '[]({opt_self}{opt_comma}{args_signature_with_names})'
+                '{lambda_ret}{{{function_call}}}'.format(
+                    opt_self=f'{cpp_class}* self' if is_method else '',
+                    opt_comma=', '
+                    if is_method and args_signature_with_names else '',
+                    args_signature_with_names=args_signature_with_names,
+                    lambda_ret=lambda_ret,
+                    function_call=function_call,
+                ))
+        else:
+            adapter_signature = (
+                f'{cpp_class}* self' if is_method else '')
+            if is_method and args_signature_with_names:
+                adapter_signature += ', '
+            adapter_signature += args_signature_with_names
+            callable_binding = self._register_callable_adapter(
+                adapter_signature,
+                call_expression,
+                return_void,
+                preserve_reference=bool(lambda_ret),
+            )
+
+        result = ('{prefix}.{cdef}("{py_method}",{callable_binding}'
+                  '{ref_policy}{py_args_names}{docstring}){suffix}'.format(
+                      prefix=prefix,
+                      cdef="def_static" if is_static else "def",
+                      py_method=py_method,
+                      callable_binding=callable_binding,
+                      ref_policy=ref_policy,
+                      py_args_names=py_args_names,
+                      docstring=docstring,
+                      suffix=suffix,
+                  ))
 
         # Create __repr__ override
         # We allow all arguments to .print() and let the compiler handle type mismatches.
@@ -597,25 +666,20 @@ pybind11::arg py_arg(const char* name) {
             args_signature = self._method_args_signature(function.args)
 
             caller = namespace + "::"
-            function_call = ('{opt_return} {caller}{function_name}'
-                             '({args_names});'.format(
-                                 opt_return='return'
-                                 if not return_void else '',
-                                 caller=caller,
-                                 function_name=cpp_method,
-                                 args_names=', '.join(args_names),
-                             ))
+            call_expression = ('{caller}{function_name}({args_names})'.format(
+                caller=caller,
+                function_name=cpp_method,
+                args_names=', '.join(args_names),
+            ))
+            callable_binding = self._register_callable_adapter(
+                args_signature, call_expression, return_void)
 
-            ret = ('{prefix}.{cdef}("{function_name}",'
-                   '[]({args_signature}){{'
-                   '{function_call}'
-                   '}}'
+            ret = ('{prefix}.{cdef}("{function_name}",{callable_binding}'
                    '{py_args_names}){suffix}'.format(
                        prefix=prefix,
                        cdef="def_static" if is_static else "def",
                        function_name=function_name,
-                       args_signature=args_signature,
-                       function_call=function_call,
+                       callable_binding=callable_binding,
                        py_args_names=py_args_names,
                        suffix=suffix))
 
@@ -740,12 +804,16 @@ pybind11::arg py_arg(const char* name) {
             submodules: List of other interface file names that should be linked to.
             source_name: Name of the interface file for parser diagnostics.
         """
+        self._callable_adapters = []
+
         # Parse the contents of the interface file
         module = parser.Module.parse_string(content, source_name=source_name)
         # Instantiate all templates
         module = instantiator.instantiate_namespace(module)
 
         wrapped_namespace, includes = self.wrap_namespace(module)
+        wrapped_namespace = (self._render_callable_adapters() +
+                             wrapped_namespace)
 
         if self.use_boost_serialization:
             includes += "#include <boost/serialization/export.hpp>"
