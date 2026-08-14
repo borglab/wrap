@@ -90,6 +90,18 @@ class CheckMixin:
                 and len(arg_type.template_params) == 1
                 and arg_type.template_params[0].typename.name
                 in self.eigen_ref_types)
+
+    def is_jacobian_output(self, arg_type) -> bool:
+        """Return whether an argument is a MATLAB Jacobian output.
+
+        GTSAM's modern C++ APIs use ``OptionalJacobian<Rows, Cols>`` while
+        older wrapper interfaces spell the same output as
+        ``Eigen::Ref<Eigen::MatrixXd>``. Neither form consumes a MATLAB input;
+        the MEX wrapper allocates a matrix, passes it to C++, and returns it as
+        an additional output.
+        """
+        return (self.is_eigen_ref(arg_type)
+                or arg_type.typename.name == 'OptionalJacobian')
     
     def is_class_enum(self, arg_type: parser.Type, class_: parser.Class):
         """Check if arg_type is an enum in the class `class_`."""

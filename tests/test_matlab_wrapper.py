@@ -197,6 +197,63 @@ class TestWrap(unittest.TestCase):
         self.assertIn('gtsam::Pose3::Expmap(xi,Hxi)', cpp_content)
         self.assertIn('out[1] = wrap< Eigen::MatrixXd >(Hxi);', cpp_content)
         self.assertIn('checkArguments("gtsam::Pose3.Expmap",nargout,nargin,1);', cpp_content)
+
+    def test_optional_jacobians(self):
+        """OptionalJacobian defaults become optional MATLAB outputs."""
+        file = osp.join(self.INTERFACE_DIR, 'optional_jacobian.i')
+
+        wrapper = MatlabWrapper(module_name='optional_jacobian',
+                                top_module_namespace=['gtsam'],
+                                ignore_classes=[''])
+
+        wrapper.wrap([file], path=self.MATLAB_ACTUAL_DIR)
+
+        cpp_file = osp.join(self.MATLAB_ACTUAL_DIR,
+                            'optional_jacobian_wrapper.cpp')
+        with open(cpp_file, 'r', encoding='UTF-8') as f:
+            cpp_content = f.read()
+
+        m_file = osp.join(self.MATLAB_ACTUAL_DIR, '+gtsam', 'Pose3.m')
+        with open(m_file, 'r', encoding='UTF-8') as f:
+            matlab_content = f.read()
+
+        self.assertNotIn('gtsam.OptionalJacobian', matlab_content)
+        self.assertNotIn('unwrap_shared_ptr< gtsam::OptionalJacobian',
+                         cpp_content)
+
+        # Default expansion supports result-only, one-Jacobian, and
+        # two-Jacobian calls, selected through nargout.
+        self.assertIn(
+            "length(varargin) == 1 && isa(varargin{1},'double')"
+            " && size(varargin{1},1)==3 && size(varargin{1},2)==1"
+            " && nargout == 3",
+            matlab_content)
+        self.assertIn(
+            "length(varargin) == 1 && isa(varargin{1},'double')"
+            " && size(varargin{1},1)==3 && size(varargin{1},2)==1"
+            " && nargout == 2",
+            matlab_content)
+        self.assertIn('Eigen::MatrixXd Hself = Eigen::MatrixXd();',
+                      cpp_content)
+        self.assertIn('Eigen::MatrixXd Hpoint = Eigen::MatrixXd();',
+                      cpp_content)
+        self.assertIn('obj->transformFrom(point,Hself,Hpoint)', cpp_content)
+        self.assertIn('obj->transformFrom(point,Hself,nullptr)', cpp_content)
+        self.assertIn('obj->transformFrom(point,nullptr,nullptr)', cpp_content)
+        self.assertIn('out[1] = wrap< Eigen::MatrixXd >(Hself);', cpp_content)
+        self.assertIn('out[2] = wrap< Eigen::MatrixXd >(Hpoint);', cpp_content)
+
+        # Instance and static methods with one Jacobian keep their ordinary
+        # Python-style/default-free MATLAB input arity.
+        self.assertIn('length(varargin) == 0 && nargout == 2', matlab_content)
+        self.assertIn('obj->inverse(H)', cpp_content)
+        self.assertIn('obj->inverse(nullptr)', cpp_content)
+        self.assertIn(
+            "length(varargin) == 1 && isa(varargin{1},'double')"
+            " && size(varargin{1},2)==1 && nargout == 2",
+            matlab_content)
+        self.assertIn('gtsam::Pose3::Expmap(xi,Hxi)', cpp_content)
+        self.assertIn('gtsam::Pose3::Expmap(xi,nullptr)', cpp_content)
         
     def test_functions(self):
         """Test interface file with function info."""

@@ -303,16 +303,16 @@ class MatlabWrapper(CheckMixin, FormatMixin):
         """
         arg_id = 1
 
-        # Eigen Ref args are output arguments, not inputs — exclude from count.
-        eigen_ref_count = sum(1 for arg in args.list()
-                              if self.is_eigen_ref(arg.ctype))
-        param_count = len(args) - eigen_ref_count
+        # Jacobian args are output arguments, not inputs — exclude from count.
+        jacobian_count = sum(1 for arg in args.list()
+                             if self.is_jacobian_output(arg.ctype))
+        param_count = len(args) - jacobian_count
         check_statement = 'if length(varargin) == {param_count}'.format(
             param_count=param_count)
 
         for _, arg in enumerate(args.list()):
-            # Eigen Ref args are outputs — skip isa() check entirely.
-            if self.is_eigen_ref(arg.ctype):
+            # Jacobian args are outputs — skip isa() check entirely.
+            if self.is_jacobian_output(arg.ctype):
                 continue
 
             name = arg.ctype.typename.name
@@ -349,10 +349,10 @@ class MatlabWrapper(CheckMixin, FormatMixin):
 
             arg_id += 1
 
-        # If there are Ref output args, require nargout to match.
-        if eigen_ref_count > 0:
+        # If there are Jacobian output args, require nargout to match.
+        if jacobian_count > 0:
             check_statement += ' && nargout == {n}'.format(
-                n=eigen_ref_count + 1)
+                n=jacobian_count + 1)
 
         check_statement = check_statement \
             if check_statement == '' \
@@ -375,9 +375,10 @@ class MatlabWrapper(CheckMixin, FormatMixin):
             unwrap = 'unwrapMatrixView< {ctype} >(in[{id}]);'.format(
                 ctype=arg_type, id=arg_id)
 
-        elif self.is_eigen_ref(arg.ctype):
-            # Ref<MatrixXd> is a Jacobian output arg — allocate locally,
-            # do not consume from in[]. Returned via out[] after the call.
+        elif self.is_jacobian_output(arg.ctype):
+            # Jacobians are output args — allocate locally, do not consume
+            # from in[]. Returned via out[] after the call. OptionalJacobian
+            # resizes the dynamic matrix to its compile-time dimensions.
             arg_type = "Eigen::MatrixXd"
             unwrap = 'Eigen::MatrixXd();'
 
@@ -430,8 +431,8 @@ class MatlabWrapper(CheckMixin, FormatMixin):
                     '''.format(arg_type=arg_type, name=arg.name,
                                unwrap=unwrap)),
                                          prefix='  ')
-            # Eigen Ref args don't consume an in[] slot — don't advance arg_id.
-            if not self.is_eigen_ref(arg.ctype):
+            # Jacobian args don't consume an in[] slot — don't advance arg_id.
+            if not self.is_jacobian_output(arg.ctype):
                 arg_id += 1
 
         params = ''
@@ -446,7 +447,7 @@ class MatlabWrapper(CheckMixin, FormatMixin):
                 params += arg.default
                 continue
 
-            if not self.is_eigen_ref(arg.ctype) and \
+            if not self.is_jacobian_output(arg.ctype) and \
                     not self.is_ref(arg.ctype) and (self.is_shared_ptr(arg.ctype) or \
                 self.is_ptr(arg.ctype) or self.can_be_pointer(arg.ctype)) and \
                     not self.is_enum(arg.ctype, instantiated_class) and \
@@ -1389,9 +1390,11 @@ class MatlabWrapper(CheckMixin, FormatMixin):
 
         params = self._wrapper_unwrap_arguments(
             method.args, arg_id=1, instantiated_class=instantiated_class)[0]
-        # Capture Ref output args before method may be reassigned to a string below.
-        eigen_ref_args = [arg for arg in method.args.backup.list()
-                          if self.is_eigen_ref(arg.ctype)]
+        # Capture output args before method may be reassigned to a string below.
+        # Use the expanded argument list: omitted default Jacobians should not
+        # be allocated or returned by this overload.
+        jacobian_args = [arg for arg in method.args.list()
+                         if self.is_jacobian_output(arg.ctype)]
 
         return_1 = method.return_type.type1
         return_count = self._return_count(method.return_type)
@@ -1430,10 +1433,10 @@ class MatlabWrapper(CheckMixin, FormatMixin):
                 expanded += self._collector_return(
                     obj, return_1, instantiated_class=instantiated_class)
                 
-                # Write any Eigen Ref (Jacobian) output args to out[1], out[2], ...
-                for i, ref_arg in enumerate(eigen_ref_args):
+                # Write Jacobian output args to out[1], out[2], ...
+                for i, jacobian_arg in enumerate(jacobian_args):
                     expanded += '\n  out[{i}] = wrap< Eigen::MatrixXd >({name});'.format(
-                        i=i + 1, name=ref_arg.name)
+                        i=i + 1, name=jacobian_arg.name)
 
             elif return_count == 2:
                 return_2 = method.return_type.type2
@@ -1602,7 +1605,7 @@ class MatlabWrapper(CheckMixin, FormatMixin):
                     shared_obj=shared_obj,
                     method_name=method_name,
                     num_args=len([a for a in extra.args.list()
-                                  if not self.is_eigen_ref(a.ctype)]),
+                                  if not self.is_jacobian_output(a.ctype)]),
                     body_args=body_args,
                     return_body=return_body)
 
