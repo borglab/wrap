@@ -55,6 +55,34 @@ def instantiate_type(
     # make a deep copy so that there is no overwriting of original template params
     ctype = deepcopy(ctype)
 
+    # Instantiate scoped nested template arguments as well. This is needed for
+    # types such as OptionalJacobian<2, CALIBRATION::dimension>, where the
+    # scoped template parameter is not the outer type itself. Preserve the
+    # existing treatment of ordinary nested type parameters.
+    if isinstance(ctype, parser.TemplatedType):
+        for idx, param in enumerate(ctype.template_params):
+            param_typename = str(param.typename)
+            scoped_template, _ = is_scoped_template(template_typenames,
+                                                     param_typename)
+            if ((scoped_template or 'This' in param_typename)
+                    and param.typename.name == 'dimension'):
+                if 'This' in param.typename.namespaces:
+                    instantiated_param = deepcopy(param)
+                    namespace_idx = instantiated_param.typename.namespaces.index(
+                        'This')
+                    instantiated_param.typename.namespaces = (
+                        instantiated_param.typename.namespaces[:namespace_idx]
+                        + cpp_typename.namespaces
+                        + [cpp_typename.name]
+                        + instantiated_param.typename.namespaces[namespace_idx + 1:]
+                    )
+                else:
+                    instantiated_param = instantiate_type(
+                        param, template_typenames, instantiations,
+                        cpp_typename, instantiated_class)
+                ctype.template_params[idx] = instantiated_param
+                ctype.typename.instantiations[idx] = instantiated_param.typename
+
     # Check if the return type has template parameters as the typename's name
     if ctype.typename.instantiations:
         for idx, instantiation in enumerate(ctype.typename.instantiations):

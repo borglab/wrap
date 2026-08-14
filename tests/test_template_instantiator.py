@@ -489,6 +489,29 @@ class TestTemplateInstantiator(unittest.TestCase):
         self.assertEqual(new_typename.name, "double")
         self.assertEqual(new_typename.instantiated_name(), "double")
 
+    def test_instantiate_nested_scoped_template_type(self):
+        """Scoped dimensions inside templated types are instantiated."""
+        calibration = Typename.rule.parse_string("gtsam::Cal3_S2")[0]
+        camera = Typename(
+            name="PinholeCamera<gtsam::Cal3_S2>", namespaces=["gtsam"])
+
+        calibration_arg = Argument.rule.parse_string(
+            "gtsam::OptionalJacobian<2, CALIBRATION::dimension> H")[0]
+        calibration_type = instantiate_type(
+            calibration_arg.ctype, ["CALIBRATION"], [calibration], camera)
+        self.assertEqual(
+            calibration_type.to_cpp(),
+            "gtsam::OptionalJacobian<2, gtsam::Cal3_S2::dimension>")
+
+        camera_arg = Argument.rule.parse_string(
+            "gtsam::OptionalJacobian<1, This::dimension> H")[0]
+        camera_type = instantiate_type(camera_arg.ctype, ["CALIBRATION"],
+                                       [calibration], camera)
+        self.assertEqual(
+            camera_type.to_cpp(),
+            "gtsam::OptionalJacobian<1, "
+            "gtsam::PinholeCamera<gtsam::Cal3_S2>::dimension>")
+
     def test_instantiate_args_list(self):
         """Test for instantiate_args_list."""
         args = ArgumentList.rule.parse_string("T x, double y, string z")[0]
