@@ -124,6 +124,18 @@ class Foo {
         )
         self.assertIn("immediately before the callable", error.hint)
 
+        error = self.assert_parse_error(
+            "class Foo { @pybind_select Foo(); };",
+            line=1,
+            column=13,
+            context="callable annotation",
+            expected=(
+                "annotation '@pybind_select' can only be applied to a method, "
+                "static method, or global function"
+            ),
+        )
+        self.assertIn("@pybind_select", error.hint)
+
     def test_misplaced_annotation_after_template(self):
         self.assert_parse_error(
             "class Foo { template<T> @pybind_adapter Foo(T value); };",

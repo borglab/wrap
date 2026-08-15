@@ -15,7 +15,7 @@ from typing import Any, Iterable, List, Union
 from pyparsing import ZeroOrMore  # type: ignore
 from pyparsing import Literal, Optional, Word, alphas
 
-from .annotations import (PYBIND_ADAPTER, UNSUPPORTED_ANNOTATION,
+from .annotations import (PYBIND_ADAPTER, PYBIND_SELECT, UNSUPPORTED_ANNOTATION,
                           UNSUPPORTED_TEMPLATED_ANNOTATION)
 from .enum import Enum
 from .function import ArgumentList, ReturnType
@@ -41,7 +41,8 @@ class Method:
     """
     rule = (
         Optional(Template.rule("template"))  #
-        + Optional(PYBIND_ADAPTER("pybind_adapter"))  #
+        + Optional(PYBIND_ADAPTER("pybind_adapter")
+                   | PYBIND_SELECT("pybind_select"))  #
         + ReturnType.rule("return_type")  #
         + IDENT("name")  #
         + LPAREN  #
@@ -56,6 +57,7 @@ class Method:
         t.args_list,
         t.is_const,
         force_pybind_adapter=bool(t.pybind_adapter),
+        force_pybind_select=bool(t.pybind_select),
     ))
 
     def __init__(self,
@@ -65,13 +67,15 @@ class Method:
                  args: ArgumentList,
                  is_const: str,
                  parent: Union["Class", Any] = '',
-                 force_pybind_adapter: bool = False):
+                 force_pybind_adapter: bool = False,
+                 force_pybind_select: bool = False):
         self.template = template
         self.name = name
         self.return_type = return_type
         self.args = args
         self.is_const = is_const
         self.force_pybind_adapter = force_pybind_adapter
+        self.force_pybind_select = force_pybind_select
 
         self.parent = parent
 
@@ -102,7 +106,8 @@ class StaticMethod:
     """
     rule = (
         Optional(Template.rule("template"))  #
-        + Optional(PYBIND_ADAPTER("pybind_adapter"))  #
+        + Optional(PYBIND_ADAPTER("pybind_adapter")
+                   | PYBIND_SELECT("pybind_select"))  #
         + STATIC  #
         + ReturnType.rule("return_type")  #
         + IDENT("name")  #
@@ -116,6 +121,7 @@ class StaticMethod:
         t.args_list,
         t.template,
         force_pybind_adapter=bool(t.pybind_adapter),
+        force_pybind_select=bool(t.pybind_select),
     ))
 
     def __init__(self,
@@ -124,12 +130,14 @@ class StaticMethod:
                  args: ArgumentList,
                  template: Union[Template, Any] = None,
                  parent: Union["Class", Any] = '',
-                 force_pybind_adapter: bool = False):
+                 force_pybind_adapter: bool = False,
+                 force_pybind_select: bool = False):
         self.name = name
         self.return_type = return_type
         self.args = args
         self.template = template
         self.force_pybind_adapter = force_pybind_adapter
+        self.force_pybind_select = force_pybind_select
 
         self.parent = parent
 

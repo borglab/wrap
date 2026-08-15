@@ -277,6 +277,16 @@ PYBIND11_MODULE({module_name}, m_) {{
             '&adapters::Adapter<int>::hiddenOverload)', content)
         self.assertIn(
             'SelectOverload<int>::function(&adapters::exactGlobal)', content)
+        self.assertIn(
+            'SelectOverload<int, double>::const_method<double, '
+            'adapters::Adapter<int>>(&adapters::Adapter<int>::selected)',
+            content)
+        self.assertIn(
+            'SelectOverload<int, double>::function<double>('
+            '&adapters::Adapter<int>::selectedStatic)', content)
+        self.assertIn(
+            'SelectOverload<int, double>::function<double>('
+            '&adapters::selectedGlobal)', content)
         self.assertIn('self->omittedDefault(value)', content)
         self.assertIn('self->referenceArgument(value)', content)
         self.assertIn('self->adaptedTemplated<double>(value)', content)

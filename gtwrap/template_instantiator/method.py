@@ -36,7 +36,8 @@ class InstantiatedMethod(parser.Method):
                          self.args,
                          self.is_const,
                          parent=self.parent,
-                         force_pybind_adapter=original.force_pybind_adapter)
+                         force_pybind_adapter=original.force_pybind_adapter,
+                         force_pybind_select=original.force_pybind_select)
 
     @classmethod
     def construct(cls, original, typenames, class_instantiations,
@@ -53,6 +54,7 @@ class InstantiatedMethod(parser.Method):
             is_const=original.is_const,
             parent=parent,
             force_pybind_adapter=original.force_pybind_adapter,
+            force_pybind_select=original.force_pybind_select,
         )
         return InstantiatedMethod(method, instantiations=method_instantiations)
 
@@ -90,7 +92,8 @@ class InstantiatedStaticMethod(parser.StaticMethod):
 
         super().__init__(self.name, self.return_type, self.args, self.template,
                          self.parent,
-                         force_pybind_adapter=original.force_pybind_adapter)
+                         force_pybind_adapter=original.force_pybind_adapter,
+                         force_pybind_select=original.force_pybind_select)
 
     @classmethod
     def construct(cls, original, typenames, class_instantiations,
@@ -108,6 +111,7 @@ class InstantiatedStaticMethod(parser.StaticMethod):
             template=original.template,
             parent=parent,
             force_pybind_adapter=original.force_pybind_adapter,
+            force_pybind_select=original.force_pybind_select,
         )
         return InstantiatedStaticMethod(method,
                                         instantiations=method_instantiations)

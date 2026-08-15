@@ -668,6 +668,27 @@ class TestTemplateInstantiator(unittest.TestCase):
             if isinstance(item, Class) and item.name == "IntAdapter")
         self.assertTrue(typedef_class.methods[0].force_pybind_adapter)
 
+    def test_select_annotation_survives_typedef_instantiation(self):
+        """A selector annotation on a templated member survives a typedef."""
+        module = Module.parse_string("""
+            namespace adapters {
+                template<T>
+                class Adapter {
+                    @pybind_select
+                    T value(T input) const;
+                };
+                typedef adapters::Adapter<int> IntAdapter;
+            }
+        """)
+
+        instantiated = instantiate_namespace(module)
+        namespace = instantiated.content[0]
+        typedef_class = next(
+            item for item in namespace.content
+            if isinstance(item, Class) and item.name == "IntAdapter")
+        self.assertFalse(typedef_class.methods[0].force_pybind_adapter)
+        self.assertTrue(typedef_class.methods[0].force_pybind_select)
+
 
 if __name__ == '__main__':
     unittest.main()

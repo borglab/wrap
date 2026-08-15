@@ -153,8 +153,10 @@ struct SelectOverload {
                          cpp_target,
                          args,
                          is_method=False,
-                         is_const=False):
-        """Select a function overload while deducing its true return type."""
+                         is_const=False,
+                         return_type=None,
+                         cpp_class=None):
+        """Select a function overload, optionally with a complete signature."""
         self._uses_direct_callables = True
         cpp_args = ', '.join(args.to_cpp())
         if not is_method:
@@ -163,8 +165,16 @@ struct SelectOverload {
             selector = 'const_method'
         else:
             selector = 'method'
+
+        explicit_types = ''
+        if return_type is not None:
+            explicit_types = return_type
+            if is_method:
+                explicit_types += f', {cpp_class}'
+            explicit_types = f'<{explicit_types}>'
+
         return (f'gtwrap::internal::SelectOverload<{cpp_args}>::{selector}'
-                f'({cpp_target})')
+                f'{explicit_types}({cpp_target})')
 
     def _register_callable_adapter(self,
                                    args_signature,
@@ -439,6 +449,9 @@ struct SelectOverload {
                 is_method=not is_static,
                 is_const=is_method
                 and bool(getattr(method, 'is_const', False)),
+                return_type=(method.return_type.to_cpp()
+                             if method.force_pybind_select else None),
+                cpp_class=cpp_class,
             )
 
         result = ('{prefix}.{cdef}("{py_method}",{callable_binding}'
@@ -737,6 +750,8 @@ struct SelectOverload {
                 callable_binding = self._direct_callable(
                     f'&{caller}{cpp_method}',
                     function.args,
+                    return_type=(function.return_type.to_cpp()
+                                 if function.force_pybind_select else None),
                 )
 
             ret = ('{prefix}.{cdef}("{function_name}",{callable_binding}'

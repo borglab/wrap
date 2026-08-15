@@ -34,6 +34,20 @@ class Adapter : public BaseAdapter {
   int hiddenOverload(int value) const { return value; }
   int hiddenOverload(double value) const { return static_cast<int>(value); }
 
+  double selected(int value, double scale) const { return value * scale; }
+
+  template <typename U>
+  double selected(const Adapter<U>&, double scale) const { return scale; }
+
+  static double selectedStatic(int value, double scale) {
+    return value * scale;
+  }
+
+  template <typename U>
+  static double selectedStatic(const Adapter<U>&, double scale) {
+    return scale;
+  }
+
   int declaredOverload(int value) const { return value; }
   double declaredOverload(double value) const { return value; }
 
@@ -78,6 +92,15 @@ inline int globalHidden(double value) { return static_cast<int>(value); }
 
 inline int globalOverload(int value) { return value; }
 inline double globalOverload(double value) { return value; }
+
+inline double selectedGlobal(int value, double scale) {
+  return value * scale;
+}
+
+template <typename U>
+double selectedGlobal(const Adapter<U>&, double scale) {
+  return scale;
+}
 
 template <typename T>
 T exactGlobalTemplated(T value) {

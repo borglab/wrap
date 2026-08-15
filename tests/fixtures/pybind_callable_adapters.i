@@ -25,6 +25,12 @@ class Adapter: adapters::BaseAdapter {
 
   int hiddenOverload(int value) const;
 
+  @pybind_select
+  double selected(int value, double scale) const;
+
+  @pybind_select
+  static double selectedStatic(int value, double scale);
+
   int declaredOverload(int value) const;
   double declaredOverload(double value) const;
 
@@ -60,6 +66,9 @@ int globalHidden(int value);
 
 int globalOverload(int value);
 double globalOverload(double value);
+
+@pybind_select
+double selectedGlobal(int value, double scale);
 
 template<T = {int}>
 T exactGlobalTemplated(T value);

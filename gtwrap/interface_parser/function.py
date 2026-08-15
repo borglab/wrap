@@ -14,7 +14,7 @@ from typing import Any, Iterable, List, Union
 
 from pyparsing import Literal, Optional, ParseResults, DelimitedList
 
-from .annotations import PYBIND_ADAPTER
+from .annotations import PYBIND_ADAPTER, PYBIND_SELECT
 from .template import Template
 from .tokens import (COMMA, DEFAULT_ARG, EQUAL, IDENT, LOPBRACK, LPAREN, PAIR,
                      ROPBRACK, RPAREN, SEMI_COLON)
@@ -158,7 +158,8 @@ class GlobalFunction:
     """
     rule = (
         Optional(Template.rule("template"))  #
-        + Optional(PYBIND_ADAPTER("pybind_adapter"))  #
+        + Optional(PYBIND_ADAPTER("pybind_adapter")
+                   | PYBIND_SELECT("pybind_select"))  #
         + ReturnType.rule("return_type")  #
         + IDENT("name")  #
         + LPAREN  #
@@ -171,6 +172,7 @@ class GlobalFunction:
         t.args_list,
         t.template,
         force_pybind_adapter=bool(t.pybind_adapter),
+        force_pybind_select=bool(t.pybind_select),
     ))
 
     def __init__(self,
@@ -179,12 +181,14 @@ class GlobalFunction:
                  args_list: ArgumentList,
                  template: Template,
                  parent: Any = '',
-                 force_pybind_adapter: bool = False):
+                 force_pybind_adapter: bool = False,
+                 force_pybind_select: bool = False):
         self.name = name
         self.return_type = return_type
         self.args = args_list
         self.template = template
         self.force_pybind_adapter = force_pybind_adapter
+        self.force_pybind_select = force_pybind_select
 
         self.parent = parent
         self.return_type.parent = self

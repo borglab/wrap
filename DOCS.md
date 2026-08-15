@@ -254,6 +254,22 @@ without generating a forwarding callable for every binding. Python-visible
 names, default arguments, argument policies, return-value policies, and
 docstrings are appended as before.
 
+If an overload set mixes ordinary functions with function templates, C++ may
+be unable to resolve the address while the selector is still deducing its
+return and class types. Add `@pybind_select` to make the selector use the full
+declared signature:
+
+```cpp
+class Camera {
+  @pybind_select
+  double range(const Point3& point) const;
+};
+```
+
+This still generates a direct member or function pointer. The declared return
+type, argument types, and member constness must exactly match C++ when using
+`@pybind_select`.
+
 A wrapper interface declaration does not always reproduce the underlying C++
 argument list exactly. Add `@pybind_adapter` when it intentionally adapts the
 C++ call:
@@ -278,11 +294,12 @@ converted before the call (such as a value for a C++ reference parameter), or
 otherwise has an argument list or member constness that cannot form a direct
 pointer. Overloading or templating alone does not require an annotation.
 
-Place `@pybind_adapter` after any `template<...>` declaration and immediately
-before the callable. It affects only Pybind generation; MATLAB generation
-ignores it, and template instantiation preserves it. Because wrap does not
-inspect the included C++ AST, the generated C++ compilation is the final check
-that an unannotated interface declaration matches the real callable.
+Place `@pybind_select` or `@pybind_adapter` after any `template<...>`
+declaration and immediately before the callable. They affect only Pybind
+generation; MATLAB generation ignores them, and template instantiation
+preserves them. Because wrap does not inspect the included C++ AST, generated
+C++ compilation is the final check that an interface declaration matches the
+real callable.
 
 Lambdas are still generated for wrappers that inherently add inline behavior,
 including redirected `print`/`__repr__`, serialization and pickle, and

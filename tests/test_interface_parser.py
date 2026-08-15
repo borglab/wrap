@@ -278,6 +278,7 @@ class TestInterfaceParser(unittest.TestCase):
         self.assertEqual(0, len(ret.args))
         self.assertTrue(not ret.is_const)
         self.assertFalse(ret.force_pybind_adapter)
+        self.assertFalse(ret.force_pybind_select)
 
         ret = Method.rule.parse_string(
             "@pybind_adapter int f() const;")[0]
@@ -285,6 +286,14 @@ class TestInterfaceParser(unittest.TestCase):
         self.assertEqual(0, len(ret.args))
         self.assertTrue(ret.is_const)
         self.assertTrue(ret.force_pybind_adapter)
+        self.assertFalse(ret.force_pybind_select)
+
+        ret = Method.rule.parse_string(
+            "@pybind_select double range(int x) const;")[0]
+        self.assertEqual("range", ret.name)
+        self.assertTrue(ret.is_const)
+        self.assertFalse(ret.force_pybind_adapter)
+        self.assertTrue(ret.force_pybind_select)
 
         ret = Method.rule.parse_string("""
             template<T={double}>
@@ -314,6 +323,7 @@ class TestInterfaceParser(unittest.TestCase):
         self.assertEqual("f", ret.name)
         self.assertEqual(0, len(ret.args))
         self.assertFalse(ret.force_pybind_adapter)
+        self.assertFalse(ret.force_pybind_select)
 
         ret = StaticMethod.rule.parse_string(
             "@pybind_adapter static int f(const int x, const Class& c, "
@@ -321,6 +331,13 @@ class TestInterfaceParser(unittest.TestCase):
         self.assertEqual("f", ret.name)
         self.assertEqual(3, len(ret.args))
         self.assertTrue(ret.force_pybind_adapter)
+        self.assertFalse(ret.force_pybind_select)
+
+        ret = StaticMethod.rule.parse_string(
+            "@pybind_select static double f(int x);")[0]
+        self.assertEqual("f", ret.name)
+        self.assertFalse(ret.force_pybind_adapter)
+        self.assertTrue(ret.force_pybind_select)
 
     def test_constructor(self):
         """Test for class constructor."""
@@ -570,6 +587,7 @@ class TestInterfaceParser(unittest.TestCase):
         self.assertEqual("Values", func.return_type.type1.typename.name)
         self.assertEqual(3, len(func.args))
         self.assertFalse(func.force_pybind_adapter)
+        self.assertFalse(func.force_pybind_select)
 
         func = GlobalFunction.rule.parse_string("""
         template<T={int}>
@@ -578,6 +596,15 @@ class TestInterfaceParser(unittest.TestCase):
         """)[0]
         self.assertEqual("adapt", func.name)
         self.assertTrue(func.force_pybind_adapter)
+        self.assertFalse(func.force_pybind_select)
+
+        func = GlobalFunction.rule.parse_string("""
+        @pybind_select
+        double resolve(int value);
+        """)[0]
+        self.assertEqual("resolve", func.name)
+        self.assertFalse(func.force_pybind_adapter)
+        self.assertTrue(func.force_pybind_select)
 
     def test_global_variable(self):
         """Test for global variable."""

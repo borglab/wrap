@@ -7,14 +7,15 @@ from .template import Template
 
 
 PYBIND_ADAPTER = Regex(r"@pybind_adapter(?![A-Za-z0-9_])")
+PYBIND_SELECT = Regex(r"@pybind_select(?![A-Za-z0-9_])")
 
 
 def _reject_annotation(source, location, tokens):
     """Raise a useful error for unknown or misplaced annotations."""
     annotation = tokens[0]
-    if annotation == "@pybind_adapter":
+    if annotation in ("@pybind_adapter", "@pybind_select"):
         message = (
-            "annotation '@pybind_adapter' can only be applied to a method, "
+            f"annotation '{annotation}' can only be applied to a method, "
             "static method, or global function"
         )
     else:
@@ -25,8 +26,8 @@ def _reject_annotation(source, location, tokens):
         location,
         "callable annotation",
         message,
-        "place '@pybind_adapter' after any template declaration and "
-        "immediately before the callable declaration",
+        "place '@pybind_adapter' or '@pybind_select' after any template "
+        "declaration and immediately before the callable declaration",
     )
 
 
