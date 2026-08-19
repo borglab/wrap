@@ -90,7 +90,31 @@ class CheckMixin:
                 and len(arg_type.template_params) == 1
                 and arg_type.template_params[0].typename.name
                 in self.eigen_ref_types)
-    
+
+    @staticmethod
+    def is_optional(arg_type: parser.Type) -> bool:
+        """Check whether ``arg_type`` is a ``std::optional<T>``."""
+        return (isinstance(arg_type, parser.TemplatedType)
+                and arg_type.typename.qualified_name() == 'std::optional'
+                and len(arg_type.template_params) == 1)
+
+    def optional_value_type(self, arg_type: parser.Type) -> parser.Type:
+        """Return ``T`` from ``std::optional<T>``.
+
+        Raises:
+            ValueError: If ``arg_type`` is not a well-formed ``std::optional``.
+        """
+        if not self.is_optional(arg_type):
+            raise ValueError(f'Expected std::optional<T>, got {arg_type}')
+        return arg_type.template_params[0]
+
+    @staticmethod
+    def is_pair(arg_type: parser.Type) -> bool:
+        """Check whether ``arg_type`` is a ``std::pair<T, U>``."""
+        return (isinstance(arg_type, parser.TemplatedType)
+                and arg_type.typename.qualified_name() in ('pair', 'std::pair')
+                and len(arg_type.template_params) == 2)
+
     def is_class_enum(self, arg_type: parser.Type, class_: parser.Class):
         """Check if arg_type is an enum in the class `class_`."""
         if class_:
@@ -212,6 +236,18 @@ class FormatMixin:
             include_namespace: whether to include namespaces when reformatting
         """
         return_wrap = ''
+
+        optional_pair_types = self._optional_pair_types(return_type.type1)
+        if optional_pair_types:
+            return 'optional<pair< {type1}, {type2} >>'.format(
+                type1=self._format_type_name(
+                    optional_pair_types[0].typename,
+                    separator=separator,
+                    include_namespace=include_namespace),
+                type2=self._format_type_name(
+                    optional_pair_types[1].typename,
+                    separator=separator,
+                    include_namespace=include_namespace))
 
         if self._return_count(return_type) == 1:
             return_wrap = self._format_type_name(
