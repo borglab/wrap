@@ -197,6 +197,89 @@ class TestWrap(unittest.TestCase):
         self.assertIn('gtsam::Pose3::Expmap(xi,Hxi)', cpp_content)
         self.assertIn('out[1] = wrap< Eigen::MatrixXd >(Hxi);', cpp_content)
         self.assertIn('checkArguments("gtsam::Pose3.Expmap",nargout,nargin,1);', cpp_content)
+
+    def test_std_optional(self):
+        """Test MATLAB [] <-> std::nullopt and engaged value conversion."""
+        file = osp.join(self.INTERFACE_DIR, 'optionals.i')
+
+        wrapper = MatlabWrapper(module_name='optionals',
+                                top_module_namespace=['gtsam'],
+                                ignore_classes=[''])
+        wrapper.wrap([file], path=self.MATLAB_ACTUAL_DIR)
+
+        cpp_file = osp.join(self.MATLAB_ACTUAL_DIR,
+                            'optionals_wrapper.cpp')
+        with open(cpp_file, 'r', encoding='UTF-8') as f:
+            cpp_content = f.read()
+
+        m_file = osp.join(self.MATLAB_ACTUAL_DIR, '+gtsam', 'Pose3.m')
+        with open(m_file, 'r', encoding='UTF-8') as f:
+            matlab_content = f.read()
+
+        # Empty arrays select nullopt; engaged values retain normal type checks.
+        self.assertIn(
+            "(isempty(varargin{1}) || isa(varargin{1},'double'))",
+            matlab_content)
+        self.assertIn(
+            "(isempty(varargin{1}) || isa(varargin{1},'gtsam.Pose3'))",
+            matlab_content)
+        self.assertIn(
+            "(isempty(varargin{1}) || isa(varargin{1},'double')"
+            " && size(varargin{1},2)==1)", matlab_content)
+        self.assertNotIn("isa(varargin{1},'std.optional", matlab_content)
+
+        # Primitive and class-value optionals recurse through the contained
+        # type's established wrapping policy.
+        self.assertIn(
+            'wrap_optional(maybeDouble(available), '
+            '[](const double& value) { return wrap< double >(value); })',
+            cpp_content)
+        self.assertIn(
+            'wrap_optional(gtsam::Pose3::MaybePose(available), '
+            '[](const gtsam::Pose3& value) { return '
+            'wrap_shared_ptr(std::make_shared<gtsam::Pose3>(value), '
+            '"gtsam.Pose3", false); })', cpp_content)
+        # Arguments and properties use values, not fake optional proxy classes.
+        self.assertIn(
+            'std::optional<double> value = unwrap_optional<double>(in[1], '
+            '[](const mxArray* value) { return unwrap< double >(value); });',
+            cpp_content)
+        self.assertIn(
+            'std::optional<gtsam::Pose3> value = '
+            'unwrap_optional<gtsam::Pose3>(in[1], '
+            '[](const mxArray* value) { return '
+            '*unwrap_shared_ptr< gtsam::Pose3 >'
+            '(value, "ptr_gtsamPose3"); });', cpp_content)
+        self.assertIn('obj->threshold = threshold;', cpp_content)
+        self.assertNotIn('obj->threshold = *threshold;', cpp_content)
+
+        # A pair keeps the wrapper's conventional two-output MATLAB API; an
+        # empty optional produces [] for both outputs.
+        self.assertIn(
+            '[ varargout{1} varargout{2} ] = optionals_wrapper(',
+            matlab_content)
+        self.assertIn('auto optionalPairResult = '
+                      'obj->maybeGaussian(available);', cpp_content)
+        self.assertIn('const auto& pairResult = *optionalPairResult;',
+                      cpp_content)
+        self.assertIn('out[0] = wrap< Vector >(pairResult.first);',
+                      cpp_content)
+        self.assertIn('out[1] = wrap< Matrix >(pairResult.second);',
+                      cpp_content)
+        self.assertGreaterEqual(
+            cpp_content.count('mxCreateDoubleMatrix(0, 0, mxREAL)'), 2)
+
+        self.assertNotIn('make_shared<std::optional', cpp_content)
+        self.assertNotIn('unwrap_shared_ptr< std::optional', cpp_content)
+
+        matlab_header = osp.join(self.TEST_DIR, '..', 'matlab.h')
+        with open(matlab_header, 'r', encoding='UTF-8') as f:
+            header_content = f.read()
+        self.assertIn('mxArray* wrap_optional(', header_content)
+        self.assertIn('std::optional<Class> unwrap_optional(',
+                      header_content)
+        self.assertIn('if (mxIsEmpty(array)) return std::nullopt;',
+                      header_content)
         
     def test_functions(self):
         """Test interface file with function info."""

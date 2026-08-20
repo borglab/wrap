@@ -25,6 +25,10 @@ The python wrapper supports keyword arguments for functions/methods. Hence, the 
 - Methods
     - Constness has no effect.
     - Specify by-value (not reference) return types, even if C++ method returns reference.
+    - MATLAB maps a disengaged `std::optional<T>` to `[]` and an engaged
+      optional to the normal wrapped representation of `T`.
+      `std::optional<std::pair<T, U>>` follows the existing pair convention:
+      two MATLAB outputs, both `[]` when the optional is disengaged.
     - Must start with a letter (upper or lowercase).
     - Overloads are supported.
 
@@ -39,6 +43,10 @@ The python wrapper supports keyword arguments for functions/methods. Hence, the 
     - C/C++ basic types: `string`, `bool`, `size_t`, `size_t`, `double`, `char`, `unsigned char`.
     - Any class with which be copied with `std::make_shared()` (except Eigen).
     - `std::shared_ptr` of any object type (except Eigen).
+    - For MATLAB, `std::optional<T>` accepts `[]` for `std::nullopt` or the
+      normal MATLAB representation of `T` for an engaged value. Consequently,
+      an engaged optional containing an empty MATLAB array cannot be
+      distinguished from `std::nullopt`.
 
 - Properties or Variables
     - You can specify class variables in the interface file as long as they are in the `public` scope, e.g.

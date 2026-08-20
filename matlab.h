@@ -40,12 +40,14 @@ extern "C" {
 #include <cstdint>
 #include <limits>
 #include <list>
+#include <optional>
 #include <set>
 #include <sstream>
 #include <streambuf>
 #include <string>
 #include <type_traits>
 #include <typeinfo>
+#include <utility>
 
 using namespace std;
 
@@ -149,6 +151,19 @@ mxArray* wrapDefault(const Class&, std::false_type) {
 template <typename Class>
 mxArray* wrap(const Class& value) {
   return wrapDefault(value, IsMatlabSizeOrKeyScalar<Class>());
+}
+
+/**
+ * Wrap a C++ optional as either MATLAB [] or the normally wrapped value.
+ *
+ * The callback keeps ownership policy in the generated wrapper: scalar and
+ * matrix values are copied into MATLAB arrays, while wrapped class values can
+ * be copied into a shared_ptr-backed MATLAB proxy.
+ */
+template <typename Class, typename Wrapper>
+mxArray* wrap_optional(const std::optional<Class>& value, Wrapper&& wrapper) {
+  if (!value) return mxCreateDoubleMatrix(0, 0, mxREAL);
+  return std::forward<Wrapper>(wrapper)(*value);
 }
 
 // specialization to string
@@ -297,6 +312,15 @@ T unwrapDefault(const mxArray*, std::false_type) {
 template <typename T>
 T unwrap(const mxArray* array) {
   return unwrapDefault<T>(array, IsMatlabSizeOrKeyScalar<T>());
+}
+
+/** Unwrap MATLAB [] as nullopt, or unwrap an engaged optional's value. */
+template <typename Class, typename Unwrapper>
+std::optional<Class> unwrap_optional(const mxArray* array,
+                                     Unwrapper&& unwrapper) {
+  if (mxIsEmpty(array)) return std::nullopt;
+  return std::optional<Class>{
+      std::forward<Unwrapper>(unwrapper)(array)};
 }
 
 /// @brief Unwrap from matlab array to C++ enum type
