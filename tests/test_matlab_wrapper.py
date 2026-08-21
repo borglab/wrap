@@ -9,6 +9,7 @@ import filecmp
 import os
 import os.path as osp
 import sys
+import tempfile
 import unittest
 
 sys.path.append(osp.dirname(osp.dirname(osp.abspath(__file__))))
@@ -350,6 +351,26 @@ class TestWrap(unittest.TestCase):
         for file in files:
             actual = osp.join(self.MATLAB_ACTUAL_DIR, file)
             self.compare_and_diff(file, actual)
+
+    def test_shared_pointer_property_setter(self):
+        """Shared-pointer properties assign handles; value properties copy."""
+        interface = osp.join(self.INTERFACE_DIR, 'pointer_properties.i')
+        wrapper = MatlabWrapper(
+            module_name='pointer_properties',
+            top_module_namespace=['gtsam'],
+            ignore_classes=[''],
+        )
+
+        with tempfile.TemporaryDirectory() as output_dir:
+            wrapper.wrap([interface], path=output_dir)
+            cpp_file = osp.join(output_dir,
+                                'pointer_properties_wrapper.cpp')
+            with open(cpp_file, 'r', encoding='UTF-8') as generated_file:
+                cpp_content = generated_file.read()
+
+        self.assertIn('obj->shared = shared;', cpp_content)
+        self.assertNotIn('obj->shared = *shared;', cpp_content)
+        self.assertIn('obj->value = *value;', cpp_content)
 
     def test_size_t_round_trip(self):
         """Generated size_t wrappers use alias-safe scalar conversions."""

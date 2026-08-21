@@ -1750,11 +1750,14 @@ class MatlabWrapper(CheckMixin, FormatMixin):
 
                 # Setter
                 if "_set_" in method_name:
-                    is_ptr_type = not self.is_optional(extra.ctype) and \
+                    is_wrapped_value = not self.is_optional(extra.ctype) and \
                         self.can_be_pointer(extra.ctype) and \
+                        not extra.ctype.is_shared_ptr and \
+                        not extra.ctype.is_ptr and \
+                        not extra.ctype.is_ref and \
                         not self.is_enum(extra.ctype, collector_func[1])
                     return_body = '  obj->{0} = {1}{0};'.format(
-                        extra.name, '*' if is_ptr_type else '')
+                        extra.name, '*' if is_wrapped_value else '')
 
                     setter = '  checkArguments("{property_name}",nargout,nargin{min1},' \
                             '{num_args});\n' \

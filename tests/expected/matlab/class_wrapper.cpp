@@ -589,7 +589,7 @@ void Test_set_model_ptr_47(int nargout, mxArray *out[], int nargin, const mxArra
   checkArguments("model_ptr",nargout,nargin-1,1);
   auto obj = unwrap_shared_ptr<Test>(in[0], "ptr_Test");
   std::shared_ptr<gtsam::noiseModel::Base> model_ptr = unwrap_shared_ptr< gtsam::noiseModel::Base >(in[1], "ptr_gtsamnoiseModelBase");
-  obj->model_ptr = *model_ptr;
+  obj->model_ptr = model_ptr;
 }
 
 void Test_get_value_48(int nargout, mxArray *out[], int nargin, const mxArray *in[])
