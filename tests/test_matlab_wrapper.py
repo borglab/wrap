@@ -122,6 +122,67 @@ class TestWrap(unittest.TestCase):
         self.assertIn('Eigen::Index m', header_content)
         self.assertIn('Stride(m, 1)', header_content)
 
+    def test_fixed_size_eigen_values(self):
+        """MatrixN/VectorN aliases are MATLAB double arrays, not handles."""
+        file = osp.join(self.INTERFACE_DIR, 'fixed_size_eigen.i')
+
+        wrapper = MatlabWrapper(module_name='fixed_size_eigen',
+                                top_module_namespace=['gtsam'],
+                                ignore_classes=[''])
+        wrapper.wrap([file], path=self.MATLAB_ACTUAL_DIR)
+
+        cpp_file = osp.join(self.MATLAB_ACTUAL_DIR,
+                            'fixed_size_eigen_wrapper.cpp')
+        with open(cpp_file, 'r', encoding='UTF-8') as f:
+            cpp_content = f.read()
+
+        self.assertIn(
+            'gtsam::Matrix3 matrix = unwrapFixedSizeEigen< gtsam::Matrix3 >(in[0]);',
+            cpp_content)
+        self.assertIn(
+            'gtsam::Vector10 vector = unwrapFixedSizeEigen< gtsam::Vector10 >(in[1]);',
+            cpp_content)
+        self.assertIn('out[0] = wrapFixedSizeEigen(obj->matrix(value));',
+                      cpp_content)
+        self.assertIn(
+            'out[0] = wrapFixedSizeEigen(obj->rectangular(value));',
+            cpp_content)
+        self.assertIn('out[0] = wrapFixedSizeEigen(obj->vector(value));',
+                      cpp_content)
+        self.assertIn(
+            'out[0] = wrapFixedSizeEigen(pairResult.first);', cpp_content)
+        self.assertIn(
+            'out[1] = wrapFixedSizeEigen(pairResult.second);', cpp_content)
+        self.assertIn(
+            'return wrapFixedSizeEigen(value);', cpp_content)
+        self.assertIn(
+            'out[0] = wrapFixedSizeEigen(obj->matrixProperty);', cpp_content)
+        self.assertNotIn('wrap_shared_ptr(std::make_shared<gtsam::Matrix3>',
+                         cpp_content)
+        self.assertNotIn('unwrap_shared_ptr< gtsam::Vector10 >', cpp_content)
+
+        m_file = osp.join(self.MATLAB_ACTUAL_DIR, '+gtsam',
+                          'FixedSizeEigenFixture.m')
+        with open(m_file, 'r', encoding='UTF-8') as f:
+            matlab_content = f.read()
+
+        self.assertNotIn("isa(varargin{1},'gtsam.Matrix3')", matlab_content)
+        self.assertNotIn("isa(varargin{1},'gtsam.Vector10')", matlab_content)
+        self.assertIn(
+            "isa(varargin{1},'double') && size(varargin{1},1)==3 && size(varargin{1},2)==3",
+            matlab_content)
+        self.assertIn(
+            "isa(varargin{2},'double') && size(varargin{2},1)==10 && size(varargin{2},2)==1",
+            matlab_content)
+
+        matlab_header = osp.join(self.TEST_DIR, '..', 'matlab.h')
+        with open(matlab_header, 'r', encoding='UTF-8') as f:
+            header_content = f.read()
+
+        self.assertIn('mxArray* wrapFixedSizeEigen(', header_content)
+        self.assertIn('EigenType unwrapFixedSizeEigen(', header_content)
+        self.assertIn('RowsAtCompileTime', header_content)
+
     def test_pybind_lambda_annotation_is_ignored(self):
         """Pybind-only annotations do not alter generated MATLAB files."""
         source = Path(self.INTERFACE_DIR) / 'pybind_lambda_adapters.i'

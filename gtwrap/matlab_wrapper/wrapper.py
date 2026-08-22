@@ -245,7 +245,8 @@ class MatlabWrapper(CheckMixin, FormatMixin):
         if name in self.not_check_type:
             return ''
 
-        check_type = self.data_type_param.get(name)
+        check_type = ('double' if self.is_fixed_size_eigen_value(ctype) else
+                      self.data_type_param.get(name))
         if self.data_type.get(check_type):
             check_type = self.data_type[check_type]
 
@@ -265,6 +266,12 @@ class MatlabWrapper(CheckMixin, FormatMixin):
         if name == 'Point3':
             checks.append(f'size({variable},1)==3')
             checks.append(f'size({variable},2)==1')
+
+        fixed_dimensions = self.fixed_size_eigen_dimensions(ctype)
+        if fixed_dimensions:
+            rows, cols = fixed_dimensions
+            checks.append(f'size({variable},1)=={rows}')
+            checks.append(f'size({variable},2)=={cols}')
 
         return ' && '.join(checks)
 
@@ -372,6 +379,9 @@ class MatlabWrapper(CheckMixin, FormatMixin):
         if self.is_matrix_view(ctype):
             return f'unwrapMatrixView< {ctype_sep} >({value})'
 
+        if self.is_fixed_size_eigen_value(ctype):
+            return f'unwrapFixedSizeEigen< {ctype_sep} >({value})'
+
         if self.is_ptr(ctype) and ctype.typename.name not in self.ignore_namespace:
             return ('unwrap_ptr< {ctype} >({value}, "ptr_{camel}")'.format(
                 ctype=ctype_sep, value=value, camel=ctype_camel))
@@ -411,6 +421,11 @@ class MatlabWrapper(CheckMixin, FormatMixin):
             # do not consume from in[]. Returned via out[] after the call.
             arg_type = "Eigen::MatrixXd"
             unwrap = 'Eigen::MatrixXd();'
+
+        elif self.is_fixed_size_eigen_value(arg.ctype):
+            arg_type = ctype_sep
+            unwrap = 'unwrapFixedSizeEigen< {ctype} >(in[{id}]);'.format(
+                ctype=ctype_sep, id=arg_id)
 
         elif self.is_ref(arg.ctype):  # and not constructor:
             arg_type = "{ctype}&".format(ctype=ctype_sep)
@@ -1343,6 +1358,9 @@ class MatlabWrapper(CheckMixin, FormatMixin):
             return f'wrap_enum({obj},"{class_name}{ctype.typename.name}")'
 
         ctype_cpp = self._format_type_name(ctype.typename)
+        if self.is_fixed_size_eigen_value(ctype):
+            return f'wrapFixedSizeEigen({obj})'
+
         if ((self.is_shared_ptr(ctype) or self.is_ptr(ctype))
                 and ctype.typename.name in self.ignore_namespace):
             return f'wrap< {ctype_cpp} >(*{obj})'
@@ -1377,7 +1395,10 @@ class MatlabWrapper(CheckMixin, FormatMixin):
         pair_value = 'first' if func_id == 0 else 'second'
         new_line = '\n' if func_id == 0 else ''
 
-        if self.is_shared_ptr(return_type) or self.is_ptr(return_type) or \
+        if self.is_fixed_size_eigen_value(return_type):
+            return_type_text += 'wrapFixedSizeEigen(pairResult.{0});{1}'.format(
+                pair_value, new_line)
+        elif self.is_shared_ptr(return_type) or self.is_ptr(return_type) or \
             self.can_be_pointer(return_type):
             shared_obj = 'pairResult.' + pair_value
 
@@ -1435,6 +1456,9 @@ class MatlabWrapper(CheckMixin, FormatMixin):
             enum_type = f"{class_name}{ctype.typename.name}"
             expanded = textwrap.indent(
                 f'out[0] = wrap_enum({obj},\"{enum_type}\");', prefix='  ')
+
+        elif self.is_fixed_size_eigen_value(ctype):
+            expanded += '  out[0] = wrapFixedSizeEigen({0});'.format(obj)
 
         elif self.is_shared_ptr(ctype) or self.is_ptr(ctype) or \
             self.can_be_pointer(ctype):
