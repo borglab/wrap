@@ -1,5 +1,7 @@
 """Mixins for reducing the amount of boilerplate in the main wrapper class."""
 
+import re
+
 from typing import Any, Tuple, Union
 
 import gtwrap.interface_parser as parser
@@ -25,6 +27,9 @@ class CheckMixin:
     matrix_view_types: Tuple = ('ConstMatrixView', )
     # Eigen Ref types used as Jacobian output arguments (not inputs).
     eigen_ref_types: Tuple = ('MatrixXd', )
+    # Fixed-size GTSAM Eigen aliases, such as Matrix3, Matrix36, and Vector9.
+    fixed_size_eigen_pattern = re.compile(
+        r'^(?:Matrix\d+(?:x\d+)?|Vector\d+)$')
     # Methods that should be ignored
     ignore_methods: Tuple = ('pickle', )
     # Methods that should not be wrapped directly
@@ -47,6 +52,7 @@ class CheckMixin:
         """
         return (arg_type.typename.name not in self.not_ptr_type
                 and arg_type.typename.name not in self.ignore_namespace
+                and not self.is_fixed_size_eigen_value(arg_type)
                 and not self.is_matrix_view(arg_type)
                 and arg_type.typename.name != 'string')
 
@@ -70,8 +76,42 @@ class CheckMixin:
         reference in the wrapper.
         """
         return arg_type.typename.name not in self.ignore_namespace and \
+               not self.is_fixed_size_eigen_value(arg_type) and \
                arg_type.typename.name not in self.not_ptr_type and \
                arg_type.is_ref
+
+    def is_fixed_size_eigen_value(self, arg_type: parser.Type):
+        """Check for a fixed-size MatrixN/VectorN value or reference alias."""
+        return (not arg_type.is_shared_ptr and not arg_type.is_ptr
+                and self.fixed_size_eigen_pattern.fullmatch(
+                    arg_type.typename.name) is not None)
+
+    def fixed_size_eigen_dimensions(self, arg_type: parser.Type):
+        """Infer dimensions when a GTSAM fixed-size alias is unambiguous."""
+        if not self.is_fixed_size_eigen_value(arg_type):
+            return None
+
+        name = arg_type.typename.name
+        vector = re.fullmatch(r'Vector(\d+)', name)
+        if vector:
+            return int(vector.group(1)), 1
+
+        explicit_matrix = re.fullmatch(r'Matrix(\d+)x(\d+)', name)
+        if explicit_matrix:
+            return int(explicit_matrix.group(1)), int(explicit_matrix.group(2))
+
+        # GTSAM defines MatrixN as NxN, and MatrixMN as MxN for M,N=1..9.
+        square_matrix = re.fullmatch(r'Matrix([1-9])', name)
+        if square_matrix:
+            dimension = int(square_matrix.group(1))
+            return dimension, dimension
+
+        rectangular_matrix = re.fullmatch(r'Matrix([1-9])([1-9])', name)
+        if rectangular_matrix:
+            return int(rectangular_matrix.group(1)), int(
+                rectangular_matrix.group(2))
+
+        return None
 
     def is_matrix_view(self, arg_type: parser.Type):
         """Check if `arg_type` should be unwrapped as a matrix view."""
