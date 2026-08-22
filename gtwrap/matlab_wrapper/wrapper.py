@@ -1658,8 +1658,8 @@ class MatlabWrapper(CheckMixin, FormatMixin):
                     item = collector_{class_name}.find(self);
                     if(item != collector_{class_name}.end()) {{
                       collector_{class_name}.erase(item);
+                      delete self;
                     }}
-                    delete self;
                 ''').format(class_name_sep=class_name_separated,
                             class_name=class_name),
                                         prefix='  ')

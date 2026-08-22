@@ -395,6 +395,30 @@ class TestWrap(unittest.TestCase):
             actual = osp.join(self.MATLAB_ACTUAL_DIR, file)
             self.compare_and_diff(file, actual)
 
+    def test_deconstructors_are_idempotent(self):
+        """Repeated MATLAB destruction only deletes collector-owned handles."""
+        file = osp.join(self.INTERFACE_DIR, 'class.i')
+        wrapper = MatlabWrapper(
+            module_name='class',
+            top_module_namespace=['gtsam'],
+            ignore_classes=[''],
+        )
+        wrapper.wrap([file], path=self.MATLAB_ACTUAL_DIR)
+
+        cpp_file = osp.join(self.MATLAB_ACTUAL_DIR, 'class_wrapper.cpp')
+        with open(cpp_file, 'r', encoding='UTF-8') as generated_file:
+            cpp_content = generated_file.read()
+
+        self.assertIn(
+            'if(item != collector_Test.end()) {\n'
+            '    collector_Test.erase(item);\n'
+            '    delete self;\n'
+            '  }', cpp_content)
+        self.assertNotIn(
+            'collector_Test.erase(item);\n'
+            '  }\n'
+            '  delete self;', cpp_content)
+
     def test_size_t_round_trip(self):
         """Generated size_t wrappers use alias-safe scalar conversions."""
         file = osp.join(self.INTERFACE_DIR, 'matlab_integer_aliases.i')
