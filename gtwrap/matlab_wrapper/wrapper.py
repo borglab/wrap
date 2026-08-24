@@ -1952,9 +1952,11 @@ class MatlabWrapper(CheckMixin, FormatMixin):
         includes = textwrap.dedent("""\
             {wrapper_file_headers}
             {boost_headers}
+            {tbb_headers}
             {includes_list}
         """).format(wrapper_file_headers=self.wrapper_file_headers.strip(),
                     boost_headers=boost_headers,
+                    tbb_headers=WrapperTemplate.tbb_headers,
                     includes_list='\n'.join(map(str, includes_list)))
 
         preamble = self.generate_preamble()
