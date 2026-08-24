@@ -60,7 +60,9 @@ function(
   if(UNIX)
     set(GTWRAP_PATH_SEPARATOR ":")
   else()
-    set(GTWRAP_PATH_SEPARATOR ";")
+    # Escaped: an unescaped ";" is CMake's list separator, so it would split
+    # the quoted PYTHONPATH argument below instead of joining two path entries.
+    set(GTWRAP_PATH_SEPARATOR "\\;")
   endif()
 
   # Create a copy of interface_headers so we can freely manipulate it
