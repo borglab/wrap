@@ -2,6 +2,15 @@
 #include <map>
 
 
+#ifdef GTSAM_USE_TBB
+#include <tbb/version.h>
+#if TBB_INTERFACE_VERSION >= 12060
+#include <tbb/global_control.h>
+#define GTSAM_WRAP_TBB_FINALIZE 1
+#endif
+#endif
+
+
 
 
 
@@ -44,6 +53,16 @@ void _deleteAllObjects()
       "calling destructors, call 'clear all' again if you plan to now recompile a wrap\n"
       "module, so that your recompiled module is used instead of the old one." << endl;
   std::cout.rdbuf(outbuf);
+#ifdef GTSAM_WRAP_TBB_FINALIZE
+  // Terminate TBB worker threads deterministically before MATLAB unloads
+  // this MEX file. Otherwise the workers may still be winding down when
+  // the image is unmapped and touch freed code, which crashes on exit.
+  // See oneTBB issue #977. finalize() is idempotent, returns false rather
+  // than throwing if the scheduler is still referenced elsewhere, and TBB
+  // re-initializes transparently if the module is used again.
+  static tbb::task_scheduler_handle tbbHandle{tbb::attach{}};
+  tbb::finalize(tbbHandle, std::nothrow);
+#endif
 }
 
 void _multiple_files_RTTIRegister() {
