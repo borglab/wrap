@@ -13,6 +13,8 @@ Author: Duy Nguyen Ta, Fan Jiang, Matthew Sklar, Varun Agrawal, and Frank Dellae
 # pylint: disable=too-many-arguments, too-many-instance-attributes, no-self-use, no-else-return, too-many-arguments, unused-format-string-argument, line-too-long, consider-using-f-string
 
 import re
+import json
+from gtwrap.serialization import export_name
 from pathlib import Path
 from typing import List
 
@@ -82,12 +84,24 @@ void bind_variable(pybind11::module_& module, const char* name,
                  use_boost_serialization=False,
                  ignore_classes=(),
                  module_template="",
-                 xml_source=""):
+                 xml_source="",
+                 serialization_manifest=None):
         self.module_name = module_name
         self.top_module_namespaces = top_module_namespaces
         self.use_boost_serialization = use_boost_serialization
         self.ignore_classes = ignore_classes
         self._serializing_classes = []
+        self._managed_serialization = {}
+        self._serialization_header = None
+        if serialization_manifest is not None:
+            if not use_boost_serialization:
+                raise ValueError('a serialization library requires serialization enabled')
+            manifest = json.loads(Path(serialization_manifest).read_text(encoding='utf-8'))
+            if manifest.get('version') != 1:
+                raise ValueError('unsupported serialization manifest version')
+            self._serialization_header = manifest['header']
+            self._managed_serialization = {
+                entry['cpp_type']: entry for entry in manifest['entries']}
         self.module_template = module_template
         self.python_keywords = [
             'lambda', 'False', 'def', 'if', 'raise', 'None', 'del', 'import',
@@ -184,6 +198,21 @@ void bind_variable(pybind11::module_& module, const char* name,
 
     def _wrap_serialization(self, cpp_class):
         """Helper method to add serialize, deserialize and pickle methods to the wrapped class."""
+        if cpp_class in self._managed_serialization:
+            entry = self._managed_serialization[cpp_class]
+            save, load = entry['save'], entry['load']
+            indent = self.method_indent
+            return (
+                f'{indent}.def("serialize", [](const {cpp_class}* self){{ '
+                f'std::string result; {save}(self, &result); return result; }})'
+                f'{indent}.def("deserialize", []({cpp_class}* self, const std::string& serialized){{ '
+                f'{load}(&serialized, self); }}, py::arg("serialized"))'
+                f'{indent}.def(py::pickle('
+                f'[](const {cpp_class}& value){{ std::string result; '
+                f'{save}(&value, &result); return py::make_tuple(result); }}, '
+                f'[](py::tuple state){{ {cpp_class} value; '
+                f'auto input = state[0].cast<std::string>(); '
+                f'{load}(&input, &value); return value; }}))')
         if not cpp_class in self._serializing_classes:
             self._serializing_classes.append(cpp_class)
 
@@ -910,16 +939,18 @@ void bind_variable(pybind11::module_& module, const char* name,
         wrapped_declarations, wrapped_bindings, includes = self.wrap_namespace(
             module)
 
+        if self._serialization_header:
+            includes = f'#include "{self._serialization_header}"\n' + includes
+
         if self.use_boost_serialization:
             includes += "#include <boost/serialization/export.hpp>"
 
             # Export classes for serialization.
             boost_class_export = ""
             for cpp_class in self._serializing_classes:
-                new_name = cpp_class
+                new_name = self.serialization_export_name(cpp_class)
                 # The boost's macro doesn't like commas, so we have to typedef.
-                if ',' in cpp_class:
-                    new_name = re.sub("[,:<> ]", "", cpp_class)
+                if new_name != cpp_class:
                     boost_class_export += "typedef {cpp_class} {new_name};\n".format(  # noqa
                         cpp_class=cpp_class, new_name=new_name)
 
@@ -986,6 +1017,8 @@ void bind_variable(pybind11::module_& module, const char* name,
             submodules="\n".join(submodules),
             submodules_init="",
         )
+
+    serialization_export_name = staticmethod(export_name)
 
     def wrap_submodule(self, source):
         """

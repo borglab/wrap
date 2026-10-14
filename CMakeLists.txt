@@ -75,7 +75,8 @@ endif()
 # Install wrapping scripts as binaries to `CMAKE_INSTALL_PREFIX/bin` so they can
 # be invoked for wrapping. We use DESTINATION (instead of TYPE) so we can
 # support older CMake versions.
-install(PROGRAMS scripts/pybind_wrap.py scripts/matlab_wrap.py
+install(PROGRAMS scripts/pybind_wrap.py scripts/pybind_serialization.py
+                 scripts/matlab_wrap.py
         DESTINATION "${GTWRAP_BIN_INSTALL_DIR}")
 
 # Install the matlab.h file to `CMAKE_INSTALL_PREFIX/lib/gtwrap/matlab.h`.
@@ -89,3 +90,14 @@ message(STATUS "${gtwrap} CMake path     : ${GTWRAP_CMAKE_INSTALL_DIR}")
 message(STATUS "${gtwrap} library path   : ${GTWRAP_LIB_INSTALL_DIR}")
 message(STATUS "${gtwrap} binary path    : ${GTWRAP_BIN_INSTALL_DIR}")
 message(STATUS "${gtwrap} header path    : ${GTWRAP_INCLUDE_INSTALL_DIR}")
+
+# Explicit test targets work with the caller's configured Python environment.
+add_custom_target(testWrap.run
+  COMMAND "${PYTHON_EXECUTABLE}" -m pytest tests -q -o "addopts="
+  WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" USES_TERMINAL)
+add_custom_target(testSerialization.run
+  COMMAND "${PYTHON_EXECUTABLE}" -m pytest
+    tests/test_serialization_discovery.py tests/test_serialization_library.py
+    tests/test_serialization_bindings.py tests/test_serialization_runtime.py
+    -q -o "addopts="
+  WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" USES_TERMINAL)
