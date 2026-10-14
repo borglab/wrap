@@ -14,6 +14,44 @@ ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = ROOT / 'tests/fixtures/serialization_library'
 
 
+def check_public_exports(actual, expected, platform, linkage):
+    """Require every bridge and reject exports outside the reviewed exception."""
+    allowed = set()
+    if platform == 'win32' and linkage == 'static':
+        # Precompiled MSVC objects carry dllexport directives that our DLL's
+        # source-level visibility settings cannot suppress. Match exact names,
+        # never a Boost namespace pattern or exports discovered during this run.
+        allowed = {line for line in
+                   (FIXTURE / 'windows_static_boost_exports.txt').read_text().splitlines()
+                   if line and not line.startswith('#')}
+    missing = expected - actual
+    unexpected = actual - expected - allowed
+    if missing or unexpected:
+        raise AssertionError(f'Missing bridge exports: {sorted(missing)}\n'
+                             f'Unexpected exports: {sorted(unexpected)}')
+
+
+class TestExportPolicy(unittest.TestCase):
+    def test_exception_is_limited_to_windows_static(self):
+        bridge = {'gtwrap_test_save', 'gtwrap_test_load'}
+        actual = bridge | {'?lock@singleton_module@serialization@boost@@QEAAXXZ'}
+        check_public_exports(actual, bridge, 'win32', 'static')
+        for platform, linkage in (('win32', 'shared'), ('linux', 'static'),
+                                  ('darwin', 'static')):
+            with self.subTest(platform=platform, linkage=linkage):
+                with self.assertRaisesRegex(AssertionError, 'Unexpected exports: \\[.+'):
+                    check_public_exports(actual, bridge, platform, linkage)
+
+    def test_unknown_boost_helpers_are_rejected(self):
+        with self.assertRaisesRegex(AssertionError, 'Unexpected exports: \\[.+'):
+            check_public_exports({'?unknown_helper@serialization@boost@@'},
+                                 set(), 'win32', 'static')
+
+    def test_exception_cannot_hide_missing_bridges(self):
+        with self.assertRaisesRegex(AssertionError, 'Missing bridge exports: \\[.+'):
+            check_public_exports(set(), {'gtwrap_test_load'}, 'win32', 'static')
+
+
 def run(args, **kwargs):
     result = subprocess.run([str(a) for a in args], capture_output=True,
                             text=True, **kwargs)
@@ -132,4 +170,4 @@ class TestSerializationRuntime(unittest.TestCase):
             # Report export-policy failures without skipping installed-package
             # runtime validation. Both consumption modes must still be exercised.
             with self.subTest(consumption=label, check='public exports'):
-                self.assertEqual(actual, symbols)
+                check_public_exports(actual, symbols, sys.platform, linkage)

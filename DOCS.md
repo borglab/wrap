@@ -334,8 +334,26 @@ required). Do not combine incompatible Boost versions, C++ ABIs, or C++ runtimes
 on Windows, use a consistent runtime such as `/MD` across all participants.
 The typed API uses C linkage for explicit symbol exports but passes C++ objects
 and strings, so it is not a cross-toolchain C ABI. Only the bridge functions are
-exported; the private static Boost runtime must not interpose on another
-library's registrations.
+supported consumer entry points. ELF and macOS export lists hide the static
+Boost implementation; Windows uses explicit exports.
+
+Precompiled static Boost libraries on Windows can carry MSVC `dllexport`
+directives that force additional implementation helpers into the owner's DLL
+export table. We permit narrowly identified helpers for `codecvt_null<wchar_t>`,
+`singleton_module`, and singleton instances for text-archive serializer maps,
+extended type-info registries, and void-cast registrations. They are unsupported
+implementation details; consumers must not import or call them. Windows resolves
+DLL imports through the named provider, and the required integration test checks
+that a separate static Boost runtime retains its own registrations before and
+after both managed consumers load.
+
+The CI exception applies only to Windows with static Boost and uses the exact
+reviewed symbol names in
+[`windows_static_boost_exports.txt`](tests/fixtures/serialization_library/windows_static_boost_exports.txt)
+for the pinned Boost/MSVC fixture. Unknown exports and missing bridge functions
+still fail. Boost or toolchain upgrades that change these names require review;
+there is no blanket Boost namespace exemption. Windows shared Boost, Linux,
+and macOS retain exact bridge-only export checks.
 
 Call the helper and pass `SERIALIZATION_LIBRARY` only when serialization is
 enabled in the consuming project. Pairing the latter argument with a false
