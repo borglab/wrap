@@ -1,0 +1,76 @@
+name: Central serialization runtime
+
+on: [pull_request]
+
+jobs:
+  runtime:
+    name: Serialization (${{ matrix.os }}, ${{ matrix.linkage }} Boost)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        linkage: [static, shared]
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/checkout@v5
+        with:
+          repository: microsoft/vcpkg
+          ref: ef7dbf94b9198bc58f45951adcf1f041fcbc5ea0
+          path: _vcpkg
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          activate-environment: py312
+          python-version: '3.12'
+          auto-activate-base: false
+      - name: Python and build tools
+        run: python -m pip install -e . pytest cmake ninja
+      - name: Bootstrap vcpkg (Unix)
+        if: runner.os != 'Windows'
+        run: ./_vcpkg/bootstrap-vcpkg.sh -disableMetrics
+      - name: Bootstrap vcpkg (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./_vcpkg/bootstrap-vcpkg.bat -disableMetrics
+      - name: Configure Boost triplet
+        run: |
+          mkdir -p _triplets
+          architecture=x64
+          if [[ "$(uname -m)" == arm64 ]]; then architecture=arm64; fi
+          linkage=${{ matrix.linkage }}
+          if [[ "$linkage" == shared ]]; then linkage=dynamic; fi
+          cat > _triplets/managed.cmake <<EOF
+          set(VCPKG_TARGET_ARCHITECTURE $architecture)
+          set(VCPKG_CRT_LINKAGE dynamic)
+          set(VCPKG_LIBRARY_LINKAGE $linkage)
+          EOF
+          if [[ "$RUNNER_OS" == Linux ]]; then
+            echo 'set(VCPKG_CMAKE_SYSTEM_NAME Linux)' >> _triplets/managed.cmake
+            echo 'set(VCPKG_CXX_FLAGS "-fPIC")' >> _triplets/managed.cmake
+          elif [[ "$RUNNER_OS" == macOS ]]; then
+            echo 'set(VCPKG_CMAKE_SYSTEM_NAME Darwin)' >> _triplets/managed.cmake
+          fi
+      - uses: actions/cache@v4
+        with:
+          path: _vcpkg/installed
+          key: serialization-v1-${{ runner.os }}-${{ runner.arch }}-${{ matrix.linkage }}-ef7dbf94
+      - name: Install Boost.Serialization
+        run: ./_vcpkg/vcpkg install boost-serialization:managed --overlay-triplets=_triplets
+      - name: Run required runtime tests
+        env:
+          GTWRAP_TEST_SERIALIZATION: '1'
+          GTWRAP_TEST_BOOST_LINKAGE: ${{ matrix.linkage }}
+          VCPKG_TARGET_TRIPLET: managed
+          CMAKE_GENERATOR: Ninja
+        run: |
+          # Build against the same native C++ runtime as the vcpkg libraries.
+          unset CC CXX CFLAGS CXXFLAGS CPPFLAGS LDFLAGS
+          export CMAKE_TOOLCHAIN_FILE="$PWD/_vcpkg/scripts/buildsystems/vcpkg.cmake"
+          export VCPKG_OVERLAY_TRIPLETS="$PWD/_triplets"
+          cmake -S . -B build -DWRAP_PYTHON_VERSION=3.12
+          cmake --build build --target testSerialization.run --parallel 6
