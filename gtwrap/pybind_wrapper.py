@@ -13,6 +13,7 @@ Author: Duy Nguyen Ta, Fan Jiang, Matthew Sklar, Varun Agrawal, and Frank Dellae
 # pylint: disable=too-many-arguments, too-many-instance-attributes, no-self-use, no-else-return, too-many-arguments, unused-format-string-argument, line-too-long, consider-using-f-string
 
 import re
+from gtwrap.serialization import discover, export_name
 from pathlib import Path
 from typing import List
 
@@ -996,22 +997,10 @@ void bind_variable(pybind11::module_& module, const char* name,
         """
         if not namespace_prefix or not namespace_prefix.endswith('::'):
             raise ValueError('namespace_prefix must end in ::')
-        module = parser.Module.parse_string(content)
-        module = instantiator.instantiate_namespace(module)
-        self._serializing_classes = []
-        try:
-            self.wrap_namespace(module)
-            return [cpp_class for cpp_class in self._serializing_classes
-                    if cpp_class.startswith(namespace_prefix)]
-        finally:
-            self._serializing_classes = []
+        return [entry.cpp_type for entry in discover(
+            [('<string>', content)], [namespace_prefix], self.ignore_classes)]
 
-    @staticmethod
-    def serialization_export_name(cpp_class):
-        """Return the existing Boost export name, including comma-safe alias."""
-        if ',' in cpp_class:
-            return re.sub('[,:<> ]', '', cpp_class)
-        return cpp_class
+    serialization_export_name = staticmethod(export_name)
 
     def serialization_support(self, content, namespace_prefix, includes=()):
         """Generate shared export keys and a single-owner implementation list.
