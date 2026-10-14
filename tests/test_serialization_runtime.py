@@ -46,14 +46,15 @@ class TestSerializationRuntime(unittest.TestCase):
         env = dict(os.environ)
         env['PATH'] = str(Path(sys.executable).parent) + os.pathsep + env['PATH']
         cmake_args = ['-DCMAKE_BUILD_TYPE=Release', '-DPYBIND11_FINDPYTHON=ON',
-                      f'-DPython_EXECUTABLE={sys.executable}',
+                      f'-DPython_EXECUTABLE={Path(sys.executable).as_posix()}',
                       f'-DWRAP_PYTHON_VERSION={sys.version_info.major}.{sys.version_info.minor}',
                       f'-DBoost_USE_STATIC_LIBS={"ON" if linkage == "static" else "OFF"}']
         # Accept a caller-provided Boost/toolchain installation, never download
         # dependencies or silently change linkage from inside a test.
         for variable in ('CMAKE_PREFIX_PATH', 'CMAKE_TOOLCHAIN_FILE', 'VCPKG_TARGET_TRIPLET'):
             if os.environ.get(variable):
-                cmake_args.append(f'-D{variable}={os.environ[variable]}')
+                value = os.environ[variable].replace('\\', '/')
+                cmake_args.append(f'-D{variable}={value}')
 
         for installed in (False, True):
             label = 'installed' if installed else 'source'
@@ -64,16 +65,17 @@ class TestSerializationRuntime(unittest.TestCase):
                 wrap_build = directory / 'wrap-build'
                 wrap_prefix = directory / 'wrap-prefix'
                 run(['cmake', '-S', wrap, '-B', wrap_build,
-                     f'-DCMAKE_INSTALL_PREFIX={wrap_prefix}', *cmake_args], env=env)
+                     f'-DCMAKE_INSTALL_PREFIX={wrap_prefix.as_posix()}', *cmake_args], env=env)
                 run(['cmake', '--install', wrap_build, '--config', 'Release'], env=env)
+                config = next(wrap_prefix.rglob('gtwrapConfig.cmake'))
                 arguments += ['-DWRAP_INSTALLED=ON',
-                              f'-Dgtwrap_DIR={wrap_prefix}/lib/cmake/gtwrap']
+                              f'-Dgtwrap_DIR={config.parent.as_posix()}']
                 implementation = wrap_prefix / 'lib/gtwrap/gtwrap/serialization.py'
             else:
-                arguments += [f'-DWRAP_ROOT={wrap}']
+                arguments += [f'-DWRAP_ROOT={wrap.as_posix()}']
                 implementation = wrap / 'gtwrap/serialization.py'
             run(['cmake', '-S', source, '-B', build,
-                 f'-DCMAKE_INSTALL_PREFIX={prefix}', *arguments], env=env)
+                 f'-DCMAKE_INSTALL_PREFIX={prefix.as_posix()}', *arguments], env=env)
             run(['cmake', '--build', build, '--config', 'Release', '-j', '6'], env=env)
             generated = build / 'gtwrap_serialization/registry'
             manifest = json.loads((generated / 'registry.json').read_text())

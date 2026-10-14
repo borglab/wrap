@@ -56,12 +56,18 @@ jobs:
           elif [[ "$RUNNER_OS" == macOS ]]; then
             echo 'set(VCPKG_CMAKE_SYSTEM_NAME Darwin)' >> _triplets/managed.cmake
           fi
-      - uses: actions/cache@v4
+      - uses: actions/cache/restore@v4
+        id: boost-cache
         with:
           path: _vcpkg/installed
           key: serialization-v1-${{ runner.os }}-${{ runner.arch }}-${{ matrix.linkage }}-ef7dbf94
       - name: Install Boost.Serialization
         run: ./_vcpkg/vcpkg install boost-serialization:managed --overlay-triplets=_triplets
+      - uses: actions/cache/save@v4
+        if: steps.boost-cache.outputs.cache-hit != 'true'
+        with:
+          path: _vcpkg/installed
+          key: serialization-v1-${{ runner.os }}-${{ runner.arch }}-${{ matrix.linkage }}-ef7dbf94
       - name: Run required runtime tests
         env:
           GTWRAP_TEST_SERIALIZATION: '1'
