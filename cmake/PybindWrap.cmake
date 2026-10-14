@@ -5,33 +5,89 @@ else()
   set(GTWRAP_PACKAGE_DIR ${CMAKE_CURRENT_LIST_DIR}/..)
 endif()
 
-# Generate one shared export-key header and one implementation fragment from a
-# selected interface namespace. Callers include the header in every binding
-# translation unit that may serialize these types, and include the fragment
-# once in each extension that lacks its own BOOST_CLASS_EXPORT owner.
-# ARGN contains C++ headers defining the selected types.
-function(pybind_generate_serialization_support interface namespace_prefix
-         output_header output_implementations)
-  if(UNIX)
-    set(_serialization_path_separator ":")
-  else()
-    set(_serialization_path_separator ";")
+# Installed packages set these before including this module. Source-tree users
+# need no separate script assignments.
+if(NOT PYBIND_WRAP_SCRIPT)
+  set(PYBIND_WRAP_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/../scripts/pybind_wrap.py")
+endif()
+if(NOT PYBIND_SERIALIZATION_SCRIPT)
+  set(PYBIND_SERIALIZATION_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/../scripts/pybind_serialization.py")
+endif()
+file(GLOB_RECURSE GTWRAP_GENERATOR_SOURCES CONFIGURE_DEPENDS
+     "${GTWRAP_PACKAGE_DIR}/gtwrap/*.py")
+
+# Create one shared archive owner. Callers supply the complete polymorphic
+# type family and use SERIALIZATION_LIBRARY in every participating pybind_wrap.
+function(pybind_add_serialization_library target)
+  cmake_parse_arguments(REG "" "BOOST_SERIALIZATION_TARGET"
+    "INTERFACES;HEADERS;LINK_LIBRARIES;NAMESPACE_PREFIXES;IGNORE_CLASSES" ${ARGN})
+  if(REG_UNPARSED_ARGUMENTS OR REG_KEYWORDS_MISSING_VALUES)
+    message(FATAL_ERROR "Invalid pybind_add_serialization_library arguments")
   endif()
-  set(_serialization_includes "")
-  foreach(_serialization_include IN LISTS ARGN)
-    list(APPEND _serialization_includes --include "${_serialization_include}")
+  if(NOT REG_INTERFACES OR NOT REG_HEADERS)
+    message(FATAL_ERROR "A serialization library requires INTERFACES and HEADERS")
+  endif()
+  if(NOT target MATCHES "^[A-Za-z0-9_-]+$")
+    message(FATAL_ERROR "Serialization target names may contain letters, digits, _ and -")
+  endif()
+  if(NOT REG_BOOST_SERIALIZATION_TARGET)
+    set(REG_BOOST_SERIALIZATION_TARGET Boost::serialization)
+  endif()
+  if(NOT TARGET ${REG_BOOST_SERIALIZATION_TARGET})
+    message(FATAL_ERROR "Provide an existing Boost.Serialization target")
+  endif()
+  set(directory "${CMAKE_CURRENT_BINARY_DIR}/gtwrap_serialization/${target}")
+  set(arguments --name "${target}" --out-dir "${directory}")
+  set(interfaces "")
+  foreach(interface IN LISTS REG_INTERFACES)
+    get_filename_component(interface "${interface}" ABSOLUTE BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+    list(APPEND interfaces "${interface}")
+    list(APPEND arguments --src "${interface}")
   endforeach()
-  add_custom_command(
-    OUTPUT "${output_header}" "${output_implementations}"
+  foreach(header IN LISTS REG_HEADERS)
+    list(APPEND arguments --include "${header}")
+  endforeach()
+  foreach(prefix IN LISTS REG_NAMESPACE_PREFIXES)
+    list(APPEND arguments --namespace-prefix "${prefix}")
+  endforeach()
+  foreach(type IN LISTS REG_IGNORE_CLASSES)
+    list(APPEND arguments --ignore "${type}")
+  endforeach()
+  if(UNIX)
+    set(separator ":")
+  else()
+    set(separator ";")
+  endif()
+  set(outputs "")
+  foreach(suffix .h _keys.h .cpp .json .map .exports)
+    list(APPEND outputs "${directory}/${target}${suffix}")
+  endforeach()
+  add_custom_command(OUTPUT ${outputs}
     COMMAND ${CMAKE_COMMAND} -E env
-      "PYTHONPATH=${GTWRAP_PACKAGE_DIR}${_serialization_path_separator}$ENV{PYTHONPATH}"
-      ${PYTHON_EXECUTABLE} ${PYBIND_SERIALIZATION_SCRIPT}
-      --src "${interface}" --namespace-prefix "${namespace_prefix}"
-      --out-header "${output_header}"
-      --out-implementations "${output_implementations}"
-      ${_serialization_includes}
-    DEPENDS "${interface}" "${PYBIND_SERIALIZATION_SCRIPT}"
+      "PYTHONPATH=${GTWRAP_PACKAGE_DIR}${separator}$ENV{PYTHONPATH}"
+      "${PYTHON_EXECUTABLE}" "${PYBIND_SERIALIZATION_SCRIPT}" ${arguments}
+    DEPENDS ${interfaces} "${PYBIND_SERIALIZATION_SCRIPT}" ${GTWRAP_GENERATOR_SOURCES}
     VERBATIM)
+  add_custom_target(${target}_generate DEPENDS ${outputs})
+  add_library(${target} SHARED "${directory}/${target}.cpp")
+  add_dependencies(${target} ${target}_generate)
+  target_compile_features(${target} PUBLIC cxx_std_17)
+  target_link_libraries(${target} PRIVATE ${REG_BOOST_SERIALIZATION_TARGET}
+                                PUBLIC ${REG_LINK_LIBRARIES})
+  target_include_directories(${target} PUBLIC "$<BUILD_INTERFACE:${directory}>")
+  set_target_properties(${target} PROPERTIES
+    CXX_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN ON
+    WINDOWS_EXPORT_ALL_SYMBOLS OFF
+    GTWRAP_SERIALIZATION_MANIFEST "${directory}/${target}.json")
+  if(APPLE)
+    # Match pybind_wrap's cross-DSO RTTI behavior for header-defined types.
+    target_compile_options(${target} PRIVATE -fvisibility-ms-compat)
+    target_link_options(${target} PRIVATE "LINKER:-exported_symbols_list,${directory}/${target}.exports")
+    set_property(TARGET ${target} APPEND PROPERTY LINK_DEPENDS "${directory}/${target}.exports")
+  elseif(UNIX)
+    target_link_options(${target} PRIVATE "LINKER:--version-script=${directory}/${target}.map")
+    set_property(TARGET ${target} APPEND PROPERTY LINK_DEPENDS "${directory}/${target}.map")
+  endif()
 endfunction()
 
 # Get the Python version
@@ -79,7 +135,30 @@ function(
   libs
   dependencies)
   set(ExtraMacroArgs ${ARGN})
-  list(GET ExtraMacroArgs 0 USE_BOOST_SERIALIZATION)
+  set(USE_BOOST_SERIALIZATION OFF)
+  if(ExtraMacroArgs)
+    list(POP_FRONT ExtraMacroArgs USE_BOOST_SERIALIZATION)
+  endif()
+  cmake_parse_arguments(WRAP "" "SERIALIZATION_LIBRARY" "" ${ExtraMacroArgs})
+  if(WRAP_UNPARSED_ARGUMENTS OR WRAP_KEYWORDS_MISSING_VALUES)
+    message(FATAL_ERROR "Invalid pybind_wrap optional arguments")
+  endif()
+  set(_serialization_args "")
+  set(_serialization_depends "")
+  if(WRAP_SERIALIZATION_LIBRARY)
+    if(NOT USE_BOOST_SERIALIZATION)
+      message(FATAL_ERROR "SERIALIZATION_LIBRARY requires serialization enabled")
+    endif()
+    if(NOT TARGET ${WRAP_SERIALIZATION_LIBRARY})
+      message(FATAL_ERROR "Unknown serialization library ${WRAP_SERIALIZATION_LIBRARY}")
+    endif()
+    get_target_property(_manifest ${WRAP_SERIALIZATION_LIBRARY} GTWRAP_SERIALIZATION_MANIFEST)
+    if(NOT _manifest)
+      message(FATAL_ERROR "Target was not created by pybind_add_serialization_library")
+    endif()
+    set(_serialization_args --serialization-manifest "${_manifest}")
+    set(_serialization_depends "${_manifest}" ${WRAP_SERIALIZATION_LIBRARY}_generate)
+  endif()
   if(USE_BOOST_SERIALIZATION)
     set(_WRAP_BOOST_ARG "--use-boost-serialization")
   else(USE_BOOST_SERIALIZATION)
@@ -119,8 +198,8 @@ function(
           --out "${cpp_file}"  --module_name ${module_name}
           --top_module_namespaces "${top_namespace}" --ignore ${ignore_classes}
           --template ${module_template} --is_submodule ${_WRAP_BOOST_ARG}
-          --xml_source "${GTWRAP_PYTHON_DOCS_SOURCE}"
-      DEPENDS "${interface_file}" ${module_template} "${module_name}/specializations/${interface}.h" "${module_name}/preamble/${interface}.h"
+          --xml_source "${GTWRAP_PYTHON_DOCS_SOURCE}" ${_serialization_args}
+      DEPENDS ${_serialization_depends} ${GTWRAP_GENERATOR_SOURCES} "${PYBIND_WRAP_SCRIPT}" "${interface_file}" ${module_template} "${module_name}/specializations/${interface}.h" "${module_name}/preamble/${interface}.h"
       VERBATIM)
 
   endforeach()
@@ -138,8 +217,8 @@ function(
       --out "${generated_cpp}" --module_name ${module_name}
       --top_module_namespaces "${top_namespace}" --ignore ${ignore_classes}
       --template ${module_template} ${_WRAP_BOOST_ARG}
-      --xml_source "${GTWRAP_PYTHON_DOCS_SOURCE}"
-    DEPENDS "${main_interface}" ${module_template} "${module_name}/specializations/${main_interface_name}.h" "${module_name}/specializations/${main_interface_name}.h"
+      --xml_source "${GTWRAP_PYTHON_DOCS_SOURCE}" ${_serialization_args}
+    DEPENDS ${_serialization_depends} ${GTWRAP_GENERATOR_SOURCES} "${PYBIND_WRAP_SCRIPT}" "${main_interface}" ${module_template} "${module_name}/specializations/${main_interface_name}.h" "${module_name}/specializations/${main_interface_name}.h"
     VERBATIM)
 
     add_custom_target(pybind_wrap_${module_name} DEPENDS ${cpp_files})
@@ -159,6 +238,10 @@ function(
   endif()
 
   add_dependencies(${target} pybind_wrap_${module_name})
+  if(WRAP_SERIALIZATION_LIBRARY)
+    target_link_libraries(${target} PRIVATE ${WRAP_SERIALIZATION_LIBRARY})
+    add_dependencies(${target} ${WRAP_SERIALIZATION_LIBRARY}_generate)
+  endif()
 
   if(NOT "${libs}" STREQUAL "")
     target_link_libraries(${target} PRIVATE "${libs}")

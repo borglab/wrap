@@ -13,7 +13,8 @@ Author: Duy Nguyen Ta, Fan Jiang, Matthew Sklar, Varun Agrawal, and Frank Dellae
 # pylint: disable=too-many-arguments, too-many-instance-attributes, no-self-use, no-else-return, too-many-arguments, unused-format-string-argument, line-too-long, consider-using-f-string
 
 import re
-from gtwrap.serialization import discover, export_name
+import json
+from gtwrap.serialization import export_name
 from pathlib import Path
 from typing import List
 
@@ -83,12 +84,24 @@ void bind_variable(pybind11::module_& module, const char* name,
                  use_boost_serialization=False,
                  ignore_classes=(),
                  module_template="",
-                 xml_source=""):
+                 xml_source="",
+                 serialization_manifest=None):
         self.module_name = module_name
         self.top_module_namespaces = top_module_namespaces
         self.use_boost_serialization = use_boost_serialization
         self.ignore_classes = ignore_classes
         self._serializing_classes = []
+        self._managed_serialization = {}
+        self._serialization_header = None
+        if serialization_manifest is not None:
+            if not use_boost_serialization:
+                raise ValueError('a serialization library requires serialization enabled')
+            manifest = json.loads(Path(serialization_manifest).read_text(encoding='utf-8'))
+            if manifest.get('version') != 1:
+                raise ValueError('unsupported serialization manifest version')
+            self._serialization_header = manifest['header']
+            self._managed_serialization = {
+                entry['cpp_type']: entry for entry in manifest['entries']}
         self.module_template = module_template
         self.python_keywords = [
             'lambda', 'False', 'def', 'if', 'raise', 'None', 'del', 'import',
@@ -185,6 +198,21 @@ void bind_variable(pybind11::module_& module, const char* name,
 
     def _wrap_serialization(self, cpp_class):
         """Helper method to add serialize, deserialize and pickle methods to the wrapped class."""
+        if cpp_class in self._managed_serialization:
+            entry = self._managed_serialization[cpp_class]
+            save, load = entry['save'], entry['load']
+            indent = self.method_indent
+            return (
+                f'{indent}.def("serialize", [](const {cpp_class}* self){{ '
+                f'std::string result; {save}(self, &result); return result; }})'
+                f'{indent}.def("deserialize", []({cpp_class}* self, const std::string& serialized){{ '
+                f'{load}(&serialized, self); }}, py::arg("serialized"))'
+                f'{indent}.def(py::pickle('
+                f'[](const {cpp_class}& value){{ std::string result; '
+                f'{save}(&value, &result); return py::make_tuple(result); }}, '
+                f'[](py::tuple state){{ {cpp_class} value; '
+                f'auto input = state[0].cast<std::string>(); '
+                f'{load}(&input, &value); return value; }}))')
         if not cpp_class in self._serializing_classes:
             self._serializing_classes.append(cpp_class)
 
@@ -911,6 +939,9 @@ void bind_variable(pybind11::module_& module, const char* name,
         wrapped_declarations, wrapped_bindings, includes = self.wrap_namespace(
             module)
 
+        if self._serialization_header:
+            includes = f'#include "{self._serialization_header}"\n' + includes
+
         if self.use_boost_serialization:
             includes += "#include <boost/serialization/export.hpp>"
 
@@ -987,42 +1018,7 @@ void bind_variable(pybind11::module_& module, const char* name,
             submodules_init="",
         )
 
-    def serialization_export_types(self, content, namespace_prefix):
-        """Find serializable types in one interface using the normal wrapper path.
-
-        A prefix selects the shared polymorphic family.  In particular, this
-        avoids exporting unrelated classes from a large interface such as
-        GTSAM's linear.i.  The caller owns the export implementations; this
-        method only discovers the types and does not change normal wrapping.
-        """
-        if not namespace_prefix or not namespace_prefix.endswith('::'):
-            raise ValueError('namespace_prefix must end in ::')
-        return [entry.cpp_type for entry in discover(
-            [('<string>', content)], [namespace_prefix], self.ignore_classes)]
-
     serialization_export_name = staticmethod(export_name)
-
-    def serialization_support(self, content, namespace_prefix, includes=()):
-        """Generate shared export keys and a single-owner implementation list.
-
-        Include the key header in every serialization translation unit before
-        archive instantiation. Include the implementation fragment exactly once
-        per extension, after its archive headers. The ordinary generated full
-        exports in that owner must not also declare the same keys.
-        """
-        classes = self.serialization_export_types(content, namespace_prefix)
-        header = ['#pragma once', '', '#include <boost/serialization/export.hpp>']
-        for include in includes:
-            header.append(f'#include <{include}>')
-        header.append('')
-        implementations = []
-        for cpp_class in classes:
-            name = self.serialization_export_name(cpp_class)
-            if name != cpp_class:
-                header.append(f'typedef {cpp_class} {name};')
-            header.append(f'BOOST_CLASS_EXPORT_KEY({name})')
-            implementations.append(f'BOOST_CLASS_EXPORT_IMPLEMENT({name})')
-        return '\n'.join(header) + '\n', '\n'.join(implementations) + '\n'
 
     def wrap_submodule(self, source):
         """
