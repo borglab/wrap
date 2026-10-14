@@ -252,6 +252,42 @@ The python wrapper supports keyword arguments for functions/methods. Hence, the 
     - Unfortunately, this means that aliases can no longer be used.
     - Similarly, there can be multiple `preamble.h` and `specializations.h` files. Each of these should match the module file name.
 
+### Shared Python Boost export keys
+
+When one binding translation unit serializes a polymorphic type exported by
+another, both must see the same `BOOST_CLASS_EXPORT_KEY` specialization before
+archive instantiation. `pybind_serialization.py` derives keys and optional
+implementation macros from the same interface markers used by the ordinary
+pybind generator. Select a narrow namespace to avoid including unrelated
+types in every binding translation unit:
+
+```cmake
+pybind_generate_serialization_support(
+  "${PROJECT_SOURCE_DIR}/gtsam/linear/linear.i"
+  "gtsam::noiseModel::"
+  "${CMAKE_CURRENT_BINARY_DIR}/noise_model_keys.h"
+  "${CMAKE_CURRENT_BINARY_DIR}/noise_model_implementations.inc"
+  "gtsam/linear/NoiseModel.h")
+add_custom_target(noise_model_keys DEPENDS
+  "${CMAKE_CURRENT_BINARY_DIR}/noise_model_keys.h"
+  "${CMAKE_CURRENT_BINARY_DIR}/noise_model_implementations.inc")
+add_dependencies(stable_python_module noise_model_keys)
+add_dependencies(unstable_python_module noise_model_keys)
+```
+
+Add the build directory to the modules' include paths. Include the generated
+key header in each serialization-enabled binding translation unit, after its
+normal preamble and before `{boost_class_export}` or other serialization uses.
+The translation unit whose generated `BOOST_CLASS_EXPORT` macros already own
+these types must **skip** the key header: that macro declares the keys again.
+In a second extension, include the key header followed by the generated
+implementation fragment exactly once, after the Boost archive headers. This
+retains one set of serializer implementations per extension and the existing
+archive names, without an additional library or link dependency. Keep these
+files private to Python bindings when C++ clients use different archive IDs.
+Generate and include them only when Boost serialization is enabled. MATLAB
+generation is independent of this Python helper.
+
 ## Pybind Callable Adapters
 
 The Python generator uses explicit full-signature C++ callable-pointer casts for

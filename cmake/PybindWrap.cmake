@@ -5,6 +5,35 @@ else()
   set(GTWRAP_PACKAGE_DIR ${CMAKE_CURRENT_LIST_DIR}/..)
 endif()
 
+# Generate one shared export-key header and one implementation fragment from a
+# selected interface namespace. Callers include the header in every binding
+# translation unit that may serialize these types, and include the fragment
+# once in each extension that lacks its own BOOST_CLASS_EXPORT owner.
+# ARGN contains C++ headers defining the selected types.
+function(pybind_generate_serialization_support interface namespace_prefix
+         output_header output_implementations)
+  if(UNIX)
+    set(_serialization_path_separator ":")
+  else()
+    set(_serialization_path_separator ";")
+  endif()
+  set(_serialization_includes "")
+  foreach(_serialization_include IN LISTS ARGN)
+    list(APPEND _serialization_includes --include "${_serialization_include}")
+  endforeach()
+  add_custom_command(
+    OUTPUT "${output_header}" "${output_implementations}"
+    COMMAND ${CMAKE_COMMAND} -E env
+      "PYTHONPATH=${GTWRAP_PACKAGE_DIR}${_serialization_path_separator}$ENV{PYTHONPATH}"
+      ${PYTHON_EXECUTABLE} ${PYBIND_SERIALIZATION_SCRIPT}
+      --src "${interface}" --namespace-prefix "${namespace_prefix}"
+      --out-header "${output_header}"
+      --out-implementations "${output_implementations}"
+      ${_serialization_includes}
+    DEPENDS "${interface}" "${PYBIND_SERIALIZATION_SCRIPT}"
+    VERBATIM)
+endfunction()
+
 # Get the Python version
 include(GtwrapUtils)
 message(STATUS "Checking Python Version")

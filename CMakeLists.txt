@@ -75,7 +75,8 @@ endif()
 # Install wrapping scripts as binaries to `CMAKE_INSTALL_PREFIX/bin` so they can
 # be invoked for wrapping. We use DESTINATION (instead of TYPE) so we can
 # support older CMake versions.
-install(PROGRAMS scripts/pybind_wrap.py scripts/matlab_wrap.py
+install(PROGRAMS scripts/pybind_wrap.py scripts/pybind_serialization.py
+                 scripts/matlab_wrap.py
         DESTINATION "${GTWRAP_BIN_INSTALL_DIR}")
 
 # Install the matlab.h file to `CMAKE_INSTALL_PREFIX/lib/gtwrap/matlab.h`.

@@ -916,10 +916,9 @@ void bind_variable(pybind11::module_& module, const char* name,
             # Export classes for serialization.
             boost_class_export = ""
             for cpp_class in self._serializing_classes:
-                new_name = cpp_class
+                new_name = self.serialization_export_name(cpp_class)
                 # The boost's macro doesn't like commas, so we have to typedef.
-                if ',' in cpp_class:
-                    new_name = re.sub("[,:<> ]", "", cpp_class)
+                if new_name != cpp_class:
                     boost_class_export += "typedef {cpp_class} {new_name};\n".format(  # noqa
                         cpp_class=cpp_class, new_name=new_name)
 
@@ -986,6 +985,55 @@ void bind_variable(pybind11::module_& module, const char* name,
             submodules="\n".join(submodules),
             submodules_init="",
         )
+
+    def serialization_export_types(self, content, namespace_prefix):
+        """Find serializable types in one interface using the normal wrapper path.
+
+        A prefix selects the shared polymorphic family.  In particular, this
+        avoids exporting unrelated classes from a large interface such as
+        GTSAM's linear.i.  The caller owns the export implementations; this
+        method only discovers the types and does not change normal wrapping.
+        """
+        if not namespace_prefix or not namespace_prefix.endswith('::'):
+            raise ValueError('namespace_prefix must end in ::')
+        module = parser.Module.parse_string(content)
+        module = instantiator.instantiate_namespace(module)
+        self._serializing_classes = []
+        try:
+            self.wrap_namespace(module)
+            return [cpp_class for cpp_class in self._serializing_classes
+                    if cpp_class.startswith(namespace_prefix)]
+        finally:
+            self._serializing_classes = []
+
+    @staticmethod
+    def serialization_export_name(cpp_class):
+        """Return the existing Boost export name, including comma-safe alias."""
+        if ',' in cpp_class:
+            return re.sub('[,:<> ]', '', cpp_class)
+        return cpp_class
+
+    def serialization_support(self, content, namespace_prefix, includes=()):
+        """Generate shared export keys and a single-owner implementation list.
+
+        Include the key header in every serialization translation unit before
+        archive instantiation. Include the implementation fragment exactly once
+        per extension, after its archive headers. The ordinary generated full
+        exports in that owner must not also declare the same keys.
+        """
+        classes = self.serialization_export_types(content, namespace_prefix)
+        header = ['#pragma once', '', '#include <boost/serialization/export.hpp>']
+        for include in includes:
+            header.append(f'#include <{include}>')
+        header.append('')
+        implementations = []
+        for cpp_class in classes:
+            name = self.serialization_export_name(cpp_class)
+            if name != cpp_class:
+                header.append(f'typedef {cpp_class} {name};')
+            header.append(f'BOOST_CLASS_EXPORT_KEY({name})')
+            implementations.append(f'BOOST_CLASS_EXPORT_IMPLEMENT({name})')
+        return '\n'.join(header) + '\n', '\n'.join(implementations) + '\n'
 
     def wrap_submodule(self, source):
         """

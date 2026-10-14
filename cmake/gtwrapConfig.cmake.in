@@ -16,6 +16,7 @@ include(@PACKAGE_INSTALL_CMAKE_DIR@/GtwrapUtils.cmake)
 
 # Set the variables for the wrapping scripts to be used in the build.
 set_and_check(PYBIND_WRAP_SCRIPT "@PACKAGE_INSTALL_BIN_DIR@/pybind_wrap.py")
+set_and_check(PYBIND_SERIALIZATION_SCRIPT "@PACKAGE_INSTALL_BIN_DIR@/pybind_serialization.py")
 set_and_check(MATLAB_WRAP_SCRIPT "@PACKAGE_INSTALL_BIN_DIR@/matlab_wrap.py")
 
 # Load the same pybind11 provider selected when gtwrap was configured.
