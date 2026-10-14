@@ -129,4 +129,7 @@ class TestSerializationRuntime(unittest.TestCase):
             else:
                 exported = run(['nm', '-D', '--defined-only', runtime / 'libregistry.so'])
                 actual = {line.split()[-1] for line in exported.splitlines() if line.strip()}
-            self.assertEqual(actual, symbols)
+            # Report export-policy failures without skipping installed-package
+            # runtime validation. Both consumption modes must still be exercised.
+            with self.subTest(consumption=label, check='public exports'):
+                self.assertEqual(actual, symbols)
