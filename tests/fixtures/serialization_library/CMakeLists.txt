@@ -50,11 +50,20 @@ endforeach()
 install(TARGETS registry consumer_a consumer_b unrelated legacy
   LIBRARY DESTINATION runtime RUNTIME DESTINATION runtime)
 # All independent executables/modules use the same selected Boost runtime.
-# Copy a shared Boost beside them to test a relocatable package layout.
+# Copy shared Boost and its imported component dependencies beside them.
+# Some distributions link serialization to thread/atomic, others do not.
 if(NOT Boost_USE_STATIC_LIBS)
-  install(FILES "$<TARGET_FILE:Boost::serialization>" DESTINATION runtime)
+  get_property(imported_targets DIRECTORY PROPERTY IMPORTED_TARGETS)
+  foreach(dependency IN LISTS imported_targets)
+    if(dependency MATCHES "^Boost::")
+      get_target_property(dependency_type ${dependency} TYPE)
+      if(dependency_type STREQUAL "SHARED_LIBRARY")
+        install(IMPORTED_RUNTIME_ARTIFACTS ${dependency}
+          LIBRARY DESTINATION runtime RUNTIME DESTINATION runtime)
+      endif()
+    endif()
+  endforeach()
   if(UNIX)
-    install(FILES "$<TARGET_SONAME_FILE:Boost::serialization>" DESTINATION runtime)
     set_target_properties(legacy PROPERTIES INSTALL_RPATH "$ORIGIN")
     if(APPLE)
       set_target_properties(legacy PROPERTIES INSTALL_RPATH "@loader_path")
