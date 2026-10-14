@@ -252,41 +252,131 @@ The python wrapper supports keyword arguments for functions/methods. Hence, the 
     - Unfortunately, this means that aliases can no longer be used.
     - Similarly, there can be multiple `preamble.h` and `specializations.h` files. Each of these should match the module file name.
 
-### Shared Python Boost export keys
+### Centrally managed Python serialization
 
-When one binding translation unit serializes a polymorphic type exported by
-another, both must see the same `BOOST_CLASS_EXPORT_KEY` specialization before
-archive instantiation. `pybind_serialization.py` derives keys and optional
-implementation macros from the same interface markers used by the ordinary
-pybind generator. Select a narrow namespace to avoid including unrelated
-types in every binding translation unit:
+`pybind_add_serialization_library` creates an opt-in shared library that owns
+Boost export registrations **and** the text-archive save/load operations used
+by Python bindings. Multiple extensions link that same library. Archive
+construction stays in the owner, including when Boost.Serialization itself is
+static; consumers do not need their own copy of its registration tables.
+Existing wrapping is unchanged unless a serialization library is selected.
+
+The API is independent of any particular C++ project. Supply interface files,
+headers defining their types, and the domain-library targets they require:
 
 ```cmake
-pybind_generate_serialization_support(
-  "${PROJECT_SOURCE_DIR}/gtsam/linear/linear.i"
-  "gtsam::noiseModel::"
-  "${CMAKE_CURRENT_BINARY_DIR}/noise_model_keys.h"
-  "${CMAKE_CURRENT_BINARY_DIR}/noise_model_implementations.inc"
-  "gtsam/linear/NoiseModel.h")
-add_custom_target(noise_model_keys DEPENDS
-  "${CMAKE_CURRENT_BINARY_DIR}/noise_model_keys.h"
-  "${CMAKE_CURRENT_BINARY_DIR}/noise_model_implementations.inc")
-add_dependencies(stable_python_module noise_model_keys)
-add_dependencies(unstable_python_module noise_model_keys)
+# Use find_package(gtwrap CONFIG REQUIRED) for an installed wrap package,
+# or include(PybindWrap) with wrap/cmake on CMAKE_MODULE_PATH for a source tree.
+find_package(Boost REQUIRED COMPONENTS serialization)
+
+pybind_add_serialization_library(shared_archives
+  INTERFACES common.i module_a.i module_b.i
+  HEADERS example/types.h
+  LINK_LIBRARIES example_types)
+
+pybind_wrap(module_a "${CMAKE_CURRENT_SOURCE_DIR}/module_a.i"
+  "module_a.cpp" "module_a" "example" ""
+  "${CMAKE_CURRENT_SOURCE_DIR}/module.tpl" "example_types" "" ON
+  SERIALIZATION_LIBRARY shared_archives)
+pybind_wrap(module_b "${CMAKE_CURRENT_SOURCE_DIR}/module_b.i"
+  "module_b.cpp" "module_b" "example" ""
+  "${CMAKE_CURRENT_SOURCE_DIR}/module.tpl" "example_types" "" ON
+  SERIALIZATION_LIBRARY shared_archives)
 ```
 
-Add the build directory to the modules' include paths. Include the generated
-key header in each serialization-enabled binding translation unit, after its
-normal preamble and before `{boost_class_export}` or other serialization uses.
-The translation unit whose generated `BOOST_CLASS_EXPORT` macros already own
-these types must **skip** the key header: that macro declares the keys again.
-In a second extension, include the key header followed by the generated
-implementation fragment exactly once, after the Boost archive headers. This
-retains one set of serializer implementations per extension and the existing
-archive names, without an additional library or link dependency. Keep these
-files private to Python bindings when C++ clients use different archive IDs.
-Generate and include them only when Boost serialization is enabled. MATLAB
-generation is independent of this Python helper.
+`example_types` supplies the C++ headers' include paths, compile definitions,
+and domain-library dependencies. The usual wrapping template and preamble
+requirements still apply. The source-tree module resolves the generator script
+paths itself; no extra script-variable assignment is necessary.
+
+The library helper accepts these keyword arguments:
+
+| Argument | Meaning |
+| --- | --- |
+| `INTERFACES` | Required list of interfaces containing the serializable types. Relative paths resolve against the current source directory. |
+| `HEADERS` | Required C++ header include names defining those types. |
+| `LINK_LIBRARIES` | Domain targets and their usage requirements; these must not depend on the consuming Python extensions. |
+| `NAMESPACE_PREFIXES` | Optional list of namespace prefixes ending in `::`; absent means all serializable declarations. |
+| `IGNORE_CLASSES` | Optional fully qualified instantiated C++ types to exclude. |
+| `BOOST_SERIALIZATION_TARGET` | Existing static or shared Boost.Serialization target; defaults to `Boost::serialization`. |
+
+Selection uses the existing `serialize`/`serializable` markers and
+`@serializable` template typedefs after instantiation. Duplicate types across
+interfaces are coalesced. Empty selections and conflicting archive identifiers
+are errors. Export names retain the ordinary wrapper's existing spelling,
+including its comma-safe template aliases.
+
+Supply the complete serialization domain: both the types whose Python
+save/load methods use the owner and every concrete polymorphic type reachable
+through their serialized members. Wrap cannot discover arbitrary C++ runtime
+subclasses or inspect the bodies of C++ serialization methods. A family-only
+registration list is insufficient if the containing object's archive is still
+created in an extension with its own static Boost runtime. Use one owner for
+all participating boundary types and their polymorphic dependencies.
+
+For selected types, generated `.serialize()`, `.deserialize()`, and pickle
+methods call typed functions in the library. Their normal export macros are
+suppressed. Unselected types retain ordinary wrapping. Consumers include a
+private generated API header through the existing `{includes}` placeholder;
+no new template placeholders, manual key headers, implementation fragments, or
+special owner translation units are needed. The library's registration headers
+remain private to its implementation.
+
+This mode preserves the existing text-archive protocol and one-element pickle
+state. It does not add binary/XML archives or customizable archive adapters.
+Boost archive exceptions become `std::runtime_error` at the library boundary
+and Python `RuntimeError` through pybind11.
+
+The owner is always a `SHARED` target, regardless of `BUILD_SHARED_LIBS`. Its
+Boost dependency is private and can be static or shared. Static dependencies
+must be suitable for linking into a shared library (including PIC where
+required). Do not combine incompatible Boost versions, C++ ABIs, or C++ runtimes;
+on Windows, use a consistent runtime such as `/MD` across all participants.
+The typed API uses C linkage for explicit symbol exports but passes C++ objects
+and strings, so it is not a cross-toolchain C ABI. Only the bridge functions are
+exported; the private static Boost runtime must not interpose on another
+library's registrations.
+
+Call the helper and pass `SERIALIZATION_LIBRARY` only when serialization is
+enabled in the consuming project. Pairing the latter argument with a false
+serialization flag is a configuration error. MATLAB generation is independent
+of this opt-in Python facility.
+
+#### Installation and migration
+
+The caller owns the runtime package layout. Install the shared owner alongside
+or in a location reachable from every consuming extension using ordinary
+`install(TARGETS ...)`. Configure relative install RPATHs as appropriate (for
+example `$ORIGIN` on ELF or `@loader_path` on macOS), or colocate the DLL with
+Windows extensions. Package a shared Boost runtime according to the project's
+existing dependency policy. Wrap does not choose installation directories or
+rewrite third-party library install names. The generated manifest and headers
+are build inputs; Python users do not need them at runtime. Normal linking
+keeps the owner loaded while its extension consumers are loaded.
+
+To migrate existing bindings, identify the complete domain, create the owner,
+and attach it to each consumer. Remove handwritten keys and export
+implementations for the managed types, including any special-case header
+exclusions. Keep existing serialization feature guards. Validate stable-only
+use, both extension import orders, calls after both are loaded, legacy archive
+exchange, and serialization-disabled builds before deploying the migration.
+
+The generic integration example in `tests/fixtures/serialization_library`
+builds two independent Python consumers and a legacy archive producer. It also
+checks installed source-tree/package consumption and coexistence with an
+unrelated static Boost runtime. Run it using the configured Python environment:
+
+```sh
+cmake -S . -B build
+cd build
+GTWRAP_TEST_SERIALIZATION=1 make -j6 testSerialization.run
+```
+
+Set `GTWRAP_TEST_BOOST_LINKAGE=static` or `shared` to choose one linkage; by
+default both are tested. Supply `CMAKE_PREFIX_PATH`, or a toolchain and
+`VCPKG_TARGET_TRIPLET`, to select the intended Boost installation. The dedicated
+CI matrix provisions Boost and treats missing dependencies as errors. The
+ordinary lightweight suite skips this integration test unless explicitly enabled.
 
 ## Pybind Callable Adapters
 
