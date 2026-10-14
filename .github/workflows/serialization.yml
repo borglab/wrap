@@ -51,6 +51,7 @@ jobs:
           EOF
           if [[ "$RUNNER_OS" == Linux ]]; then
             echo 'set(VCPKG_CMAKE_SYSTEM_NAME Linux)' >> _triplets/managed.cmake
+            echo 'set(VCPKG_C_FLAGS "-fPIC")' >> _triplets/managed.cmake
             echo 'set(VCPKG_CXX_FLAGS "-fPIC")' >> _triplets/managed.cmake
           elif [[ "$RUNNER_OS" == macOS ]]; then
             echo 'set(VCPKG_CMAKE_SYSTEM_NAME Darwin)' >> _triplets/managed.cmake
