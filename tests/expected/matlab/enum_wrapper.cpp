@@ -205,7 +205,7 @@ void gtsamOptimizerGaussNewtonParams_constructor_13(int nargout, mxArray *out[],
   mexAtExit(&_deleteAllObjects);
   typedef std::shared_ptr<gtsam::Optimizer<gtsam::GaussNewtonParams>> Shared;
 
-  Optimizer<gtsam::GaussNewtonParams>::Verbosity verbosity = unwrap_enum<Optimizer<gtsam::GaussNewtonParams>::Verbosity>(in[0]);
+  gtsam::Optimizer<gtsam::GaussNewtonParams>::Verbosity verbosity = unwrap_enum<gtsam::Optimizer<gtsam::GaussNewtonParams>::Verbosity>(in[0]);
   Shared *self = new Shared(new gtsam::Optimizer<gtsam::GaussNewtonParams>(verbosity));
   collector_gtsamOptimizerGaussNewtonParams.insert(self);
   out[0] = mxCreateNumericMatrix(1, 1, mxUINT32OR64_CLASS, mxREAL);
@@ -243,7 +243,7 @@ void gtsamOptimizerGaussNewtonParams_setVerbosity_17(int nargout, mxArray *out[]
 {
   checkArguments("setVerbosity",nargout,nargin-1,1);
   auto obj = unwrap_shared_ptr<gtsam::Optimizer<gtsam::GaussNewtonParams>>(in[0], "ptr_gtsamOptimizerGaussNewtonParams");
-  Optimizer<gtsam::GaussNewtonParams>::Verbosity value = unwrap_enum<Optimizer<gtsam::GaussNewtonParams>::Verbosity>(in[1]);
+  gtsam::Optimizer<gtsam::GaussNewtonParams>::Verbosity value = unwrap_enum<gtsam::Optimizer<gtsam::GaussNewtonParams>::Verbosity>(in[1]);
   obj->setVerbosity(value);
 }
 

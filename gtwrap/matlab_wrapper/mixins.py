@@ -155,30 +155,35 @@ class CheckMixin:
                 and arg_type.typename.qualified_name() in ('pair', 'std::pair')
                 and len(arg_type.template_params) == 2)
 
-    def is_class_enum(self, arg_type: parser.Type, class_: parser.Class):
-        """Check if arg_type is an enum in the class `class_`."""
+    def resolve_enum(self, arg_type: parser.Type, class_=None):
+        """Return the declared enum's C++ and MATLAB names, or None."""
+        name = arg_type.typename.to_cpp()
+        scope = []
         if class_:
-            class_enums = [enum.name for enum in class_.enums]
-            return arg_type.typename.name in class_enums
-        else:
-            return False
+            scope = class_.namespaces()[1:] + [class_.name]
+            # Preserve this instantiation's MATLAB alias for its own enums.
+            owners = (class_.name, class_.original.name,
+                      class_.cpp_typename().templated_name())
+            namespaces = arg_type.typename.namespaces
+            is_local = (not namespaces or any(
+                namespaces == prefix + [owner]
+                for prefix in ([], class_.namespaces()[1:])
+                for owner in owners))
+            if is_local and any(enum.name == arg_type.typename.name
+                                for enum in class_.enums):
+                return (f'{class_.to_cpp()}::{arg_type.typename.name}',
+                        '.'.join(scope + [arg_type.typename.name]))
 
-    def is_global_enum(self, arg_type: parser.Type, class_: parser.Class):
-        """Check if arg_type is a global enum."""
-        if class_:
-            # Get the enums in the class' namespace
-            global_enums = [
-                member.name for member in class_.parent.content
-                if isinstance(member, parser.Enum)
-            ]
-            return arg_type.typename.name in global_enums
-        else:
-            return False
+        # Try the local class/namespace scopes, then the fully qualified name.
+        for length in range(len(scope), -1, -1):
+            qualified = '::'.join(scope[:length] + [name])
+            if qualified in self.enum_names:
+                return self.enum_names[qualified]
+        return None
 
     def is_enum(self, arg_type: parser.Type, class_: parser.Class):
         """Check if `arg_type` is an enum."""
-        return self.is_class_enum(arg_type, class_) or self.is_global_enum(
-            arg_type, class_)
+        return self.resolve_enum(arg_type, class_) is not None
 
 
 class FormatMixin:

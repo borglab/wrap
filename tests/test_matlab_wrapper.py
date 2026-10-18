@@ -611,6 +611,108 @@ class TestWrap(unittest.TestCase):
             actual = osp.join(self.MATLAB_ACTUAL_DIR, file)
             self.compare_and_diff(file, actual)
 
+    def test_class_enum_namespace_paths(self):
+        """Class enums retain each namespace component, including typedefs."""
+        for namespaces in ([], ['outer'], ['outer', 'inner'],
+                           ['outer', 'inner', 'detail']):
+            with self.subTest(namespaces=namespaces), \
+                    tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                source = root / 'class_enums.i'
+                qualified = '::'.join(namespaces + ['Base'])
+                template = '::'.join(namespaces + ['Loss'])
+                source.write_text(
+                    ''.join(f'namespace {name} {{\n' for name in namespaces)
+                    + f'''
+class Base {{
+  enum ReweightScheme {{ Scalar, Block }};
+  Base(const {qualified}::ReweightScheme scheme);
+  {qualified}::ReweightScheme scheme() const;
+}};
+template<T>
+class Loss {{
+  enum Mode {{ First, Second }};
+  Loss(const This::Mode mode);
+  This::Mode mode() const;
+}};
+typedef {template}<double> LossDouble;
+typedef {template}<double> AnotherLossDouble;
+'''
+                    + '}\n' * len(namespaces), encoding='UTF-8')
+                output = root / 'output'
+                MatlabWrapper(module_name='class_enums').wrap(
+                    [str(source)], path=str(output))
+
+                package = output.joinpath(*(f'+{ns}' for ns in namespaces))
+                scheme = package / '+Base' / 'ReweightScheme.m'
+                self.assertTrue(scheme.is_file(), str(scheme))
+                self.assertIn('Scalar(0)', scheme.read_text(encoding='UTF-8'))
+                self.assertTrue((package / '+LossDouble' / 'Mode.m').is_file())
+                matlab = (package / 'Base.m').read_text(encoding='UTF-8')
+                qualified_enum = '.'.join(namespaces + ['Base', 'ReweightScheme'])
+                self.assertIn(f"isa(varargin{{1}},'{qualified_enum}')", matlab)
+                cpp = (output / 'class_enums_wrapper.cpp').read_text(
+                    encoding='UTF-8')
+                self.assertIn(f'"{qualified_enum}"', cpp)
+                for alias in ('LossDouble', 'AnotherLossDouble'):
+                    alias_enum = '.'.join(namespaces + [alias, 'Mode'])
+                    self.assertIn(f'wrap_enum(obj->mode(),"{alias_enum}")', cpp)
+                    matlab = (package / f'{alias}.m').read_text(encoding='UTF-8')
+                    self.assertIn(f"isa(varargin{{1}},'{alias_enum}')", matlab)
+
+    def test_interface_file_boundaries(self):
+        """A trailing line comment cannot consume the next interface file."""
+        for ending in ('', '\n', '\r\n'):
+            with self.subTest(ending=repr(ending)), \
+                    tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                first = root / 'first.i'
+                second = root / 'second.i'
+                first.write_text(
+                    'namespace first { class First { First(); }; }'
+                    '// namespace first' + ending, encoding='UTF-8')
+                second.write_text(
+                    'namespace second { class Second { Second(); }; }',
+                    encoding='UTF-8')
+                output = root / 'output'
+                MatlabWrapper(module_name='boundaries').wrap(
+                    [str(first), str(second)], path=str(output))
+
+                self.assertTrue((output / '+first' / 'First.m').is_file())
+                self.assertTrue((output / '+second' / 'Second.m').is_file())
+                cpp = (output / 'boundaries_wrapper.cpp').read_text(
+                    encoding='UTF-8')
+                self.assertIn('new first::First()', cpp)
+                self.assertIn('new second::Second()', cpp)
+
+    def test_enum_arguments_from_other_classes(self):
+        """Qualified enums use value conversions regardless of their owner."""
+        source = Path(self.INTERFACE_DIR) / 'matlab_enum_arguments.i'
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            MatlabWrapper(module_name='matlab_enum_arguments').wrap(
+                [str(source)], path=directory)
+            cpp = (output / 'matlab_enum_arguments_wrapper.cpp').read_text(
+                encoding='UTF-8')
+            enum = 'demo::nested::Owner::Mode'
+            matlab_enum = 'demo.nested.Owner.Mode'
+            self.assertIn(f'{enum} mode = unwrap_enum<{enum}>(in[0]);', cpp)
+            self.assertIn(f'{enum} mode = unwrap_enum<{enum}>(in[1]);', cpp)
+            self.assertIn('new demo::nested::Consumer(mode)', cpp)
+            self.assertIn('demo::nested::Consumer::Echo(mode)', cpp)
+            self.assertIn('demo::nested::NoLocalEnum::Echo(mode)', cpp)
+            self.assertIn(f'wrap_enum(obj->get(),"{matlab_enum}")', cpp)
+            self.assertIn(f'wrap_enum(obj->mode,"{matlab_enum}")', cpp)
+            self.assertIn('obj->mode = mode;', cpp)
+            self.assertIn(f'unwrap_enum<{enum}>(value)', cpp)
+            self.assertIn(f'wrap_enum(value,"{matlab_enum}")', cpp)
+            self.assertIn(f'wrap_enum(demo::nested::echo(mode),"{matlab_enum}")', cpp)
+            self.assertIn(f'wrap_enum(pairResult.first,"{matlab_enum}")', cpp)
+            self.assertIn(f'wrap_enum(pairResult.second,"{matlab_enum}")', cpp)
+            self.assertNotIn(f'unwrap_shared_ptr< {enum} >', cpp)
+            self.assertNotIn(f'make_shared<{enum}>', cpp)
+            self.assertTrue((output / '+demo' / '+nested' / '+Owner' / 'Mode.m').is_file())
+
     def test_templates(self):
         """Test interface file with template info."""
         file = osp.join(self.INTERFACE_DIR, 'templates.i')
