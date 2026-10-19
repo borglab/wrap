@@ -1,0 +1,34 @@
+# Exact compiler-forced exports observed with the pinned Boost 1.88 x64 MSVC
+# static libraries. This exception applies ONLY to Windows + static Boost.
+# These are implementation details, not supported consumer entry points.
+# No namespace wildcards: Boost/toolchain changes require explicit review.
+# Groups: codecvt_null<wchar_t>; singleton_module; singleton<T> for text archive
+# serializer maps, extended type-info registries, and void-cast registrations.
+??0?$codecvt_null@_W@archive@boost@@QEAA@_K@Z
+??1?$codecvt_null@_W@archive@boost@@UEAA@XZ
+??_F?$codecvt_null@_W@archive@boost@@QEAAXXZ
+?do_always_noconv@?$codecvt_null@_W@archive@boost@@EEBA_NXZ
+?do_encoding@?$codecvt_null@_W@archive@boost@@EEBAHXZ
+?do_in@?$codecvt_null@_W@archive@boost@@EEBAHAEAU_Mbstatet@@PEBD1AEAPEBDPEA_W3AEAPEA_W@Z
+?do_max_length@?$codecvt_null@_W@archive@boost@@EEBAHXZ
+?do_out@?$codecvt_null@_W@archive@boost@@EEBAHAEAU_Mbstatet@@PEB_W1AEAPEB_WPEAD3AEAPEAD@Z
+?get_const_instance@?$singleton@V?$map@Vtext_iarchive@archive@boost@@@extra_detail@detail@archive@boost@@@serialization@boost@@SAAEBV?$map@Vtext_iarchive@archive@boost@@@extra_detail@detail@archive@3@XZ
+?get_const_instance@?$singleton@V?$map@Vtext_oarchive@archive@boost@@@extra_detail@detail@archive@boost@@@serialization@boost@@SAAEBV?$map@Vtext_oarchive@archive@boost@@@extra_detail@detail@archive@3@XZ
+?get_const_instance@?$singleton@V?$multiset@PEBVextended_type_info@serialization@boost@@Ukey_compare@detail@23@V?$allocator@PEBVextended_type_info@serialization@boost@@@std@@@std@@@serialization@boost@@SAAEBV?$multiset@PEBVextended_type_info@serialization@boost@@Ukey_compare@detail@23@V?$allocator@PEBVextended_type_info@serialization@boost@@@std@@@std@@XZ
+?get_const_instance@?$singleton@V?$multiset@PEBVextended_type_info_typeid_0@typeid_system@serialization@boost@@Utype_compare@234@V?$allocator@PEBVextended_type_info_typeid_0@typeid_system@serialization@boost@@@std@@@std@@@serialization@boost@@SAAEBV?$multiset@PEBVextended_type_info_typeid_0@typeid_system@serialization@boost@@Utype_compare@234@V?$allocator@PEBVextended_type_info_typeid_0@typeid_system@serialization@boost@@@std@@@std@@XZ
+?get_const_instance@?$singleton@V?$set@PEBVvoid_caster@void_cast_detail@serialization@boost@@Uvoid_caster_compare@234@V?$allocator@PEBVvoid_caster@void_cast_detail@serialization@boost@@@std@@@std@@@serialization@boost@@SAAEBV?$set@PEBVvoid_caster@void_cast_detail@serialization@boost@@Uvoid_caster_compare@234@V?$allocator@PEBVvoid_caster@void_cast_detail@serialization@boost@@@std@@@std@@XZ
+?get_lock@singleton_module@serialization@boost@@AEAAAEA_NXZ
+?get_mutable_instance@?$singleton@V?$map@Vtext_iarchive@archive@boost@@@extra_detail@detail@archive@boost@@@serialization@boost@@SAAEAV?$map@Vtext_iarchive@archive@boost@@@extra_detail@detail@archive@3@XZ
+?get_mutable_instance@?$singleton@V?$map@Vtext_oarchive@archive@boost@@@extra_detail@detail@archive@boost@@@serialization@boost@@SAAEAV?$map@Vtext_oarchive@archive@boost@@@extra_detail@detail@archive@3@XZ
+?get_mutable_instance@?$singleton@V?$multiset@PEBVextended_type_info@serialization@boost@@Ukey_compare@detail@23@V?$allocator@PEBVextended_type_info@serialization@boost@@@std@@@std@@@serialization@boost@@SAAEAV?$multiset@PEBVextended_type_info@serialization@boost@@Ukey_compare@detail@23@V?$allocator@PEBVextended_type_info@serialization@boost@@@std@@@std@@XZ
+?get_mutable_instance@?$singleton@V?$multiset@PEBVextended_type_info_typeid_0@typeid_system@serialization@boost@@Utype_compare@234@V?$allocator@PEBVextended_type_info_typeid_0@typeid_system@serialization@boost@@@std@@@std@@@serialization@boost@@SAAEAV?$multiset@PEBVextended_type_info_typeid_0@typeid_system@serialization@boost@@Utype_compare@234@V?$allocator@PEBVextended_type_info_typeid_0@typeid_system@serialization@boost@@@std@@@std@@XZ
+?get_mutable_instance@?$singleton@V?$set@PEBVvoid_caster@void_cast_detail@serialization@boost@@Uvoid_caster_compare@234@V?$allocator@PEBVvoid_caster@void_cast_detail@serialization@boost@@@std@@@std@@@serialization@boost@@SAAEAV?$set@PEBVvoid_caster@void_cast_detail@serialization@boost@@Uvoid_caster_compare@234@V?$allocator@PEBVvoid_caster@void_cast_detail@serialization@boost@@@std@@@std@@XZ
+?is_destroyed@?$singleton@V?$map@Vtext_iarchive@archive@boost@@@extra_detail@detail@archive@boost@@@serialization@boost@@SA_NXZ
+?is_destroyed@?$singleton@V?$map@Vtext_oarchive@archive@boost@@@extra_detail@detail@archive@boost@@@serialization@boost@@SA_NXZ
+?is_destroyed@?$singleton@V?$multiset@PEBVextended_type_info@serialization@boost@@Ukey_compare@detail@23@V?$allocator@PEBVextended_type_info@serialization@boost@@@std@@@std@@@serialization@boost@@SA_NXZ
+?is_destroyed@?$singleton@V?$multiset@PEBVextended_type_info_typeid_0@typeid_system@serialization@boost@@Utype_compare@234@V?$allocator@PEBVextended_type_info_typeid_0@typeid_system@serialization@boost@@@std@@@std@@@serialization@boost@@SA_NXZ
+?is_destroyed@?$singleton@V?$set@PEBVvoid_caster@void_cast_detail@serialization@boost@@Uvoid_caster_compare@234@V?$allocator@PEBVvoid_caster@void_cast_detail@serialization@boost@@@std@@@std@@@serialization@boost@@SA_NXZ
+?is_locked@singleton_module@serialization@boost@@QEAA_NXZ
+?lock@?1??get_lock@singleton_module@serialization@boost@@AEAAAEA_NXZ@4_NA
+?lock@singleton_module@serialization@boost@@QEAAXXZ
+?unlock@singleton_module@serialization@boost@@QEAAXXZ
