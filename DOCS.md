@@ -305,18 +305,26 @@ forwarding-lambda path, for example:
 
 ```cpp
 .def("lookup",
-     [](Example* self, int index) {
+     [](Example* self, int index) -> int {
        return self->lookup(index);
      },
      py::arg("index"))
 ```
+
+An adapter that returns by value returns the type declared in the `.i` file,
+not whatever the C++ callable returns. Declare an owning type such as
+`gtsam::Matrix` when the C++ callable returns a non-owning view such as an
+Eigen block: pybind11 exposes a view returned by value without keeping its
+owner alive, so the array would dangle once a temporary owner is destroyed.
+Adapters that return `const T&` keep using `reference_internal`.
 
 The annotation is useful when the interface intentionally:
 
 - omits underlying C++ parameters that have defaults;
 - accepts values where the C++ function accepts references;
 - synthesizes a value-returning container operation such as `at` or `front`;
-- uses types that are not equivalent to the callable's declared signature; or
+- uses types that are not equivalent to the callable's declared signature,
+  including an owned return type for a callable that returns a view; or
 - otherwise adapts an inherited or templated member's signature.
 
 Do not annotate a callable merely because it is overloaded, including when an
