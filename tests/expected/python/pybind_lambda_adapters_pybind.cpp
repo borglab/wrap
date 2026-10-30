@@ -43,28 +43,29 @@ void gtwrap_bind_pybind_lambda_adapters_py(py::module_ &m_) {
     auto gtwrap_class_m_adapters_BaseAdapter = py::reinterpret_borrow<py::class_<adapters::BaseAdapter, std::shared_ptr<adapters::BaseAdapter>>>(m_adapters.attr("BaseAdapter"));
     gtwrap_class_m_adapters_BaseAdapter
         .def(py::init<>())
-        .def("inherited",[](adapters::BaseAdapter* self, int value){return self->inherited(value);}, gtwrap::internal::py_arg<int>("value"));
+        .def("inherited",[](adapters::BaseAdapter* self, int value) -> int{return self->inherited(value);}, gtwrap::internal::py_arg<int>("value"));
 
     auto gtwrap_class_m_adapters_AdapterInt = py::reinterpret_borrow<py::class_<adapters::Adapter<int>, adapters::BaseAdapter, std::shared_ptr<adapters::Adapter<int>>>>(m_adapters.attr("AdapterInt"));
     gtwrap_class_m_adapters_AdapterInt
         .def(py::init<>())
         .def("exact",static_cast<int (adapters::Adapter<int>::*)(int)>(&adapters::Adapter<int>::exact), gtwrap::internal::py_arg<int>("value"))
         .def("exactConst",static_cast<int (adapters::Adapter<int>::*)(int) const>(&adapters::Adapter<int>::exactConst), gtwrap::internal::py_arg<int>("value"))
-        .def("omittedDefault",[](adapters::Adapter<int>* self, int value){return self->omittedDefault(value);}, gtwrap::internal::py_arg<int>("value"))
-        .def("referenceArgument",[](adapters::Adapter<int>* self, int value){return self->referenceArgument(value);}, gtwrap::internal::py_arg<int>("value"))
+        .def("omittedDefault",[](adapters::Adapter<int>* self, int value) -> int{return self->omittedDefault(value);}, gtwrap::internal::py_arg<int>("value"))
+        .def("referenceArgument",[](adapters::Adapter<int>* self, int value) -> int{return self->referenceArgument(value);}, gtwrap::internal::py_arg<int>("value"))
         .def("hiddenOverload",static_cast<int (adapters::Adapter<int>::*)(int) const>(&adapters::Adapter<int>::hiddenOverload), gtwrap::internal::py_arg<int>("value"))
         .def("declaredOverload",static_cast<int (adapters::Adapter<int>::*)(int) const>(&adapters::Adapter<int>::declaredOverload), gtwrap::internal::py_arg<int>("value"))
         .def("declaredOverload",static_cast<double (adapters::Adapter<int>::*)(double) const>(&adapters::Adapter<int>::declaredOverload), gtwrap::internal::py_arg<double>("value"))
-        .def("at",[](adapters::Adapter<int>* self, size_t index){return self->at(index);}, gtwrap::internal::py_arg<size_t>("index"))
-        .def("front",[](adapters::Adapter<int>* self){return self->front();})
-        .def("alias",[](adapters::Adapter<int>* self, int index){return self->alias(index);}, gtwrap::internal::py_arg<int>("index"))
+        .def("at",[](adapters::Adapter<int>* self, size_t index) -> int{return self->at(index);}, gtwrap::internal::py_arg<size_t>("index"))
+        .def("front",[](adapters::Adapter<int>* self) -> int{return self->front();})
+        .def("alias",[](adapters::Adapter<int>* self, int index) -> int{return self->alias(index);}, gtwrap::internal::py_arg<int>("index"))
         .def("templatedDouble",[](adapters::Adapter<int>* self, double value){return self->templated<double>(value);}, gtwrap::internal::py_arg<double>("value"))
         .def("lambda_",[](adapters::Adapter<int>* self, const string& value) -> const auto&{return self->lambda(value);}, py::return_value_policy::reference_internal, gtwrap::internal::py_arg<const string&>("value") = "fallback")
+        .def("view",[](adapters::Adapter<int>* self) -> int{return self->view();})
         .def_static("exactStatic",static_cast<int (*)(int)>(&adapters::Adapter<int>::exactStatic), gtwrap::internal::py_arg<int>("value"))
-        .def_static("staticOmitted",[](int value){return adapters::Adapter<int>::staticOmitted(value);}, gtwrap::internal::py_arg<int>("value"));
+        .def_static("staticOmitted",[](int value) -> int{return adapters::Adapter<int>::staticOmitted(value);}, gtwrap::internal::py_arg<int>("value"));
 
     m_adapters.def("exactGlobal",static_cast<int (*)(int)>(&adapters::exactGlobal), gtwrap::internal::py_arg<int>("value"));
-    m_adapters.def("globalOmitted",[](int value){return adapters::globalOmitted(value);}, gtwrap::internal::py_arg<int>("value"));
+    m_adapters.def("globalOmitted",[](int value) -> int{return adapters::globalOmitted(value);}, gtwrap::internal::py_arg<int>("value"));
     m_adapters.def("globalHidden",static_cast<int (*)(int)>(&adapters::globalHidden), gtwrap::internal::py_arg<int>("value"));
     m_adapters.def("globalOverload",static_cast<int (*)(int)>(&adapters::globalOverload), gtwrap::internal::py_arg<int>("value"));
     m_adapters.def("globalOverload",static_cast<double (*)(double)>(&adapters::globalOverload), gtwrap::internal::py_arg<double>("value"));

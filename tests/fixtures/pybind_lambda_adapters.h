@@ -7,6 +7,13 @@ namespace adapters {
 
 using Index = std::size_t;
 
+/// Non-owning view of a stored value, like an Eigen block of a member matrix.
+template <typename T>
+struct View {
+  const T* data;
+  operator T() const { return *data; }
+};
+
 class BaseAdapter {
  public:
   BaseAdapter() = default;
@@ -38,6 +45,7 @@ class Adapter : public BaseAdapter {
   double declaredOverload(double value) const { return value; }
 
   const T& at(std::size_t) const { return value_; }
+  View<T> view() const { return View<T>{&value_}; }
   const T& front() const { return value_; }
 
   int alias(Index index) const { return static_cast<int>(index); }

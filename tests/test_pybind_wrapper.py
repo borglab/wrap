@@ -535,6 +535,15 @@ namespace py = pybind11;
         self.assertIn(
             'm_adapters.def("globalOmitted",[](int value)', content)
 
+        # Adapters return the declared type, not whatever the C++ callable
+        # returns, so a non-owning view is converted to an owned value.
+        self.assertIn(
+            '.def("view",[](adapters::Adapter<int>* self) -> int'
+            '{return self->view();})', content)
+        self.assertIn(
+            'm_adapters.def("globalOmitted",[](int value) -> int'
+            '{return adapters::globalOmitted(value);}', content)
+
         # Automatic template specialization, defaults, keyword renaming, and
         # return policy remain on the same lambda-emission path.
         self.assertIn(

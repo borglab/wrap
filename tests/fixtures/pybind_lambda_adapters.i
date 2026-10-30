@@ -45,6 +45,9 @@ class Adapter: adapters::BaseAdapter {
 
   @pybind_lambda
   const string& lambda(const string& value = "fallback") const;
+
+  @pybind_lambda
+  T view() const;
 };
 
 int exactGlobal(int value);

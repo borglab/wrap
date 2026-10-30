@@ -156,6 +156,23 @@ void bind_variable(pybind11::module_& module, const char* name,
                 and bool(callable_.original.template))
 
     @staticmethod
+    def _adapter_return(callable_):
+        """
+        Explicit return type for an `@pybind_lambda` adapter that returns by
+        value: the adapter returns the type declared in the interface rather
+        than whatever the C++ callable returns. A deduced return type can be a
+        view, such as an Eigen block, which pybind11 exposes without keeping
+        its owner alive.
+        """
+        return_type = callable_.return_type
+        returned = getattr(return_type, 'type1', None)
+        if (not getattr(callable_, 'force_pybind_lambda', False)
+                or return_type.is_void()
+                or getattr(returned, 'is_ref', False)):
+            return ''
+        return f' -> {return_type.to_cpp()}'
+
+    @staticmethod
     def _full_signature_cast(cpp_target,
                              return_type,
                              args,
@@ -342,7 +359,7 @@ void bind_variable(pybind11::module_& module, const char* name,
             lambda_ret = ' -> const auto&'
             ref_policy = ', py::return_value_policy::reference_internal'
         else:
-            lambda_ret = ''
+            lambda_ret = self._adapter_return(method)
             ref_policy = ''
 
         # Try to get the function's docstring from the Doxygen XML.
@@ -728,10 +745,12 @@ void bind_variable(pybind11::module_& module, const char* name,
                                      function_name=cpp_method,
                                      args_names=', '.join(args_names),
                                  ))
-                callable_binding = ('[]({args_signature}){{'
+                callable_binding = ('[]({args_signature}){lambda_ret}{{'
                                     '{function_call}'
                                     '}}'.format(
                                         args_signature=args_signature,
+                                        lambda_ret=self._adapter_return(
+                                            function),
                                         function_call=function_call,
                                     ))
             else:
